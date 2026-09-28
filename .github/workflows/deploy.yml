@@ -25,6 +25,8 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy orakl
+        env:
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
         run: >
           flyctl deploy --remote-only --config fly.toml
-          --build-arg VITE_SENTRY_DSN=${{ vars.VITE_SENTRY_DSN }}
+          --build-arg VITE_SENTRY_DSN="$VITE_SENTRY_DSN"
