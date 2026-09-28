@@ -29,6 +29,14 @@ describe("attachWsEntry", () => {
     expect(proxyUpgrade).not.toHaveBeenCalled();
   });
 
+  it("leaves an unlisted upgrade to other listeners when told to", () => {
+    const server = new EventEmitter();
+    attachWsEntry(server as unknown as Server, "http://127.0.0.1:3001", false);
+    const { socket } = upgrade(server, "/?token=abc");
+    expect(socket.destroy).not.toHaveBeenCalled();
+    expect(proxyUpgrade).not.toHaveBeenCalled();
+  });
+
   it("proxies both listed paths to the API origin", () => {
     const server = new EventEmitter();
     attachWsEntry(
