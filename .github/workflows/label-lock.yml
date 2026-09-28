@@ -41,17 +41,29 @@ jobs:
         with:
           sparse-checkout: .github/labels.yml
 
+      - name: Read the allowlist
+        if: steps.gate.outputs.on == 'true'
+        run: yq -o=json '.' .github/labels.yml > "$RUNNER_TEMP/labels.json"
+
       - name: Sync labels to the allowlist
         if: steps.gate.outputs.on == 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require("node:fs");
-            const want = [
-              ...fs
-                .readFileSync(".github/labels.yml", "utf8")
-                .matchAll(/^- name: (.+)\n\s+color: "(.+)"\n\s+description: "(.*)"$/gm),
-            ].map(([, name, color, description]) => ({ name: name.trim(), color, description }));
+            // A malformed allowlist fails the run: a dropped entry would delete a live label.
+            const raw = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/labels.json`, "utf8"));
+            if (!Array.isArray(raw) || raw.length === 0) throw new Error(".github/labels.yml must be a non-empty list");
+            const want = raw.map((l, i) => {
+              if (
+                typeof l?.name !== "string" || !l.name.trim() ||
+                typeof l.color !== "string" || !/^[0-9a-f]{6}$/i.test(l.color) ||
+                (l.description != null && typeof l.description !== "string")
+              ) throw new Error(`.github/labels.yml entry ${i + 1}: needs a name, a quoted 6-digit hex color, and an optional description`);
+              return { name: l.name.trim(), color: l.color, description: l.description ?? "" };
+            });
+            if (new Set(want.map((l) => l.name.toLowerCase())).size !== want.length)
+              throw new Error(".github/labels.yml lists a name twice (names are case-insensitive)");
             const byName = new Map(want.map((l) => [l.name.toLowerCase(), l]));
             const have = await github.paginate(github.rest.issues.listLabelsForRepo, {
               owner: context.repo.owner,
@@ -103,18 +115,31 @@ jobs:
         with:
           sparse-checkout: .github/labels.yml
 
+      - name: Read the allowlist
+        if: steps.gate.outputs.on == 'true'
+        run: yq -o=json '.' .github/labels.yml > "$RUNNER_TEMP/labels.json"
+
       - name: Guard label allowlist
         if: steps.gate.outputs.on == 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require("node:fs");
+            // A malformed allowlist fails the run: a dropped entry would delete a live label.
+            const raw = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/labels.json`, "utf8"));
+            if (!Array.isArray(raw) || raw.length === 0) throw new Error(".github/labels.yml must be a non-empty list");
+            const want = raw.map((l, i) => {
+              if (
+                typeof l?.name !== "string" || !l.name.trim() ||
+                typeof l.color !== "string" || !/^[0-9a-f]{6}$/i.test(l.color) ||
+                (l.description != null && typeof l.description !== "string")
+              ) throw new Error(`.github/labels.yml entry ${i + 1}: needs a name, a quoted 6-digit hex color, and an optional description`);
+              return { name: l.name.trim(), color: l.color, description: l.description ?? "" };
+            });
+            if (new Set(want.map((l) => l.name.toLowerCase())).size !== want.length)
+              throw new Error(".github/labels.yml lists a name twice (names are case-insensitive)");
             // GitHub label names are unique case-insensitively; compare lower-cased.
-            const allowed = new Set(
-              [...fs.readFileSync(".github/labels.yml", "utf8").matchAll(/^- name: (.+)$/gm)].map(
-                (m) => m[1].trim().toLowerCase(),
-              ),
-            );
+            const allowed = new Set(want.map((l) => l.name.toLowerCase()));
             const { eventName, payload } = context;
             const label = payload.label.name;
             const listed = allowed.has(label.toLowerCase());
