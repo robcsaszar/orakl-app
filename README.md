@@ -1,16 +1,29 @@
-# Orakl app
+# Orakl
 
-The web client of [Orakl](https://orakl.quest), a casual live quiz: a curator
-hosts a session, players join from their own devices in the browser, no
-accounts needed to play.
+The web client for [Orakl](https://orakl.quest), a quiz app for local gatherings. One person curates the quiz and everyone else plays from their own device. Players need no install and no account.
 
-This repository holds the client only — SvelteKit pages, components, the
-design system and styles. The game engine, data and API are private; the
-client talks to them over HTTP and WebSocket through the same origin, with
-the wire contract published as [`@orakl/protocol`](https://www.npmjs.com/package/@orakl/protocol)
-and shared runtime helpers as [`@orakl/shared`](https://www.npmjs.com/package/@orakl/shared).
+This repository holds what players and curators see: the SvelteKit pages, the components, the design system and the styles. The engine that runs games, scores answers and keeps the question bank is private. The client talks to it over HTTP and WebSocket on the same origin.
+
+## How a game runs
+
+1. The curator creates a quiz and picks categories and a timer.
+2. Players join from a shared link or a QR code.
+3. Questions arrive in real time. Players answer before the timer runs out.
+4. The leaderboard shows the final scores.
+
+Solo mode, the Trial of the Sphinx, has no lobby: pick categories and play.
+
+## Stack
+
+- [SvelteKit](https://svelte.dev/docs/kit) and Svelte 5, server-rendered on Node
+- [Tailwind CSS](https://tailwindcss.com) 4 with [tailwind-variants](https://www.tailwind-variants.org)
+- TypeScript, [Vitest](https://vitest.dev) and [Biome](https://biomejs.dev)
+- [`@orakl/protocol`](https://www.npmjs.com/package/@orakl/protocol): the wire contract with the engine, as Effect schemas
+- [`@orakl/shared`](https://www.npmjs.com/package/@orakl/shared): runtime helpers that the client and the engine both use
 
 ## Develop
+
+You need Node LTS and pnpm 10.
 
 ```bash
 pnpm install
@@ -20,9 +33,17 @@ pnpm test
 pnpm build
 ```
 
-`pnpm dev` serves the app and forwards `/api/*` and both sockets to the API at
-`API_ORIGIN` (default `http://localhost:3001`); without a running API, pages
-that load data will fail.
+These four checks need no API and no credentials. CI runs them on every push and pull request.
+
+```bash
+pnpm dev
+```
+
+`pnpm dev` serves the app on `http://localhost:5173`. It forwards `/api/*` and both WebSocket paths to the API at `API_ORIGIN` (default `http://localhost:3001`). The API is not in this repository, so pages that load data show an error until one answers at that address.
+
+## Design
+
+[`DESIGN.md`](DESIGN.md) is the design system: tokens, components, and the principles behind them. Read it before you change the interface.
 
 ## License
 

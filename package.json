@@ -10,9 +10,6 @@
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && pnpm --filter @orakl/client-core typecheck",
     "lint": "biome check .",
     "test": "vitest run && pnpm --filter @orakl/client-core test",
-    "e2e": "playwright test",
-    "cap:sync": "npx cap sync",
-    "cap:android": "npx cap open android",
     "prepare": "svelte-kit sync"
   },
   "dependencies": {
