@@ -1,0 +1,28 @@
+name: Deploy
+
+# Deploys the web app to the `orakl` Fly app. FLY_API_TOKEN is a deploy token
+# scoped to that app alone.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fly-deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy orakl
+        run: >
+          flyctl deploy --remote-only --config fly.toml
+          --build-arg VITE_SENTRY_DSN=${{ vars.VITE_SENTRY_DSN }}

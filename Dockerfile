@@ -8,15 +8,11 @@ RUN apk add --no-cache git && \
     npm install -g pnpm@10
 
 COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY packages/protocol/package.json ./packages/protocol/package.json
-COPY packages/shared/package.json ./packages/shared/package.json
-COPY packages/client-core/package.json ./packages/client-core/package.json
-COPY packages/design-tokens/package.json ./packages/design-tokens/package.json
+COPY packages ./packages
 RUN printf '{"compilerOptions":{"strict":true,"moduleResolution":"bundler","module":"esnext","target":"esnext","allowImportingTsExtensions":true,"noEmit":true}}' > tsconfig.json
 
 RUN pnpm install --frozen-lockfile
 
-COPY packages ./packages
 COPY src ./src
 COPY data ./data
 COPY static ./static
@@ -38,16 +34,6 @@ ARG BUILD_FEATURE_WIP_QUESTION_TYPES
 # Build the SvelteKit app, then bundle the solo WS server into build/solo-ws.mjs
 RUN pnpm exec svelte-kit sync && pnpm build && node build-ws-server.mjs
 
-# GeoLite2 databases for sign-in locations (map #840, decision #16). The
-# licence key rides in as build secrets (never an ARG, never in a layer);
-# GEOIP_STAMP changes monthly so the cached layer is rebuilt inside MaxMind's
-# 30-day window. Without the secrets the dir stays empty and the feature is off.
-ARG GEOIP_STAMP=unset
-COPY scripts/fetch-geoip.sh ./scripts/fetch-geoip.sh
-RUN --mount=type=secret,id=MAXMIND_ACCOUNT_ID \
-    --mount=type=secret,id=MAXMIND_LICENSE_KEY \
-    apk add --no-cache curl && sh scripts/fetch-geoip.sh /app/geoip
-
 # Runtime stage
 FROM node:22-alpine
 
@@ -63,8 +49,6 @@ RUN printf '{"compilerOptions":{"strict":true,"moduleResolution":"bundler","modu
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/build ./build
-# Non-public runtime path read by src/lib/geoip.ts (GEOIP_DIR, default /app/geoip).
-COPY --from=builder /app/geoip ./geoip
 COPY server-entry.mjs ./
 
 EXPOSE 3000
