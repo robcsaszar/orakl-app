@@ -29,8 +29,8 @@ importers:
         specifier: workspace:*
         version: link:packages/design-tokens
       '@orakl/protocol':
-        specifier: ^0.1.0
-        version: 0.1.0(effect@3.22.1)
+        specifier: ^0.1.1
+        version: 0.1.1(effect@3.22.1)
       '@orakl/shared':
         specifier: ^0.1.0
         version: 0.1.0(effect@3.22.1)
@@ -150,8 +150,8 @@ importers:
   packages/client-core:
     dependencies:
       '@orakl/protocol':
-        specifier: ^0.1.0
-        version: 0.1.0(effect@3.22.1)
+        specifier: ^0.1.1
+        version: 0.1.1(effect@3.22.1)
     devDependencies:
       effect:
         specifier: ^3.22.1
@@ -637,6 +637,11 @@ packages:
 
   '@orakl/protocol@0.1.0':
     resolution: {integrity: sha512-W+0omxDFWyb6KL3HPeT/B/p5pIILnegKLdB7xy4xul4avM5vxSVvD2fIUSBeueFoP+GBcLFUDvtFe1PF1pk8BA==}
+    peerDependencies:
+      effect: ^3.22.1
+
+  '@orakl/protocol@0.1.1':
+    resolution: {integrity: sha512-DdTouxSl7/TmBpM93TJvqvxz1dwzBMC4PKg5jXyrZbDTZNL5XjgpYj0c+djUEMOww6jDV6kNChyksoDzzdnS9Q==}
     peerDependencies:
       effect: ^3.22.1
 
@@ -3432,6 +3437,10 @@ snapshots:
   '@opentelemetry/semantic-conventions@1.43.0': {}
 
   '@orakl/protocol@0.1.0(effect@3.22.1)':
+    dependencies:
+      effect: 3.22.1
+
+  '@orakl/protocol@0.1.1(effect@3.22.1)':
     dependencies:
       effect: 3.22.1
 

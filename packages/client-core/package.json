@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@orakl/protocol": "^0.1.0"
+    "@orakl/protocol": "^0.1.1"
   },
   "peerDependencies": {
     "effect": "^3.22.1"
