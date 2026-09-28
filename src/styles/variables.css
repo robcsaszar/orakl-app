@@ -1,0 +1,11 @@
+:root {
+  --ui-header-height: 160px;
+  --co-hero-padding: calc(var(--spacing) * 8);
+  --co-hero-height: calc(100vh - var(--ui-header-height));
+  --ui-z-back: -2;
+  --ui-z-behind: -1;
+  --ui-z-base: 0;
+  --ui-z-front: 1;
+  --ui-z-overlay: 2;
+  --ui-theme-transition-duration: 1s;
+}

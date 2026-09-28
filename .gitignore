@@ -1,0 +1,36 @@
+node_modules/
+dist/
+.astro/
+.fallow/
+.svelte-kit/
+build/
+sveltekit/.svelte-kit/
+sveltekit/build/
+.env
+*.local
+local.db
+local-dev.db
+PROJECT_STATUS.md
+package-lock.json
+.worktrees/
+seeds/
+dev_server.log
+.claude/worktrees/
+.claude/logs/
+playwright-report/
+test-results/
+e2e/.auth/
+.playwright-cli/
+.agent-shots/
+graft/
+
+# e2e file-backed DB (CI + local spikes)
+.e2e*.db*
+# local Playwright overrides (sandbox browser paths etc.)
+playwright.local.config.ts
+
+# convoy/transit orchestration trail (briefs, reports, decisions)
+.claude/log/
+
+# ShipStudio metadata
+.shipstudio/

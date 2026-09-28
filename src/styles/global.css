@@ -1,0 +1,666 @@
+@import url('variables.css') layer(variables);
+@import url('reset.css') layer(reset);
+@import url('styles.css') layer(styles);
+
+@import 'tailwindcss' source(none);
+@source "../";
+@source "../../packages/client-core/src";
+
+@plugin '@tailwindcss/typography';
+@plugin '@tailwindcss/forms';
+
+/* Colours, type scale, font weights, spacing, breakpoints, tracking and
+   container widths live in @orakl/design-tokens — the one source the web's
+   Tailwind and the mobile app's NativeWind both read. Semantic tokens sit in
+   a non-inline @theme there so Tailwind generates utilities that reference
+   var(--color-*) — making CSS cascade overrides from data-* attrs work. */
+@import '@orakl/design-tokens/theme.css';
+
+@theme inline {
+  --animate-down: down var(--tw-duration) cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
+  --animate-up: up var(--tw-duration) cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
+  --animate-dash-array: dash-array 5s infinite linear;
+  --animate-fade-in: fade-in 0.5s ease-in-out forwards;
+  --animate-scrolly: scrolly 1s infinite alternate;
+  --animate-dot-down: dot-down 2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-unread-pulse: unread-pulse 2s ease-out 1s infinite;
+  --animate-timer-low: timer-low 600ms linear infinite alternate;
+  --animate-pop: pop 200ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-sun-rays: spin-ease 180s linear infinite;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+
+  --aspect-blog: 21 / 9;
+
+  --background-image-noise-10: url('/images/assets/noise-10.svg');
+  --background-image-noise-25: url('/images/assets/noise-25.svg');
+  --background-image-noise-50: url('/images/assets/noise-50.svg');
+  --background-image-noise: url('/images/assets/noise-full.svg');
+
+  --shadow-button: 0px 4px 0px 2px var(--tw-shadow-color), 0px 0px 0px 2px var(--tw-shadow-color);
+  --shadow-button-hover: 0px 2px 0px 2px currentColor, 0px 0px 0px 2px currentColor;
+  --shadow-menu: 0px 3px 0px 1px currentColor, 0px 0px 0px 1px currentColor;
+
+  --text-shadow-outline-thin: -2px -2px 0 var(--tw-text-shadow-color),-2px -1px 0 var(--tw-text-shadow-color),-2px 0px 0 var(--tw-text-shadow-color),-2px 1px 0 var(--tw-text-shadow-color),-2px 2px 0 var(--tw-text-shadow-color),-1px -2px 0 var(--tw-text-shadow-color),-1px -1px 0 var(--tw-text-shadow-color),-1px 0px 0 var(--tw-text-shadow-color),-1px 1px 0 var(--tw-text-shadow-color),-1px 2px 0 var(--tw-text-shadow-color),0px -2px 0 var(--tw-text-shadow-color),0px -1px 0 var(--tw-text-shadow-color),0px 0px 0 var(--tw-text-shadow-color),0px 1px 0 var(--tw-text-shadow-color),0px 2px 0 var(--tw-text-shadow-color),1px -2px 0 var(--tw-text-shadow-color),1px -1px 0 var(--tw-text-shadow-color),1px 0px 0 var(--tw-text-shadow-color),1px 1px 0 var(--tw-text-shadow-color),1px 2px 0 var(--tw-text-shadow-color),2px -2px 0 var(--tw-text-shadow-color),2px -1px 0 var(--tw-text-shadow-color),2px 0px 0 var(--tw-text-shadow-color),2px 1px 0 var(--tw-text-shadow-color),2px 2px 0 var(--tw-text-shadow-color);
+  --text-shadow-outline-thick: -4px -4px 0 var(--tw-text-shadow-color),-4px -3px 0 var(--tw-text-shadow-color),-4px -2px 0 var(--tw-text-shadow-color),-4px -1px 0 var(--tw-text-shadow-color),-4px 0px 0 var(--tw-text-shadow-color),-4px 1px 0 var(--tw-text-shadow-color),-4px 2px 0 var(--tw-text-shadow-color),-4px 3px 0 var(--tw-text-shadow-color),-4px 4px 0 var(--tw-text-shadow-color),-3px -4px 0 var(--tw-text-shadow-color),-3px -3px 0 var(--tw-text-shadow-color),-3px -2px 0 var(--tw-text-shadow-color),-3px -1px 0 var(--tw-text-shadow-color),-3px 0px 0 var(--tw-text-shadow-color),-3px 1px 0 var(--tw-text-shadow-color),-3px 2px 0 var(--tw-text-shadow-color),-3px 3px 0 var(--tw-text-shadow-color),-3px 4px 0 var(--tw-text-shadow-color),-2px -4px 0 var(--tw-text-shadow-color),-2px -3px 0 var(--tw-text-shadow-color),-2px -2px 0 var(--tw-text-shadow-color),-2px -1px 0 var(--tw-text-shadow-color),-2px 0px 0 var(--tw-text-shadow-color),-2px 1px 0 var(--tw-text-shadow-color),-2px 2px 0 var(--tw-text-shadow-color),-2px 3px 0 var(--tw-text-shadow-color),-2px 4px 0 var(--tw-text-shadow-color),-1px -4px 0 var(--tw-text-shadow-color),-1px -3px 0 var(--tw-text-shadow-color),-1px -2px 0 var(--tw-text-shadow-color),-1px -1px 0 var(--tw-text-shadow-color),-1px 0px 0 var(--tw-text-shadow-color),-1px 1px 0 var(--tw-text-shadow-color),-1px 2px 0 var(--tw-text-shadow-color),-1px 3px 0 var(--tw-text-shadow-color),-1px 4px 0 var(--tw-text-shadow-color),0px -4px 0 var(--tw-text-shadow-color),0px -3px 0 var(--tw-text-shadow-color),0px -2px 0 var(--tw-text-shadow-color),0px -1px 0 var(--tw-text-shadow-color),0px 0px 0 var(--tw-text-shadow-color),0px 1px 0 var(--tw-text-shadow-color),0px 2px 0 var(--tw-text-shadow-color),0px 3px 0 var(--tw-text-shadow-color),0px 4px 0 var(--tw-text-shadow-color),1px -4px 0 var(--tw-text-shadow-color),1px -3px 0 var(--tw-text-shadow-color),1px -2px 0 var(--tw-text-shadow-color),1px -1px 0 var(--tw-text-shadow-color),1px 0px 0 var(--tw-text-shadow-color),1px 1px 0 var(--tw-text-shadow-color),1px 2px 0 var(--tw-text-shadow-color),1px 3px 0 var(--tw-text-shadow-color),1px 4px 0 var(--tw-text-shadow-color),2px -4px 0 var(--tw-text-shadow-color),2px -3px 0 var(--tw-text-shadow-color),2px -2px 0 var(--tw-text-shadow-color),2px -1px 0 var(--tw-text-shadow-color),2px 0px 0 var(--tw-text-shadow-color),2px 1px 0 var(--tw-text-shadow-color),2px 2px 0 var(--tw-text-shadow-color),2px 3px 0 var(--tw-text-shadow-color),2px 4px 0 var(--tw-text-shadow-color),3px -4px 0 var(--tw-text-shadow-color),3px -3px 0 var(--tw-text-shadow-color),3px -2px 0 var(--tw-text-shadow-color),3px -1px 0 var(--tw-text-shadow-color),3px 0px 0 var(--tw-text-shadow-color),3px 1px 0 var(--tw-text-shadow-color),3px 2px 0 var(--tw-text-shadow-color),3px 3px 0 var(--tw-text-shadow-color),3px 4px 0 var(--tw-text-shadow-color),4px -4px 0 var(--tw-text-shadow-color),4px -3px 0 var(--tw-text-shadow-color),4px -2px 0 var(--tw-text-shadow-color),4px -1px 0 var(--tw-text-shadow-color),4px 0px 0 var(--tw-text-shadow-color),4px 1px 0 var(--tw-text-shadow-color),4px 2px 0 var(--tw-text-shadow-color),4px 3px 0 var(--tw-text-shadow-color),4px 4px 0 var(--tw-text-shadow-color);
+  --text-shadow-sm: 0 0 8px var(--tw-text-shadow-color);
+  --text-shadow-md: 0 0 16px var(--tw-text-shadow-color);
+  --text-shadow-lg: 0 0 24px var(--tw-text-shadow-color);
+  --text-shadow-xl: 0 0 32px var(--tw-text-shadow-color);
+
+  --font-serif: var(--albertus-nova);
+  --font-sans: var(--geist);
+  --font-mono: var(--geist-mono);
+
+  --ease-ease-in-out-quad: cubic-bezier(0.46, 0.03, 0.52, 0.96);
+  --ease-ease-in-out-sine: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  --ease-ease-in-out-cubic: cubic-bezier(0.65, 0.05, 0.36, 1);
+  --ease-ease-in-out-quart: cubic-bezier(0.77, 0, 0.18, 1);
+  --ease-ease-in-out-circ: cubic-bezier(0.79, 0.14, 0.15, 0.86);
+  --ease-ease-in-out-quint: cubic-bezier(0.86, 0, 0.07, 1);
+  --ease-ease-in-out-expo: cubic-bezier(1, 0, 0, 1);
+  --ease-ease-in-out-back: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+  --corner-shape-squircle: superellipse(2);
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dash-array {
+    0% {
+      stroke-dasharray: 0, 1000;
+    }
+    100% {
+      stroke-dasharray: 63, 1000;
+    }
+  }
+
+  @keyframes down {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes up {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+  }
+
+  @keyframes pop {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1.1);
+    }
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes scrolly {
+    0% {
+      opacity: 0.5;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0.75;
+      transform: translateY(12px);
+    }
+  }
+
+  @keyframes dot-down {
+    0% {
+      opacity: 0;
+      translate: -50% -12px;
+    }
+    100% {
+      opacity: 1;
+      translate: -50% 0;
+    }
+  }
+
+  @keyframes unread-pulse {
+    0% {
+      opacity: 0.4;
+      translate: -50% 0;
+      scale: 1;
+    }
+    100% {
+      opacity: 0;
+      translate: -50% 0;
+      scale: 3;
+    }
+  }
+
+  @keyframes slide-out-left {
+    to {
+      transform: translateX(-30px);
+      opacity: 0;
+    }
+  }
+  
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(30px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes timer-low {
+    100% {
+      opacity: 0.25;
+    }
+  }
+
+  @keyframes spin-ease {
+    0% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(180deg);
+      animation-timing-function: var(--ease-ease-in-out-quad);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+/* ─── Theme / phase variants ──────────────────────────────────────────────
+   dark / light match both the page-level data-effective-theme on <html> and
+   any ancestor [data-theme="dark|light"]. Phase variants match data-sky-phase
+   on <html> (set by the background system) and [data-theme="<phase>"] on any
+   element, enabling component-level phase overrides.
+   ─────────────────────────────────────────────────────────────────────────── */
+@custom-variant dark    (&:where([data-effective-theme=dark],   [data-effective-theme=dark] *,   [data-theme=dark],   [data-theme=dark] *,   [data-theme=night],  [data-theme=night] *));
+@custom-variant light   (&:where([data-effective-theme=light],  [data-effective-theme=light] *,  [data-theme=light],  [data-theme=light] *));
+@custom-variant night   (&:where([data-sky-phase=night],        [data-sky-phase=night] *,        [data-theme=night],  [data-theme=night] *));
+@custom-variant dawn    (&:where([data-sky-phase=dawn],         [data-sky-phase=dawn] *,         [data-theme=dawn],   [data-theme=dawn] *));
+@custom-variant morning (&:where([data-sky-phase=morning],      [data-sky-phase=morning] *,      [data-theme=morning],[data-theme=morning] *));
+@custom-variant noon    (&:where([data-sky-phase=noon],         [data-sky-phase=noon] *,         [data-theme=noon],   [data-theme=noon] *));
+@custom-variant evening (&:where([data-sky-phase=evening],      [data-sky-phase=evening] *,      [data-theme=evening],[data-theme=evening] *));
+@custom-variant sunset  (&:where([data-sky-phase=sunset],       [data-sky-phase=sunset] *,       [data-theme=sunset], [data-theme=sunset] *));
+@custom-variant dusk    (&:where([data-sky-phase=dusk],         [data-sky-phase=dusk] *,         [data-theme=dusk],   [data-theme=dusk] *));
+
+#background ~ a[href*="neat"] {
+  display: none !important;
+}
+
+/* Scroll fade masks for overflow containers */
+.scroll-mask-container.mask-bottom > :first-child {
+  mask-image: linear-gradient(to bottom, black calc(100% - 1rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 1rem), transparent 100%);
+}
+.scroll-mask-container.mask-top > :first-child {
+  mask-image: linear-gradient(to top, black calc(100% - 1rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black calc(100% - 1rem), transparent 100%);
+}
+.scroll-mask-container.mask-both > :first-child {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 1rem, black calc(100% - 1rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 1rem, black calc(100% - 1rem), transparent 100%);
+}
+
+/* Short mask variant (0.75rem) */
+.scroll-mask-container[data-mask-size="short"].mask-bottom > :first-child {
+  mask-image: linear-gradient(to bottom, black calc(100% - 0.75rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 0.75rem), transparent 100%);
+}
+.scroll-mask-container[data-mask-size="short"].mask-top > :first-child {
+  mask-image: linear-gradient(to top, black calc(100% - 0.75rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black calc(100% - 0.75rem), transparent 100%);
+}
+.scroll-mask-container[data-mask-size="short"].mask-both > :first-child {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 0.75rem, black calc(100% - 0.75rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 0.75rem, black calc(100% - 0.75rem), transparent 100%);
+}
+
+/* Long mask variant (3rem) */
+.scroll-mask-container[data-mask-size="long"].mask-bottom > :first-child {
+  mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent 100%);
+}
+.scroll-mask-container[data-mask-size="long"].mask-top > :first-child {
+  mask-image: linear-gradient(to top, black calc(100% - 3rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black calc(100% - 3rem), transparent 100%);
+}
+.scroll-mask-container[data-mask-size="long"].mask-both > :first-child {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 3rem, black calc(100% - 3rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 3rem, black calc(100% - 3rem), transparent 100%);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 transparent;
+}
+
+@utility is-loading {
+  display: inline-flex;
+  flex-wrap: nowrap;
+
+  span {
+    animation: blink 1s cubic-bezier(0.5, 0, 1, 1) infinite;
+  }
+
+  span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+/* Make sure hover styles applied only for devices that support it. */
+@custom-variant has-hover (@media (hover: hover));
+@custom-variant no-hover (@media not all and (hover: hover));
+@custom-variant hover-always {
+  @media (hover: hover) {
+    &:hover {
+      @slot;
+    }
+  }
+  @media not all and (hover: hover) {
+    & {
+      @slot;
+    }
+  }
+}
+@custom-variant mobile-hover (&:hover);
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+
+  @media (width >= --theme(--breakpoint-xs)) {
+    max-width: none;
+  }
+
+  @media (width >= 1280px) {
+    max-width: 1280px;
+  }
+}
+
+@utility corner-shape-* {
+  corner-shape: --value('squircle', 'initial', 'unset');
+}
+
+@utility text-wrap-stable {
+  text-wrap-style: stable;
+}
+
+@utility field-sizing-content {
+  field-sizing: content;
+}
+
+@utility glow {
+  background-image: radial-gradient(
+    at center,
+    color-mix(in oklab, var(--color-secondary-100) var(--js-logo-bg-opacity, 50%), transparent),
+    var(--color-transparent) 70%
+  );
+}
+
+@utility visuallyhidden {
+  position: absolute;
+  clip: rect(1px, 1px, 1px, 1px);
+  -webkit-clip-path: inset(0px 0px 99.9% 99.9%);
+  clip-path: inset(0px 0px 99.9% 99.9%);
+  overflow: hidden;
+  height: 1px;
+  width: 1px;
+  padding: 0;
+  border: 0;
+}
+
+@utility reserve-bold-font {
+  &:not(.font-bold) {
+    letter-spacing: 0.015em;
+  }
+
+  &.font-bold {
+    letter-spacing: 0;
+  }
+}
+
+@utility text-tint-* {
+  color: color-mix(in srgb, --value(--color-*, [*]), white calc(--modifier(integer) * 1%));
+}
+
+@utility text-shade-* {
+  color: color-mix(in srgb, --value(--color-*, [*]), black calc(--modifier(integer) * 1%));
+}
+
+@utility bg-tint-* {
+  background-color: color-mix(
+    in srgb,
+    --value(--color-*, [*]),
+    white calc(--modifier(integer) * 1%)
+  );
+}
+
+@utility bg-shade-* {
+  background-color: color-mix(
+    in srgb,
+    --value(--color-*, [*]),
+    black calc(--modifier(integer) * 1%)
+  );
+}
+
+@utility border-tint-* {
+  border-color: color-mix(in srgb, --value(--color-*, [*]), white calc(--modifier(integer) * 1%));
+}
+
+@utility border-shade-* {
+  border-color: color-mix(in srgb, --value(--color-*, [*]), black calc(--modifier(integer) * 1%));
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@custom-variant pressed {
+  &[aria-pressed="true"] {
+    @slot;
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.2;
+  }
+}
+
+html {
+  /* Reserve space below focused elements so the sticky footer never obscures them */
+  scroll-padding-bottom: 7rem;
+}
+
+/* Anchor targets on prose pages (the legal pages) sit below the sticky header
+   when linked to — e.g. a footer use-case link to /legal/privacy#use-<id>. */
+.prose :where(section[id], h2[id], h3[id]) {
+  scroll-margin-top: calc(var(--ui-header-height) + 1rem);
+}
+
+html:not([data-sky-phase="night"]) body {
+  background-color: transparent;
+}
+
+#stars,
+#birds {
+  transition: opacity 3s ease;
+}
+
+/* Star and bird opacity driven by PHASE_CONFIG in Background.svelte / Birds.svelte */
+#stars { opacity: 0; }
+#birds { opacity: 0; }
+
+/* Body background fades with the sky */
+body { transition: background-color 3s ease; }
+
+/* ─── Semantic colour palettes ──────────────────────────────────────────────
+   Palettes are applied via three mechanisms:
+   1. data-effective-theme on <html>  — page-level dark / light switch
+   2. data-sky-phase on <html>        — per-phase tinting (set by background system)
+   3. data-theme="<phase|dark|light>" on any element — component-level override
+
+   Cascade order matters: phase rules come after dark/light rules so they win
+   when the page is in the matching phase. Component [data-theme] rules apply to
+   a subtree and don't conflict with the page-level html selectors.
+
+   All values can use var() to reference existing tokens — both scale tokens
+   (var(--color-secondary-900)) and other semantic tokens
+   (var(--color-foreground-darker)). Derived values like -lighter/-raised use
+   color-mix() against var(--color-background) so they stay in sync automatically.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── dark / night ── maps directly to the secondary scale ──────────────── */
+html[data-effective-theme="dark"],
+[data-theme="dark"],
+[data-theme="night"],
+html[data-sky-phase="night"] {
+  --color-background: var(--color-secondary-950);
+  --color-background-lighter: var(--color-secondary-900);
+  --color-foreground: var(--color-secondary-100);
+  --color-foreground-darker: var(--color-secondary-400);
+  --color-border: var(--color-secondary-900);
+  --color-surface: var(--color-secondary-900);
+  --color-surface-raised: var(--color-secondary-800);
+}
+
+/* ── light / morning — cool blue-grey, light sky ────────────────────────── */
+html[data-effective-theme="light"],
+[data-theme="light"],
+[data-theme="morning"],
+html[data-sky-phase="morning"] {
+  --color-background: var(--color-secondary-50);
+  --color-background-lighter: var(--color-secondary-100);
+  --color-foreground: var(--color-secondary-950);
+  --color-foreground-darker: color-mix(in oklch, var(--color-foreground) 80%, var(--color-secondary-200) 20%);
+
+  /* state tokens darkened for AA (4.5:1) as text on secondary-50 and inside *-dark/15 washes */
+  --color-warning: oklch(50% 0.17 66.31);
+  --color-success: oklch(47% 0.14 156.69);
+  --color-danger: oklch(51% 0.22 28.32);
+}
+
+/* ── dawn — dark navy-purple, warm peach undertone ──────────────────────── */
+/* [data-theme="dawn"],
+html[data-sky-phase="dawn"] {
+  --color-background:         oklch(11%  0.042 295.00);
+  --color-background-lighter: color-mix(in oklch, var(--color-background) 80%, white 20%);
+  --color-foreground:         oklch(91%  0.022 52.00);
+  --color-foreground-darker:  color-mix(in oklch, var(--color-foreground) 60%, var(--color-background) 40%);
+  --color-border:             color-mix(in oklch, var(--color-background) 60%, var(--color-foreground) 40%);
+  --color-surface:            color-mix(in oklch, var(--color-background) 85%, white 15%);
+  --color-surface-raised:     color-mix(in oklch, var(--color-background) 70%, white 30%);
+} */
+
+/* ── noon — bright clear blue, high contrast ────────────────────────────── */
+/* [data-theme="noon"],
+html[data-sky-phase="noon"] {
+  --color-background:         oklch(97%  0.010 225.00);
+  --color-background-lighter: color-mix(in oklch, var(--color-background) 80%, black 20%);
+  --color-foreground:         oklch(16%  0.050 240.00);
+  --color-foreground-darker:  color-mix(in oklch, var(--color-foreground) 60%, var(--color-background) 40%);
+  --color-border:             color-mix(in oklch, var(--color-background) 55%, var(--color-foreground) 45%);
+  --color-surface:            color-mix(in oklch, var(--color-background) 85%, black 15%);
+  --color-surface-raised:     color-mix(in oklch, var(--color-background) 70%, black 30%);
+} */
+
+/* ── evening — warm cream and gold ──────────────────────────────────────── */
+/* [data-theme="evening"],
+html[data-sky-phase="evening"] {
+  --color-background:         oklch(93%  0.030 75.00);
+  --color-background-lighter: color-mix(in oklch, var(--color-background) 80%, black 20%);
+  --color-foreground:         oklch(19%  0.055 48.00);
+  --color-foreground-darker:  color-mix(in oklch, var(--color-foreground) 60%, var(--color-background) 40%);
+  --color-border:             color-mix(in oklch, var(--color-background) 55%, var(--color-foreground) 45%);
+  --color-surface:            color-mix(in oklch, var(--color-background) 85%, black 15%);
+  --color-surface-raised:     color-mix(in oklch, var(--color-background) 70%, black 30%);
+} */
+
+/* ── sunset — deep crimson, warm cream text ──────────────────────────────── */
+/* [data-theme="sunset"],
+html[data-sky-phase="sunset"] {
+  --color-background:         oklch(16%  0.080 22.00);
+  --color-background-lighter: color-mix(in oklch, var(--color-background) 80%, white 20%);
+  --color-foreground:         oklch(92%  0.025 60.00);
+  --color-foreground-darker:  color-mix(in oklch, var(--color-foreground) 60%, var(--color-background) 40%);
+  --color-border:             color-mix(in oklch, var(--color-background) 60%, var(--color-foreground) 40%);
+  --color-surface:            color-mix(in oklch, var(--color-background) 85%, white 15%);
+  --color-surface-raised:     color-mix(in oklch, var(--color-background) 70%, white 30%);
+} */
+
+/* ── dusk — deep indigo-navy, lavender-rose text ─────────────────────────── */
+/* [data-theme="dusk"],
+html[data-sky-phase="dusk"] {
+  --color-background:         oklch(11%  0.032 268.00);
+  --color-background-lighter: color-mix(in oklch, var(--color-background) 80%, white 20%);
+  --color-foreground:         oklch(90%  0.018 295.00);
+  --color-foreground-darker:  color-mix(in oklch, var(--color-foreground) 60%, var(--color-background) 40%);
+  --color-border:             color-mix(in oklch, var(--color-background) 60%, var(--color-foreground) 40%);
+  --color-surface:            color-mix(in oklch, var(--color-background) 85%, white 15%);
+  --color-surface-raised:     color-mix(in oklch, var(--color-background) 70%, white 30%);
+} */
+
+/* sv-grid theme */
+.sg-theme {
+  /* Colors */
+  --sg-bg:           transparent;
+  --sg-fg:           var(--color-foreground);
+  --sg-muted:        var(--color-foreground-darker);
+  --sg-border:       --alpha(var(--color-secondary) / 20%);
+  --sg-header-bg:    transparent;
+  --sg-header-fg:    var(--color-foreground);
+  --sg-row-alt-bg:   var(--color-background);
+  --sg-row-hover-bg: var(--color-surface);
+  --sg-selection-bg: color-mix(in oklch, var(--color-primary) 18%, transparent);
+  --sg-input-bg:     var(--color-background);
+  --sg-input-border: var(--color-border);
+  --sg-accent:       var(--color-primary);
+  --sg-row-height:   0;
+
+  /* Scrollbar */
+  --sg-scrollbar-bg:                transparent;
+  --sg-scrollbar-border:            transparent;
+  --sg-scrollbar-arrow:             var(--color-foreground-darker);
+  --sg-scrollbar-arrow-hover-bg:    var(--color-border);
+  --sg-scrollbar-arrow-hover:       var(--color-foreground);
+  --sg-scrollbar-arrow-active-bg:   var(--color-border);
+  --sg-scrollbar-arrow-active:      var(--color-foreground);
+  --sg-scrollbar-arrow-disabled:    color-mix(in oklch, var(--color-foreground-darker) 40%, transparent);
+  --sg-scrollbar-thumb:             var(--color-secondary);
+  --sg-scrollbar-thumb-hover:       var(--color-foreground-darker);
+  --sg-scrollbar-thumb-active:      var(--color-foreground-darker);
+  --sg-scrollbar-thumb-radius:      3px;
+
+  /* Icon size — change to resize all table icons at once */
+  --sg-icon-size: 14px;
+
+  font-size: 1rem;
+}
+
+/* ── Icon sizing ─────────────────────────────────────────────────────── */
+/* Override Tailwind's svg { display:block } reset so icons sit inline  */
+/* inside flex header cells, and apply the CSS-var-controlled size.     */
+.sg-theme .sv-grid-header-icon svg {
+  display: inline;
+  width: var(--sg-icon-size);
+  height: var(--sg-icon-size);
+}
+
+/* ── Chevron submenu indicator ───────────────────────────────────────── */
+.sg-theme .sv-grid-menu-item-chevron {
+  margin-left: auto;
+  opacity: 0.5;
+}
+
+/* ── Cell & header padding ───────────────────────────────────────────── */
+.sg-theme .sv-grid-cell,
+.sg-theme .sv-grid-column {
+  padding-inline: 12px;
+}
+.sg-theme .sv-grid-cell[data-align="left"],
+.sg-theme .sv-grid-column[data-align="left"] {
+  padding-left: 12px;
+}
+.sg-theme .sv-grid-cell[data-align="right"] {
+  padding-right: 12px;
+}
+.sg-theme .sv-grid-column[data-align="right"] {
+  padding-right: 12px;
+}
+
+/* ── Font sizes ──────────────────────────────────────────────────────── */
+.sg-theme .sv-grid-cell { @apply text-base px-2 py-1 }
+.sg-theme .sv-grid-head .sv-grid-column { @apply text-base px-2 py-1 backdrop-blur-sm }
+.sg-theme .sv-grid-column { font-size: 0.75rem; letter-spacing: 0.02em; }
+.sg-theme .sv-grid-menu { font-size: 0.8125rem; }
+.sg-theme .sv-grid-pagination { font-size: 0.75rem; }
+.sg-theme .sv-grid-pagination-label { font-size: 0.75rem; }
+
+/* ── Column menu ─────────────────────────────────────────────────────── */
+.sg-theme .sv-grid-menu {
+  @apply bg-background shadow-lg p-2 border-2 rounded-2xl corner-shape-squircle;
+}
+.sg-theme .sv-grid-menu-item {
+  @apply gap-2 px-2 py-1 rounded-xl corner-shape-squircle;
+}
+
+.sg-theme .sv-grid-menu-item:hover {
+  background: var(--color-surface-hover, var(--color-border));
+}
+
+.sg-theme .sv-grid-menu-item[aria-checked="true"] {
+  background: var(--sg-selection-bg);
+  color: var(--color-primary);
+}
+.sg-theme .sv-grid-menu-item:disabled,
+.sg-theme .sv-grid-menu-item[disabled] {
+  opacity: 0.4;
+}
+.sg-theme .sv-grid-menu-sep {
+  background: var(--color-border);
+  margin: 3px 4px;
+}
+.sg-theme .sv-grid-column-menu { width: 240px; }
+
+/* Actions column: no menu button, no sort cursor */
+.sg-theme [data-col-id="actions"] .sv-grid-col-menu-btn { display: none; }
+.sg-theme [data-col-id="actions"].sv-grid-column { cursor: default; }
+
+.sv-grid-head .sv-grid-column[data-pinned="left"],
+.sv-grid-head .sv-grid-column[data-pinned="right"] {
+  --sg-pinned-header-bg: transparent;
+}
+
+.sv-grid-cell[data-pinned="right"], .sv-grid-column[data-pinned="right"],
+.sv-grid-cell[data-pinned="left"], .sv-grid-column[data-pinned="left"] {
+  --sg-pinned-bg: transparent;
+
+  @apply backdrop-blur-sm;
+}
+
+.sg-theme .sv-grid-cell-active {
+  --sg-accent: transparent;
+
+  > span {
+    @apply bg-primary text-background font-bold;
+  }
+}

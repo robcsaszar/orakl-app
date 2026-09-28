@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-03T00:00:00Z",
+  "title": "Design System: Orakl",
+  "strategic": {
+    "register": "product",
+    "users": "Curators (granted role) host quiz sessions for casual social play among friends and colleagues; players join anonymously from their own device via link, QR code, or join code, no account required. The job to be done is fast, low-friction group play: a curator gets a room playing within seconds, a player joins and answers without setup friction. Solo mode (\"Trial of the Sphinx\") extends the same experience to a single player with a guest-to-signed-in conversion tier.",
+    "purpose": "A real-time, browser-based quiz platform. Success looks like a curator starting a session and players joining and answering questions live with no account friction, then seeing results/leaderboards immediately.",
+    "personality": "Measured, intelligent, grounded — a referee who knows the rules and has no interest in spectacle.",
+    "principles": [
+      "Semantic over literal — reach for tokens that carry meaning, never raw scale values or hardcoded phase colours.",
+      "Clarity over decoration — motion and visual flourish exist only to clarify state changes, never as ornament.",
+      "Precision over spectacle — the interface confirms and informs quickly; it does not perform enthusiasm the way generic party-quiz apps do.",
+      "One shape language — the squircle is the interactive signature across every surface.",
+      "Accessible by default — dyslexia-friendly type, reduced motion, and WCAG AA contrast are first-class settings, not afterthoughts."
+    ],
+    "antiReferences": [
+      "Avoid generic Kahoot-style visuals — don't look like Kahoot/generic bright primary-color quiz apps: avoid loud saturated flat colors, cartoonish shapes, exclamation-heavy copy."
+    ],
+    "accessibility": "WCAG 2.1 AA baseline. Dyslexia-friendly typeface swap (html[data-font=\"dyslexic\"], OpenDyslexic replaces Albertus Nova / Geist / Geist Mono system-wide via CSS custom properties). Reduced-motion preferences respected; state-communicating motion degrades to instant/crossfade rather than being skipped."
+  },
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Warm Gold",
+        "canonical": "oklch(84.746% 0.16058 83.298)",
+        "tonalRamp": [
+          "oklch(9.6644% 0.02005 99.316)",
+          "oklch(22.408% 0.04613 82.451)",
+          "oklch(42.516% 0.08878 77.508)",
+          "oklch(60.602% 0.12686 76.862)",
+          "oklch(77.707% 0.16275 76.718)",
+          "oklch(84.746% 0.16058 83.298)",
+          "oklch(90.579% 0.11217 88.004)",
+          "oklch(98.519% 0.01915 90.538)"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Deep Indigo",
+        "canonical": "oklch(64.3% 0.141 281.67)",
+        "tonalRamp": [
+          "oklch(10.7% 0.031 279.92)",
+          "oklch(20.2% 0.067 278.57)",
+          "oklch(31.9% 0.117 277.47)",
+          "oklch(42.8% 0.171 276.38)",
+          "oklch(53.8% 0.162 279.48)",
+          "oklch(64.3% 0.141 281.67)",
+          "oklch(78.1% 0.072 284.62)",
+          "oklch(96.6% 0.008 286.4)"
+        ]
+      },
+      "success": {
+        "role": "state",
+        "displayName": "Success Green",
+        "canonical": "oklch(57% 0.14 156.69)",
+        "tonalRamp": ["oklch(15% 0.05 182.55)", "oklch(57% 0.14 156.69)", "oklch(95% 0.08 163.05)"]
+      },
+      "warning": {
+        "role": "state",
+        "displayName": "Warning Amber",
+        "canonical": "oklch(76% 0.17 66.31)",
+        "tonalRamp": ["oklch(30% 0.06 87.41)", "oklch(76% 0.17 66.31)", "oklch(99% 0.02 95.28)"]
+      },
+      "danger": {
+        "role": "state",
+        "displayName": "Danger Red",
+        "canonical": "oklch(56% 0.22 28.32)",
+        "tonalRamp": ["oklch(16% 0.09 26.04)", "oklch(56% 0.22 28.32)", "oklch(97% 0.17 17.38)"]
+      },
+      "info": {
+        "role": "state",
+        "displayName": "Info Blue",
+        "canonical": "oklch(39% 0.14 257.38)",
+        "tonalRamp": ["oklch(19% 0.05 252.97)", "oklch(39% 0.14 257.38)", "oklch(93% 0.03 233.05)"]
+      },
+      "flame": {
+        "role": "accent",
+        "displayName": "Flame",
+        "canonical": "oklch(70% 0.21 40.32)",
+        "tonalRamp": ["oklch(16% 0.25 32.32)", "oklch(70% 0.21 40.32)", "oklch(80% 0.2 32.32)", "oklch(95% 0.1 62.32)"]
+      },
+      "featured": {
+        "role": "accent",
+        "displayName": "Featured Violet",
+        "canonical": "oklch(57% 0.21 293)",
+        "tonalRamp": ["oklch(20% 0.1 293)", "oklch(57% 0.21 293)", "oklch(90% 0.05 293)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headings, score reveals — ceremonial moments only." },
+      "heading-xl": { "displayName": "Heading XL", "purpose": "Page titles, section headers." },
+      "mono": { "displayName": "Mono", "purpose": "Join codes, IDs, scores — anywhere a fixed-width glyph grid aids legibility." },
+      "dyslexic-override": { "displayName": "OpenDyslexic override", "purpose": "Replaces all families system-wide when html[data-font=\"dyslexic\"] is set." }
+    },
+    "shadows": [
+      { "name": "shadow-button", "value": "0px 4px 0px 2px currentColor", "purpose": "Physical press depth on primary buttons." },
+      { "name": "shadow-button-hover", "value": "0px 2px 0px 2px currentColor", "purpose": "Reduced depth on hover, suggesting lift." },
+      { "name": "shadow-menu", "value": "0px 3px 0px 1px currentColor", "purpose": "Tight outline shadow for dropdown menus." }
+    ],
+    "motion": [
+      { "name": "active-press", "value": "transform: scale(0.95)", "purpose": "Tactile press feedback on buttons, no animation budget spent." },
+      { "name": "ease-in-out-quart", "value": "cubic-bezier(0.76, 0, 0.24, 1)", "purpose": "Default easing for in-app micro-interactions." }
+    ],
+    "breakpoints": [
+      { "name": "xs", "value": "425px" },
+      { "name": "desktop", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default call-to-action button — warm gold fill, squircle shape, physical press shadow.",
+      "html": "<button class=\"ds-btn-primary\">Start game</button>",
+      "css": ".ds-btn-primary { background: oklch(84.746% 0.16058 83.298); color: oklch(10.7% 0.031 279.92); border: 2px solid transparent; border-radius: 16px; padding: 10px 20px; font: 600 16px \"Geist\", sans-serif; box-shadow: 0px 4px 0px 2px oklch(60.602% 0.12686 76.862); transition: background 0.2s cubic-bezier(0.76,0,0.24,1), transform 0.2s cubic-bezier(0.76,0,0.24,1); cursor: pointer; } .ds-btn-primary:hover { background: oklch(90.579% 0.11217 88.004); } .ds-btn-primary:active { transform: scale(0.95); box-shadow: 0px 2px 0px 2px oklch(60.602% 0.12686 76.862); } .ds-btn-primary:focus-visible { outline: 2px solid oklch(84.746% 0.16058 83.298); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Deep indigo fill for secondary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Join game</button>",
+      "css": ".ds-btn-secondary { background: oklch(64.3% 0.141 281.67); color: oklch(92.3% 0.020 286.05); border: 2px solid transparent; border-radius: 16px; padding: 10px 20px; font: 600 16px \"Geist\", sans-serif; transition: background 0.2s cubic-bezier(0.76,0,0.24,1), transform 0.2s cubic-bezier(0.76,0,0.24,1); cursor: pointer; } .ds-btn-secondary:hover { background: oklch(71.3% 0.101 283.54); } .ds-btn-secondary:active { transform: scale(0.95); } .ds-btn-secondary:focus-visible { outline: 2px solid oklch(64.3% 0.141 281.67); outline-offset: 2px; }"
+    },
+    {
+      "name": "Input field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Squircle text input, border darkens on focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Join code\" />",
+      "css": ".ds-input { background: color-mix(in oklab, oklch(14.5% 0.042 278.50) 25%, transparent); color: oklch(92.3% 0.020 286.05); border: 2px solid color-mix(in oklab, oklch(64.3% 0.141 281.67) 50%, transparent); border-radius: 16px; padding: 10px 12px; font: 400 16px \"Geist\", sans-serif; transition: border-color 0.2s, background 0.2s; } .ds-input:focus { border-color: oklch(64.3% 0.141 281.67); background: color-mix(in oklab, oklch(10.7% 0.031 279.92) 50%, transparent); outline: none; } .ds-input::placeholder { color: oklch(55% 0.060 283.00); }"
+    },
+    {
+      "name": "Default card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "General content panel, subtle indigo tint.",
+      "html": "<div class=\"ds-card\"><p>Question 3 of 10</p></div>",
+      "css": ".ds-card { background: color-mix(in oklab, oklch(64.3% 0.141 281.67) 5%, transparent); color: oklch(92.3% 0.020 286.05); border: 2px solid color-mix(in oklab, oklch(64.3% 0.141 281.67) 10%, transparent); border-radius: 24px; padding: 16px; font: 400 16px \"Geist\", sans-serif; }"
+    },
+    {
+      "name": "Difficulty badge",
+      "kind": "chip",
+      "refersTo": "badge-difficulty",
+      "description": "All-caps difficulty tag — easy/medium/hard, solid semantic fill with dark text, squircle corners.",
+      "html": "<span class=\"ds-badge-hard\">Hard</span>",
+      "css": ".ds-badge-hard { background: oklch(56% 0.22 28.32); color: oklch(16% 0.09 26.04); border-radius: 12px; corner-shape: superellipse(2); padding: 2px 8px; font: 700 12px \"Geist\", sans-serif; text-transform: uppercase; letter-spacing: 0.1em; }"
+    },
+    {
+      "name": "Streak flame card",
+      "kind": "card",
+      "refersTo": "card-flame",
+      "description": "Momentum callout for hot-streak indicators — distinct from danger red.",
+      "html": "<div class=\"ds-card-flame\"><p>5 in a row</p></div>",
+      "css": ".ds-card-flame { background: color-mix(in oklab, oklch(70% 0.21 40.32) 20%, transparent); color: oklch(92.3% 0.020 286.05); border: 2px solid color-mix(in oklab, oklch(70% 0.21 40.32) 40%, transparent); border-radius: 24px; padding: 16px; font: 400 16px \"Geist\", sans-serif; }"
+    },
+    {
+      "name": "Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Native select on the input recipe — squircle, secondary/50 border to secondary on focus.",
+      "html": "<select class=\"ds-select\"><option>All roles</option></select>",
+      "css": ".ds-select { width: 100%; border: 2px solid color-mix(in oklab, oklch(64.3% 0.141 281.67) 50%, transparent); border-radius: 16px; corner-shape: superellipse(2); padding: 10px 40px 10px 10px; background: color-mix(in oklab, oklch(31.9% 0.117 277.47) 25%, transparent); color: oklch(92.3% 0.020 286.05); font: 400 16px \"Geist\", sans-serif; }"
+    },
+    {
+      "name": "Slider",
+      "kind": "input",
+      "refersTo": "slider",
+      "description": "Range input — background-lighter track, secondary thumb ringed in background, value shown in mono beside the label.",
+      "html": "<input class=\"ds-slider\" type=\"range\" min=\"0\" max=\"100\" value=\"40\">",
+      "css": ".ds-slider { appearance: none; width: 100%; height: 8px; border-radius: 9999px; background: color-mix(in oklab, oklch(31.9% 0.117 277.47) 40%, transparent); accent-color: oklch(64.3% 0.141 281.67); }"
+    },
+    {
+      "name": "Progress",
+      "kind": "meter",
+      "refersTo": "progress",
+      "description": "Determinate bar — secondary/25 track, secondary fill scaled on the x axis from the left; never animates width.",
+      "html": "<div class=\"ds-progress\" role=\"progressbar\" aria-valuenow=\"60\"><div class=\"ds-progress-fill\" style=\"transform: scaleX(0.6)\"></div></div>",
+      "css": ".ds-progress { position: relative; height: 8px; overflow: hidden; border-radius: 9999px; background: color-mix(in oklab, oklch(64.3% 0.141 281.67) 25%, transparent); } .ds-progress-fill { position: absolute; inset: 0; transform-origin: left; border-radius: 9999px; background: oklch(64.3% 0.141 281.67); transition: transform 300ms; }"
+    },
+    {
+      "name": "Segmented picker tile",
+      "kind": "input",
+      "refersTo": "segmented-picker",
+      "description": "Option tile in a radiogroup or tab row — squircle card; selected tile inverts to foreground-darker on background.",
+      "html": "<div role=\"radiogroup\"><button class=\"ds-seg ds-seg-checked\">Default</button><button class=\"ds-seg\">Dyslexic</button></div>",
+      "css": ".ds-seg { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px; border: 2px solid color-mix(in oklab, oklch(64.3% 0.141 281.67) 25%, transparent); border-radius: 16px; corner-shape: superellipse(2); background: transparent; color: oklch(92.3% 0.020 286.05); } .ds-seg-checked { border-color: oklch(62% 0.03 286); background: oklch(62% 0.03 286); color: oklch(20.2% 0.067 278.57); }"
+    },
+    {
+      "name": "Stat tile",
+      "kind": "card",
+      "refersTo": "stat-tile",
+      "description": "Ceremony stat — label over a mono value, tinted by tone (primary, secondary, success, warning, neutral, flame).",
+      "html": "<div class=\"ds-stat\"><p class=\"ds-stat-label\">Score</p><p class=\"ds-stat-value\">1,240</p></div>",
+      "css": ".ds-stat { display: flex; flex-direction: column; align-items: flex-end; gap: 16px; padding: 12px 16px; border: 2px solid oklch(84.8% 0.181 88.31); border-radius: 32px; corner-shape: superellipse(2); background: oklch(84.8% 0.181 88.31); color: oklch(20.2% 0.067 278.57); } .ds-stat-label { font: 700 12px \"Geist\", sans-serif; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; } .ds-stat-value { font: 700 28px \"Geist Mono\", monospace; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Radio group",
+      "kind": "input",
+      "refersTo": "radio-group",
+      "description": "Legend over squircle option tiles; checked tile fills secondary, locked tile fades to 45% with a lock glyph.",
+      "html": "<div role=\"radiogroup\"><label class=\"ds-radio ds-radio-checked\">15s</label><label class=\"ds-radio\">30s</label></div>",
+      "css": ".ds-radio { display: inline-flex; flex-direction: column; align-items: center; padding: 20px; border: 2px solid oklch(31.9% 0.117 277.47); border-radius: 16px; corner-shape: superellipse(2); background: color-mix(in oklab, oklch(31.9% 0.117 277.47) 10%, transparent); cursor: pointer; } .ds-radio-checked { border-color: oklch(64.3% 0.141 281.67); background: oklch(64.3% 0.141 281.67); color: oklch(20.2% 0.067 278.57); font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The oracle's quiet authority",
+    "overview": "Orakl draws its character from classical antiquity — the oracle, the chronicle, the vault — translated into a sparse, modern interface. The atmosphere is one of quiet authority: dark skies, warm golden light, cool indigo depth. It is a serious tool worn lightly, purposeful without ceremony. The design system is dark-first and dynamically sky-aware: a procedural background shifts through eight celestial phases, and semantic colour tokens respond to each phase rather than holding static values.",
+    "keyCharacteristics": [
+      "Dark-first, sky-phase-aware semantic color system",
+      "Squircle (superellipse) shape language across every interactive surface",
+      "Two-family type system: Albertus Nova for ceremony, Geist for work",
+      "Tonal depth over shadows; physical press shadows reserved for buttons/menus",
+      "Accessibility-first: OpenDyslexic swap, WCAG 2.1 AA baseline"
+    ],
+    "rules": [
+      { "name": "Semantic tokens only", "body": "Use semantic colour tokens (background, foreground, surface) rather than scale values in component styles. Semantic tokens respond to theme and sky-phase overrides automatically.", "section": "colors" },
+      { "name": "Squircle requires both properties", "body": "Apply corner-shape-squircle alongside rounded-2xl or rounded-3xl on every interactive element. rounded-* alone produces standard circular corners.", "section": "shapes" },
+      { "name": "Tonal depth over shadows", "body": "Prefer lighter surface tokens over shadows for hierarchy. Reach for shadow-button only for physical interactivity signals.", "section": "elevation" },
+      { "name": "FABs are squircles", "body": "Floating action buttons use rounded-2xl + corner-shape-squircle at their fixed size, never rounded-full. One shape language for every action, floating or inline.", "section": "shapes" },
+      { "name": "Font variables, not literals", "body": "Route every font reference through the --albertus-nova / --geist / --geist-mono CSS variables so the OpenDyslexic accessibility override applies everywhere automatically.", "section": "typography" }
+    ],
+    "dos": [
+      "Do use semantic colour tokens (background, foreground, surface) rather than scale values in component styles.",
+      "Do use Albertus Nova for display headings and score reveals.",
+      "Do apply corner-shape-squircle alongside rounded-2xl or rounded-3xl on every interactive element.",
+      "Do prefer tonal depth over shadows for hierarchy.",
+      "Do write copy in sentence case and maintain a spartan, professional tone.",
+      "Do wire every new navigable route into PAGE_CONFIG before opening a PR.",
+      "Do route every font reference through the CSS variables so the OpenDyslexic override applies everywhere."
+    ],
+    "donts": [
+      "Don't design toward generic party-quiz visual language (loud saturated flat colours, cartoonish shapes, exclamation-heavy copy — the Kahoot look).",
+      "Don't use the featured (violet) colour for functional actions.",
+      "Don't hardcode phase-specific values directly in component styles.",
+      "Don't animate layout properties for micro-interactions — use transform and opacity.",
+      "Don't use sharp (rounded-none) on player-facing or game-play buttons.",
+      "Don't omit role, aria-label, or onkeydown on custom interactive elements."
+    ]
+  }
+}

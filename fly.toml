@@ -1,0 +1,25 @@
+app = "orakl"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "Dockerfile"
+  # Build-level feature flags (map #859, decision 5) are passed here and
+  # nowhere else — a build-tier feature has no runtime switch, so an unlisted
+  # flag is absent from the production bundle. SIGNUP_ROLE_SELECTION stays out:
+  # curator is a granted role (docs/flows/ADMIN.md).
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  DATABASE_ENV = "prod"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en" %sveltekit.attributes% class=" scrollbar-none">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orakl</title>
+    <script nonce="%sveltekit.nonce%">(() => { const el = document.documentElement; const mode = el.dataset.themeMode; if (!mode) return; if (mode === 'system') { const dark = window.matchMedia('(prefers-color-scheme: dark)').matches; const theme = dark ? 'dark' : 'light'; el.dataset.effectiveTheme = theme; el.dataset.skyPhase = dark ? 'night' : 'morning'; // biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API is async; inline theme script must be sync
+document.cookie = `orakl-system-pref=${theme}; path=/; max-age=31536000; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`; } else if (mode === 'dynamic') { const L = (el.dataset.dynamicLookup || '').split(','); const e = (L[new Date().getHours()] || 'night:dark').split(':'); el.dataset.skyPhase = e[0]; el.dataset.effectiveTheme = e[1]; } })();</script>
+    %sveltekit.head%
+    <meta name="orakl-analytics-slot" />
+  </head>
+  <body class="bg-background text-foreground selection:bg-primary selection:text-background font-serif isolate" data-sveltekit-preload-data="hover">
+    <div>%sveltekit.body%</div>
+  </body>
+</html>

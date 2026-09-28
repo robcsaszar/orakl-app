@@ -1,0 +1,33 @@
+app = "orakl"
+primary_region = "lhr"
+
+# Review-app variant of fly.toml (used by .github/workflows/fly-review.yml):
+# identical, plus the SVELTE_DEV_META build arg so the feedback widget can
+# name Svelte components. Its API is fly.review.api.toml. Keep the three files
+# in step.
+[build]
+  dockerfile = "Dockerfile"
+  [build.args]
+    SVELTE_DEV_META = "1"
+    # Build-level flags (map #859): review apps are where an unshipped feature
+    # gets looked at, so they build with the work-in-progress ones on. Prod
+    # (fly.toml) passes none, so every one of them is excluded there.
+    BUILD_FEATURE_SKY = "true"
+    BUILD_FEATURE_PLAYER_EMOTES = "true"
+    BUILD_FEATURE_WIP_QUESTION_TYPES = "true"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  DATABASE_ENV = "prod"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

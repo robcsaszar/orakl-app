@@ -1,0 +1,24 @@
+::view-transition-old(root) {
+  animation: slide-out-left 0.3s ease-in-out;
+}
+
+::view-transition-new(root) {
+  animation: slide-in-right 0.3s ease-in-out;
+}
+
+*:not(.scrollbar-none) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-foreground) var(--color-background);
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-foreground);
+}
+
+[x-cloak] {
+  display: none !important;
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>%sveltekit.error.message%</title>
+    <style>
+      body {
+        background: #141717;
+        color: #e0e8ea;
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        text-align: center;
+        gap: 0.5rem;
+      }
+      h1 {
+        font-size: 1rem;
+        font-weight: 600;
+        opacity: 0.6;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>%sveltekit.status%</h1>
+    <p>%sveltekit.error.message%</p>
+  </body>
+</html>
