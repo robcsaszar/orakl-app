@@ -1,0 +1,125 @@
+name: Deploy branch preview
+
+# A PR labelled `deploy:preview` gets a web app, pr-<n>-robcsaszar-orakl-app,
+# and a backend for it to forward to:
+#   - `Backend: pr-<m>-robcsaszar-orakl-api` in the PR body → that backend
+#     preview of the private repository (a branch under test);
+#   - otherwise its own backend, pr-<n>-robcsaszar-orakl-app-api, started from
+#     the image production runs, on the dev database.
+# Both are destroyed when the PR closes or loses the label. Same-repository
+# PRs only: fork PRs never receive secrets.
+on:
+  pull_request:
+    types: [labeled, unlabeled, synchronize, edited, closed]
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_PREVIEW_TOKEN }}
+  FLY_ORG: personal
+  WEB_APP: pr-${{ github.event.number }}-robcsaszar-orakl-app
+  OWN_API_APP: pr-${{ github.event.number }}-robcsaszar-orakl-app-api
+
+jobs:
+  preview:
+    if: |
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'deploy:preview') &&
+      (github.event.action != 'unlabeled') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'deploy:preview')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: preview-${{ github.event.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Pick the backend
+        id: backend
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          named=$(printf '%s\n' "$BODY" | sed -nE 's/^Backend: (pr-[0-9]+-robcsaszar-orakl-api)[[:space:]]*$/\1/p' | head -1)
+          if [ -n "$named" ]; then
+            echo "app=$named" >> "$GITHUB_OUTPUT"
+            echo "own=false" >> "$GITHUB_OUTPUT"
+            flyctl apps destroy "$OWN_API_APP" --yes 2>/dev/null || true
+          else
+            echo "app=$OWN_API_APP" >> "$GITHUB_OUTPUT"
+            echo "own=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy its own backend from the production image
+        if: steps.backend.outputs.own == 'true'
+        run: |
+          image=$(flyctl image show -a orakl-api --json | jq -r '.[0] | "\(.Registry)/\(.Repository):\(.Tag)"')
+          flyctl apps create "$OWN_API_APP" --org "$FLY_ORG" || true
+          flyctl secrets set --stage -a "$OWN_API_APP" \
+            TURSO_DEV_URL="${{ secrets.TURSO_DEV_URL }}" \
+            TURSO_DEV_AUTH_TOKEN="${{ secrets.TURSO_DEV_AUTH_TOKEN }}" \
+            HMAC_SECRET="${{ secrets.PREVIEW_HMAC_SECRET }}"
+          cat > preview-api.toml <<EOF
+          app = "$OWN_API_APP"
+          primary_region = "lhr"
+          [env]
+            NODE_ENV = "production"
+            API_PORT = "3001"
+            HOST = "::"
+            DATABASE_ENV = "dev"
+          [[vm]]
+            size = "shared-cpu-1x"
+            memory = "512mb"
+          EOF
+          flyctl deploy --config preview-api.toml --image "$image" --ha=false
+          flyctl scale count 1 -a "$OWN_API_APP" --yes
+
+      # One machine per preview app, replaced in place on every deploy.
+      - name: Deploy the web app
+        id: deploy
+        run: |
+          flyctl apps create "$WEB_APP" --org "$FLY_ORG" || true
+          flyctl secrets set --stage -a "$WEB_APP" \
+            ORIGIN="https://$WEB_APP.fly.dev" \
+            API_ORIGIN="http://${{ steps.backend.outputs.app }}.internal:3001"
+          flyctl deploy --remote-only --config fly.review.toml -a "$WEB_APP" --ha=false
+          flyctl scale count 1 -a "$WEB_APP" --yes
+          echo "url=https://$WEB_APP.fly.dev" >> "$GITHUB_OUTPUT"
+
+      - name: Comment the preview URL
+        uses: actions/github-script@v7
+        env:
+          BACKEND: ${{ steps.backend.outputs.app }}
+        with:
+          script: |
+            const marker = "<!-- fly-preview-url -->";
+            const body = `${marker}\nPreview: ${{ steps.deploy.outputs.url }}\nBackend: \`${process.env.BACKEND}\``;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const mine = comments.find((c) => c.body.includes(marker));
+            if (mine) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
+
+  cleanup:
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository && (
+        github.event.action == 'closed' ||
+        (github.event.action == 'unlabeled' && github.event.label.name == 'deploy:preview')
+      )
+    runs-on: ubuntu-latest
+    concurrency:
+      group: preview-${{ github.event.number }}
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Destroy the preview apps
+        run: |
+          flyctl apps destroy "$WEB_APP" --yes || true
+          flyctl apps destroy "$OWN_API_APP" --yes || true

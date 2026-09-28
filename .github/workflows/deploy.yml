@@ -1,8 +1,10 @@
 name: Deploy
 
-# Deploys the web app to the `orakl` Fly app. FLY_API_TOKEN is a deploy token
-# scoped to that app alone.
+# Deploys the web app to the `orakl` Fly app on every push to main (a merged
+# sync PR). FLY_API_TOKEN is a deploy token scoped to that app alone.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

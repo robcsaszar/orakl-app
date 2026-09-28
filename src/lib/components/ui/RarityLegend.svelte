@@ -1,5 +1,6 @@
 <script lang="ts">
-import { RARITY_CHIP_CLASSES, RARITY_LABELS, RARITY_ORDER } from "@orakl/shared";
+import { RARITY_LABELS, RARITY_ORDER } from "@orakl/shared";
+import { RARITY_CHIP_CLASSES } from "$lib/rarity-classes";
   
   import { cn } from "tailwind-variants";
   import Icon from "./Icon.svelte";

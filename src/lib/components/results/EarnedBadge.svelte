@@ -1,5 +1,6 @@
 <script lang="ts">
-import { BADGES, RARITY_CHIP_CLASSES, RARITY_LABELS } from "@orakl/shared";
+import { BADGES, RARITY_LABELS } from "@orakl/shared";
+import { RARITY_CHIP_CLASSES } from "$lib/rarity-classes";
 import type { BadgeId, Rarity } from "@orakl/shared";
   import Icon from "$lib/components/ui/Icon.svelte";
   
