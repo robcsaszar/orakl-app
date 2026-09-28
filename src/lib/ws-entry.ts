@@ -13,15 +13,20 @@ export const PROXIED_WS_PATHS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The web server's single upgrade listener: a listed path is proxied to the
- * API service at `apiOrigin`; any other upgrade is dropped.
+ * Proxies upgrades on a listed path to the API service at `apiOrigin`. Any
+ * other upgrade is dropped, unless `dropOthers` is false because another
+ * listener owns it (Vite's HMR socket in dev).
  */
-export function attachWsEntry(httpServer: Server, apiOrigin: string): void {
+export function attachWsEntry(
+  httpServer: Server,
+  apiOrigin: string,
+  dropOthers = true,
+): void {
   const target = new URL(apiOrigin);
   httpServer.on("upgrade", (req, socket, head) => {
     const path = (req.url ?? "").split("?")[0];
     if (!PROXIED_WS_PATHS.has(path)) {
-      socket.destroy();
+      if (dropOthers) socket.destroy();
       return;
     }
     proxyUpgrade(req, socket as Duplex, head, target);
