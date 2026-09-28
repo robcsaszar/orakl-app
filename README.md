@@ -45,6 +45,10 @@ pnpm dev
 
 [`DESIGN.md`](DESIGN.md) is the design system: tokens, components, and the principles behind them. Read it before you change the interface.
 
+## Contributing
+
+Bug reports and ideas are welcome as [issues](https://github.com/robcsaszar/orakl-app/issues). Pull requests are not accepted: changes land from the private Orakl repository, which also runs the engine this client depends on.
+
 ## License
 
 [AGPL-3.0-only](LICENSE).

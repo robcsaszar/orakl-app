@@ -1,0 +1,193 @@
+name: Label lock
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  label:
+    types: [created, edited, deleted]
+  # Sync: make the repo's labels match .github/labels.yml exactly.
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/labels.yml]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    steps:
+      - name: Check LABEL_LOCK
+        id: gate
+        env:
+          LABEL_LOCK: ${{ vars.LABEL_LOCK }}
+        run: |
+          if [ "$LABEL_LOCK" = "true" ]; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=false" >> "$GITHUB_OUTPUT"
+            echo "Label lock is off (LABEL_LOCK is not true). Nothing was synced." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Get code
+        if: steps.gate.outputs.on == 'true'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/labels.yml
+
+      - name: Sync labels to the allowlist
+        if: steps.gate.outputs.on == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            const want = [
+              ...fs
+                .readFileSync(".github/labels.yml", "utf8")
+                .matchAll(/^- name: (.+)\n\s+color: "(.+)"\n\s+description: "(.*)"$/gm),
+            ].map(([, name, color, description]) => ({ name: name.trim(), color, description }));
+            const byName = new Map(want.map((l) => [l.name.toLowerCase(), l]));
+            const have = await github.paginate(github.rest.issues.listLabelsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const repo = { owner: context.repo.owner, repo: context.repo.repo };
+            const lines = [];
+            for (const label of have) {
+              const target = byName.get(label.name.toLowerCase());
+              if (!target) {
+                await github.rest.issues.deleteLabel({ ...repo, name: label.name });
+                lines.push(`deleted "${label.name}"`);
+              } else if (
+                label.name !== target.name ||
+                label.color.toLowerCase() !== target.color.toLowerCase() ||
+                (label.description ?? "") !== target.description
+              ) {
+                await github.rest.issues.updateLabel({ ...repo, name: label.name, new_name: target.name, color: target.color, description: target.description });
+                lines.push(`updated "${target.name}"`);
+              }
+              byName.delete(label.name.toLowerCase());
+            }
+            for (const target of byName.values()) {
+              await github.rest.issues.createLabel({ ...repo, ...target });
+              lines.push(`created "${target.name}"`);
+            }
+            await core.summary.addRaw(lines.length ? lines.join("\n") : "Labels already match the allowlist.").write();
+
+  guard:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]' && github.event_name != 'workflow_dispatch' && github.event_name != 'push'
+    steps:
+      - name: Check LABEL_LOCK
+        id: gate
+        env:
+          LABEL_LOCK: ${{ vars.LABEL_LOCK }}
+        run: |
+          if [ "$LABEL_LOCK" = "true" ]; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=false" >> "$GITHUB_OUTPUT"
+            echo "Label lock is off (LABEL_LOCK is not true). Nothing was checked." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Get code
+        if: steps.gate.outputs.on == 'true'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/labels.yml
+
+      - name: Guard label allowlist
+        if: steps.gate.outputs.on == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            // GitHub label names are unique case-insensitively; compare lower-cased.
+            const allowed = new Set(
+              [...fs.readFileSync(".github/labels.yml", "utf8").matchAll(/^- name: (.+)$/gm)].map(
+                (m) => m[1].trim().toLowerCase(),
+              ),
+            );
+            const { eventName, payload } = context;
+            const label = payload.label.name;
+            const listed = allowed.has(label.toLowerCase());
+            // A label already gone (removed or deleted by an earlier run) is not a failure.
+            const ignore404 = async (call) => {
+              try {
+                await call();
+                return true;
+              } catch (err) {
+                if (err.status !== 404) throw err;
+                return false;
+              }
+            };
+            // Inside a code span so the name can never render as a mention.
+            const quoted = `\`${label.replace(/`/g, "")}\``;
+
+            if (eventName === "issues" || eventName === "pull_request") {
+              const issue_number = payload.issue?.number ?? payload.pull_request.number;
+              if (!listed) {
+                const removed = await ignore404(() =>
+                  github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number,
+                    name: label,
+                  }),
+                );
+                const deleted = await ignore404(() =>
+                  github.rest.issues.deleteLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label,
+                  }),
+                );
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number,
+                  body: `This repository keeps a fixed label set; the allowlist is \`.github/labels.yml\`. The label ${quoted} was removed and deleted.`,
+                });
+                await core.summary
+                  .addRaw(
+                    `Event: ${eventName} labeled. Label "${label}": stray. Action: ${removed ? `removed from #${issue_number}` : "already off the issue"}, ${deleted ? "deleted" : "already deleted"}, commented.`,
+                  )
+                  .write();
+              } else {
+                await core.summary
+                  .addRaw(`Event: ${eventName} labeled. Label "${label}": listed. Nothing reverted.`)
+                  .write();
+              }
+            } else if (eventName === "label") {
+              if (context.payload.action === "created") {
+                if (!listed) {
+                  await ignore404(() =>
+                    github.rest.issues.deleteLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                    }),
+                  );
+                  await core.summary
+                    .addRaw(`Event: label created. Label "${label}": stray. Action: deleted.`)
+                    .write();
+                } else {
+                  await core.summary
+                    .addRaw(`Event: label created. Label "${label}": listed. Nothing reverted.`)
+                    .write();
+                }
+              } else {
+                await core.summary
+                  .addRaw(
+                    `Event: label ${context.payload.action}. Label "${label}": ${listed ? "listed" : "stray"}. Nothing reverted.`,
+                  )
+                  .write();
+              }
+            }

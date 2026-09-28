@@ -1,0 +1,37 @@
+# Label allowlist. The lock workflow deletes what is not here; its sync job (manual, or on a change to this file on main) also creates what is missing.
+- name: meridian:map
+  color: "01418e"
+  description: "Meridian map: one per effort, tickets are its sub-issues"
+- name: meridian:decision
+  color: "8080e0"
+  description: "Decision only the owner can make; a person must be present"
+- name: meridian:scout
+  color: "8080e0"
+  description: "Evidence from the codebase or the world; an agent runs it alone"
+- name: meridian:prototype
+  color: "8080e0"
+  description: "Throwaway prototype the owner reacts to; a person must be present"
+- name: meridian:task
+  color: "8080e0"
+  description: "Work that must happen before a decision; mode label says who"
+- name: meridian:slice
+  color: "5fb3c9"
+  description: "Tracer-bullet slice of the route; mode label says who"
+- name: mode:agent
+  color: "008f54"
+  description: "An unattended run may take it (task and slice only)"
+- name: mode:human
+  color: "ffc234"
+  description: "Needs a person present (task and slice only)"
+- name: deploy:preview
+  color: "ff6218"
+  description: "Create a PR preview environment."
+- name: source:widget
+  color: "6c6d94"
+  description: "Opened by the in-app feedback widget"
+- name: dependencies
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
+- name: javascript
+  color: "168700"
+  description: "Pull requests that update javascript code"
