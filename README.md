@@ -47,7 +47,7 @@ pnpm dev
 
 ## Contributing
 
-Bug reports and ideas are welcome as [issues](https://github.com/robcsaszar/orakl-app/issues). Pull requests are not accepted: changes land from the private Orakl repository, which also runs the engine this client depends on.
+Bug reports and ideas are welcome as [issues](https://github.com/robcsaszar/orakl-app/issues). Pull requests are not accepted.
 
 ## License
 
