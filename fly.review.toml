@@ -1,10 +1,9 @@
 app = "orakl"
 primary_region = "lhr"
 
-# Review-app variant of fly.toml (used by .github/workflows/fly-review.yml):
-# identical, plus the SVELTE_DEV_META build arg so the feedback widget can
-# name Svelte components. Its API is fly.review.api.toml. Keep the three files
-# in step.
+# Preview variant of fly.toml: identical, plus the SVELTE_DEV_META build arg
+# so the feedback widget can name Svelte components. Keep the two in step.
+# Every preview deploy names its own app with `-a`; `app` above is never used.
 [build]
   dockerfile = "Dockerfile"
   [build.args]
