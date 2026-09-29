@@ -34,3 +34,8 @@ playwright.local.config.ts
 
 # ShipStudio metadata
 .shipstudio/
+
+# local tool state (headroom, Serena, graft search rule)
+.claude/.headroom_wrap_*
+.serena/
+.ignore
