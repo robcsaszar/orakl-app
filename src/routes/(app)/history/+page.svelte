@@ -216,13 +216,13 @@ import type { Rarity } from "@orakl/shared";
 
   <!-- Unified badge tally: solo + multiplayer honours, above the tabs (US #4) -->
   {#if data.uiFlags.BADGE_DISPLAY === true && earnedBadges.length > 0}
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-4">
       <h2 class="text-small font-sans font-bold uppercase tracking-widest text-foreground-darker">
         Badges earned
       </h2>
-      <div class="flex flex-wrap gap-2">
+      <div class="grid gap-3 sm:grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
         {#each earnedBadges as badge (badge.id)}
-          <EarnedBadge id={badge.id} count={badge.count} rarity={badge.bestRarity} />
+          <EarnedBadge form="extended" id={badge.id} count={badge.count} rarity={badge.bestRarity} />
         {/each}
       </div>
       <p class="text-xs text-foreground-darker">

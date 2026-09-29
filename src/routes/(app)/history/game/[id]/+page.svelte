@@ -83,8 +83,8 @@ import { percent, toIsoTimestamp } from "@orakl/shared";
       </div>
 
       {#if data.uiFlags.BADGE_DISPLAY === true && data.badges.length > 0}
-        <div class="flex flex-col gap-2">
-          <h2 class="text-sm font-bold uppercase tracking-widest text-foreground-darker">
+        <div class="flex flex-col gap-4">
+          <h2 class="text-small font-sans font-bold uppercase tracking-widest text-foreground-darker">
             Badges earned
           </h2>
           <div class="flex flex-wrap gap-2">
