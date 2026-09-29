@@ -57,12 +57,12 @@ import type { BadgeAward } from "@orakl/shared";
         | "easy"
         | "medium"
         | "hard";
-      // `faster` drives the faster-than-most badge preview (best % beaten on a
-      // question); blank = no well-sampled question this run.
-      const fasterParam = params.get("faster");
-      const fasterThanMaxPercent = fasterParam === null || fasterParam === ""
-        ? null
-        : Math.max(0, Math.min(100, parseInt(fasterParam, 10)));
+      // `fastcount` drives the Wing-footed badge preview (number of answers that
+      // beat most earlier solvers); blank = none.
+      const fasterParam = params.get("fastcount");
+      const fastAnswerCount = fasterParam === null || fasterParam === ""
+        ? 0
+        : Math.max(0, parseInt(fasterParam, 10) || 0);
 
       // One per-question model feeds both the review list and finalData.results.
       const model = Array.from({ length: qtotal }, (_, i) => {
@@ -130,7 +130,7 @@ import type { BadgeAward } from "@orakl/shared";
             maxStreak: streakParam,
             timerDurationMs,
             timeToAnswerAvgMs,
-            fasterThanMaxPercent,
+            fastAnswerCount,
             results: finalResults,
           });
 

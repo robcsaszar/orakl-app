@@ -1,14 +1,17 @@
 import type { Rarity } from "@orakl/shared";
 
 /**
- * Canonical tier colours for every surface that renders the rarity scale
- * (badge chips, legends), so the key always matches the badges it explains.
+ * Tier → metal for every surface that renders the rarity scale (badge obols,
+ * legend): common bronze, rare silver, legendary gold, exotic platinum. Each
+ * entry sets the `--hi/--lt/--md/--dk/--deep/--ink` stops the obol paints with.
  * Client-side: Tailwind only generates classes it finds in this repo's source.
  */
-export const RARITY_CHIP_CLASSES: Record<Rarity, string> = {
-  common: "border-zinc-500/40 bg-zinc-500/10 text-zinc-200",
-  rare: "border-blue-500/40 bg-blue-500/10 text-blue-200",
-  legendary: "border-violet-500/50 bg-violet-500/10 text-violet-200",
+export const RARITY_METAL_CLASSES: Record<Rarity, string> = {
+  common:
+    "metal-bronze [--hi:var(--color-bronze-lighter)] [--lt:var(--color-bronze-light)] [--md:var(--color-bronze)] [--dk:var(--color-bronze-dark)] [--deep:var(--color-bronze-darker)] [--ink:var(--color-bronze-light)]",
+  rare: "metal-silver [--hi:var(--color-silver-lightest)] [--lt:var(--color-silver-light)] [--md:var(--color-silver)] [--dk:var(--color-silver-dark)] [--deep:var(--color-silver-darker)] [--ink:var(--color-silver-light)]",
+  legendary:
+    "metal-gold [--hi:var(--color-gold-lightest)] [--lt:var(--color-gold-light)] [--md:var(--color-gold)] [--dk:var(--color-gold-dark)] [--deep:var(--color-gold-darker)] [--ink:var(--color-gold-light)]",
   exotic:
-    "border-gold bg-gold/20 text-gold-lighter shadow-[0_0_12px_-2px] shadow-gold/40",
+    "metal-platinum [--hi:var(--color-platinum-lightest)] [--lt:var(--color-platinum-light)] [--md:var(--color-platinum)] [--dk:var(--color-platinum-dark)] [--deep:var(--color-platinum-darker)] [--ink:var(--color-platinum-lighter)]",
 };

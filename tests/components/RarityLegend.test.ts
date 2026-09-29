@@ -15,6 +15,19 @@ describe("RarityLegend", () => {
       expect(p & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
+  it("shows the four metals, no blue or violet", () => {
+    const { container } = render(RarityLegend, { props: { id: "legend" } });
+    for (const m of ["bronze", "silver", "gold", "platinum"])
+      expect(container.querySelector(`.metal-${m}`)).not.toBeNull();
+    expect(container.innerHTML).not.toMatch(/blue|violet/);
+  });
+
+  it("exotic swatch carries the opal ring; others do not", () => {
+    const { container } = render(RarityLegend, { props: { id: "legend" } });
+    expect(container.querySelector(".metal-platinum .opal")).not.toBeNull();
+    expect(container.querySelectorAll(".opal")).toHaveLength(1);
+  });
+
   it("sits behind a description toggle wired to the given id", () => {
     render(RarityLegend, { props: { id: "trials-rarity-legend" } });
     const toggle = screen.getByRole("button", { name: /toggle description/i });

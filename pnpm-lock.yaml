@@ -29,11 +29,11 @@ importers:
         specifier: workspace:*
         version: link:packages/design-tokens
       '@orakl/protocol':
-        specifier: ^0.1.1
-        version: 0.1.1(effect@3.22.1)
+        specifier: ^0.2.0
+        version: 0.2.0(effect@3.22.1)
       '@orakl/shared':
-        specifier: ^0.1.0
-        version: 0.1.0(effect@3.22.1)
+        specifier: ^0.2.0
+        version: 0.2.0(effect@3.22.1)
       '@sentry/sveltekit':
         specifier: ^10.73.0
         version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@sveltejs/kit@2.70.3(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.0(svelte@5.57.0)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)))(svelte@5.57.0)(typescript@6.0.3)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)))(rollup@4.63.1)(supports-color@7.2.0)(svelte@5.57.0)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13))
@@ -150,8 +150,8 @@ importers:
   packages/client-core:
     dependencies:
       '@orakl/protocol':
-        specifier: ^0.1.1
-        version: 0.1.1(effect@3.22.1)
+        specifier: ^0.2.0
+        version: 0.2.0(effect@3.22.1)
     devDependencies:
       effect:
         specifier: ^3.22.1
@@ -635,18 +635,13 @@ packages:
     resolution: {integrity: sha512-eSYWTm620tTk45EKSedaUL8MFYI8hW164hIXsgIHyxu3VobUB3fFCu5t0hQby6OoWRPsG1KkKUG2M5UadiLiVg==}
     engines: {node: '>=14'}
 
-  '@orakl/protocol@0.1.0':
-    resolution: {integrity: sha512-W+0omxDFWyb6KL3HPeT/B/p5pIILnegKLdB7xy4xul4avM5vxSVvD2fIUSBeueFoP+GBcLFUDvtFe1PF1pk8BA==}
+  '@orakl/protocol@0.2.0':
+    resolution: {integrity: sha512-bi8DtZ/uMWfKqbyGJGT/BHXUrUZyiPh2GALLPoNkRO6fiLnIKsfgd1IH2W/Q9G86VfS0WRMAfNs4/xoxxOOnUw==}
     peerDependencies:
       effect: ^3.22.1
 
-  '@orakl/protocol@0.1.1':
-    resolution: {integrity: sha512-DdTouxSl7/TmBpM93TJvqvxz1dwzBMC4PKg5jXyrZbDTZNL5XjgpYj0c+djUEMOww6jDV6kNChyksoDzzdnS9Q==}
-    peerDependencies:
-      effect: ^3.22.1
-
-  '@orakl/shared@0.1.0':
-    resolution: {integrity: sha512-VX1z3zImEy6UlfpVWaogkrgD7N5GTCotVwlXX/hf8Fzh/9CQ5JS36Ke4wi7Z6AYhairNpw6njTwn58nRTJQ/Ag==}
+  '@orakl/shared@0.2.0':
+    resolution: {integrity: sha512-n23bUir7hEunJMxezGAYNfjrhhNFKyt+M52i2qZ1AFhM2Uewl9lchi+fhQvGGb+emcf1bzovD10I+yP8axkLcg==}
     peerDependencies:
       effect: ^3.22.1
 
@@ -3436,17 +3431,13 @@ snapshots:
 
   '@opentelemetry/semantic-conventions@1.43.0': {}
 
-  '@orakl/protocol@0.1.0(effect@3.22.1)':
+  '@orakl/protocol@0.2.0(effect@3.22.1)':
     dependencies:
       effect: 3.22.1
 
-  '@orakl/protocol@0.1.1(effect@3.22.1)':
+  '@orakl/shared@0.2.0(effect@3.22.1)':
     dependencies:
-      effect: 3.22.1
-
-  '@orakl/shared@0.1.0(effect@3.22.1)':
-    dependencies:
-      '@orakl/protocol': 0.1.0(effect@3.22.1)
+      '@orakl/protocol': 0.2.0(effect@3.22.1)
       date-fns: 4.4.0
       effect: 3.22.1
 

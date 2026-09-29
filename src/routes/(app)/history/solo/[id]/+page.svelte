@@ -96,6 +96,9 @@ import { percent } from "@orakl/shared";
 
     <div class="flex flex-col gap-6 group">
       {#if showBadges && data.badges.length > 0}
+        <h2 class="text-small font-sans font-bold uppercase tracking-widest text-foreground-darker">
+          Badges earned
+        </h2>
         <p class="text-foreground-darker">
           Well done! You earned <span class="text-foreground font-bold">{data.badges.length} badge{data.badges.length > 1 ? "s" : ""}</span> for your performance in this trial.
         </p>

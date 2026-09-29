@@ -168,7 +168,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
       <div class="flex flex-col gap-6 group">
         {#if showBadges}
           {#if session.myBadges.length > 0}
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-4">
               <p class="text-foreground-darker">
                 You earned <span class="text-foreground font-bold">{session.myBadges.length} badge{session.myBadges.length > 1 ? "s" : ""}</span> for your performance in this quiz.
               </p>
@@ -181,8 +181,8 @@ import type { BadgeId, Rarity } from "@orakl/shared";
                   />
                 {/each}
               </div>
+              <RarityLegend id="quiz-results-rarity-legend" />
             </div>
-            <RarityLegend id="quiz-results-rarity-legend" />
             {#if data.isAnonymousPlayer && !data.claimed}
               <p class="text-foreground-darker text-sm">
                 Sign in to keep these badges. They are lost when you leave.
