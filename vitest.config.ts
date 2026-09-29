@@ -28,6 +28,7 @@ export default defineConfig({
       "e2e/**",
       "tests/polar-sandbox/**",
       "packages/**",
+      "apps/**",
     ],
     testTimeout: 15000,
     environment: "jsdom",
