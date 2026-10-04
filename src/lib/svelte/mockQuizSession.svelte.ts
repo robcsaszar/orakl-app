@@ -1,5 +1,9 @@
 import { selectMatchItem as selectMatchItemHelper } from "@orakl/client-core";
-import type { GameAnswerRecord, StreakFlourish } from "@orakl/protocol";
+import type {
+  GameAnswerRecord,
+  QuestionRating,
+  StreakFlourish,
+} from "@orakl/protocol";
 import type {
   AvatarGroup,
   BadgeAward,
@@ -11,12 +15,21 @@ import type {
 import { findPlayer, avatars as staticAvatars } from "@orakl/shared";
 import { type AdvanceMode, GAME } from "../../../data/game.settings.js";
 import { MOCK_AVATAR_ID } from "../mock/fixtures.js";
+import {
+  ackRating,
+  type RatingState,
+  ratingFor,
+  tapRating,
+} from "../question-rating-state.js";
 import type { GameQuestion } from "../types/game.types.js";
 import type {
   FeedbackStatus,
   PlayerData,
   PlayerSessionView,
 } from "./player-session-view.js";
+
+/** Bank id the fixture's rating state is keyed on. */
+const MOCK_QUESTION_ID = "mock-question";
 
 /** Dev-only mock session (ADR 0010). `implements PlayerSessionView` — the
  *  compiler, not a runtime cast, keeps this in lockstep with QuizSession's
@@ -79,6 +92,10 @@ export class MockQuizSession implements PlayerSessionView {
   roleSelectionTimeRemaining = $state(20);
   roleSelectionLocked = $state(false);
   roleSubmitted = $state(false);
+
+  // ── Question rating ──
+  rating = $state<RatingState>(ratingFor(MOCK_QUESTION_ID));
+  canRate = $derived(this.isLoggedIn && !this.isObserver && this.showingResult);
 
   // ── Avatars ──
   dbAvatars = $state<DbAvatar[]>([]);
@@ -168,6 +185,17 @@ export class MockQuizSession implements PlayerSessionView {
     this.feedbackStatus = "pending";
   }
 
+  /** Goes pending, then acks ok on the next timeout so the fixture shows ✓. */
+  rate(rating: QuestionRating) {
+    const r = tapRating(this.rating, rating);
+    this.rating = r.state;
+    if (!r.send) return;
+    setTimeout(() => {
+      const acked = ackRating(this.rating, MOCK_QUESTION_ID, true);
+      this.rating = acked.state;
+    }, 0);
+  }
+
   selectMatchItem(column: "left" | "right", item: string) {
     if (this.answered || this.isObserver) return;
     const result = selectMatchItemHelper(
@@ -229,6 +257,8 @@ export class MockQuizSession implements PlayerSessionView {
   }
 
   clearStoredData(): void {}
+
+  async leaveLobby(): Promise<void> {}
 
   async connect(_nicknameArg: string): Promise<void> {}
 

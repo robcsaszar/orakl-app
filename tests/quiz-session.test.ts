@@ -1,6 +1,6 @@
 /**
  * QuizSession unit tests — drive state via the injectable PlayerSessionFactory
- * seam; no real SSE, no network.
+ * seam; no real socket, no network.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -401,6 +401,41 @@ describe("QuizSession (injectable factory)", () => {
       send({ type: "lobby:approved", midGame: false });
       expect(session.membership).toBe("active");
       expect(session.isReconnecting).toBe(false);
+    });
+  });
+
+  describe("lobby:update while pending", () => {
+    const roster = (status: string, role = "player") => ({
+      type: "lobby:update",
+      players: [
+        { id: "p1", nickname: "Me", avatar: "", score: 0, status, role },
+      ],
+      accessMode: "invite-only",
+      maxPlayers: null,
+    });
+
+    beforeEach(() => {
+      session.playerId = "p1";
+      session.membership = "pending";
+      session.isReconnecting = true;
+    });
+
+    it("recovers approval when the own row is active", () => {
+      send(roster("active"));
+      expect(session.membership).toBe("active");
+      expect(session.phase).toBe("lobby");
+      expect(session.isReconnecting).toBe(false);
+    });
+
+    it("stays pending while the own row is pending", () => {
+      send(roster("pending"));
+      expect(session.membership).toBe("pending");
+    });
+
+    it("seats an approved observer as observer", () => {
+      send(roster("active", "observer"));
+      expect(session.isObserver).toBe(true);
+      expect(session.selectedRole).toBe("observer");
     });
   });
 
@@ -843,6 +878,117 @@ describe("QuizSession (injectable factory)", () => {
       session.selectAnswer("a1");
       expect(session.answered).toBe(false);
       expect(stub.send).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── question rating at the reveal ───────────────────────────────────────────
+  describe("question rating", () => {
+    function question(questionId: string) {
+      send({
+        type: "game:question",
+        questionId,
+        questionIndex: 0,
+        totalQuestions: 2,
+        text: "Q",
+        categoryId: "c",
+        questionType: "text_choice",
+        answers: [{ id: "a1", text: "A" }],
+        timeRemaining: 10,
+        serverTs: 0,
+      });
+    }
+    function reveal(withStreak: boolean) {
+      send({
+        type: "game:round-result",
+        correctAnswerId: "a1",
+        players: [],
+        playerAnswers: {},
+        ...(withStreak ? { yourStreak: { streak: 1, flourish: null } } : {}),
+      });
+    }
+
+    it("sends player:rate with the question id on a tap", () => {
+      question("q-1");
+      reveal(true);
+      session.rate("up");
+      expect(stub.send).toHaveBeenCalledWith({
+        type: "player:rate",
+        questionId: "q-1",
+        rating: "up",
+      });
+      expect(session.rating.pending).toBe("up");
+    });
+
+    it("queues a second tap before the ack and sends it after", () => {
+      question("q-1");
+      reveal(true);
+      session.rate("up");
+      session.rate("down");
+      expect(stub.send).toHaveBeenCalledTimes(1);
+      send({ type: "player:rate-ack", questionId: "q-1", ok: true });
+      expect(session.rating.result).toMatchObject({ rating: "up", ok: true });
+      expect(stub.send).toHaveBeenCalledTimes(2);
+      expect(stub.send).toHaveBeenLastCalledWith({
+        type: "player:rate",
+        questionId: "q-1",
+        rating: "down",
+      });
+    });
+
+    it("ignores an ack for another question", () => {
+      question("q-1");
+      reveal(true);
+      session.rate("up");
+      send({ type: "player:rate-ack", questionId: "q-0", ok: true });
+      expect(session.rating.pending).toBe("up");
+      expect(session.rating.result).toBeNull();
+    });
+
+    it("resets the rating when the next question arrives", () => {
+      question("q-1");
+      reveal(true);
+      session.rate("up");
+      question("q-2");
+      expect(session.rating.questionId).toBe("q-2");
+      expect(session.rating.pending).toBeNull();
+      expect(session.playedRound).toBe(false);
+    });
+
+    it("canRate is true for a logged-in player whose result has yourStreak", () => {
+      session.isLoggedIn = true;
+      question("q-1");
+      reveal(true);
+      expect(session.canRate).toBe(true);
+    });
+
+    it("canRate is false without yourStreak", () => {
+      session.isLoggedIn = true;
+      question("q-1");
+      reveal(false);
+      expect(session.canRate).toBe(false);
+    });
+
+    it("canRate is false for an observer", () => {
+      session.isLoggedIn = true;
+      session.isObserver = true;
+      question("q-1");
+      reveal(true);
+      expect(session.canRate).toBe(false);
+    });
+
+    it("canRate is false for a guest", () => {
+      session.isLoggedIn = false;
+      question("q-1");
+      reveal(true);
+      expect(session.canRate).toBe(false);
+    });
+
+    it("canRate is true for the curator without yourStreak", () => {
+      session.isLoggedIn = true;
+      session.isCurator = true;
+      question("q-1");
+      reveal(false);
+      expect(session.canRate).toBe(true);
     });
   });
 

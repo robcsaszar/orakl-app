@@ -94,10 +94,15 @@ export interface WsClientOptions<Out extends { type: string } = WsMessage> {
   fatalCloseCodes?: number[];
   /** Give up (fire `onFatal`) after this many failed reopen attempts. Default: unbounded. */
   maxReopenAttempts?: number;
+  /**
+   * Treat an open socket as dead after this many ms with no inbound frame:
+   * drop it and run the reopen path. Catches a half-open socket that never
+   * fires `onclose`. Set it above the server's ping interval. Default: off.
+   */
+  idleTimeoutMs?: number;
 }
 
-// Faster first retry than svelte-websocket-store's 2s, matching SSEClient's 1s
-// base, then a comparable climb.
+// Faster first retry than svelte-websocket-store's 2s, then a comparable climb.
 const DEFAULT_REOPEN_DELAYS = [1000, 2000, 5000, 10000, 30000];
 
 export class WsClient<Out extends { type: string } = WsMessage> {
@@ -109,6 +114,7 @@ export class WsClient<Out extends { type: string } = WsMessage> {
   private intentionallyClosed = false;
   private _status: WsStatus = "idle";
   private fatalCloseCodes: number[];
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
   private options: WsClientOptions<Out>;
 
@@ -179,11 +185,13 @@ export class WsClient<Out extends { type: string } = WsMessage> {
 
     socket.onopen = () => {
       this.reopenCount = 0;
+      this.armIdleTimer(socket);
       this.setStatus("open");
       this.options.onOpen?.((m) => this.send(m));
     };
 
     socket.onmessage = (event: { data: unknown }) => {
+      this.armIdleTimer(socket);
       let parsed: WsMessage;
       try {
         parsed = JSON.parse(event.data as string) as WsMessage;
@@ -198,6 +206,7 @@ export class WsClient<Out extends { type: string } = WsMessage> {
     };
 
     socket.onclose = (event?: { code?: number; reason?: string }) => {
+      this.clearIdleTimer();
       this.ws = null;
       const intentional = this.intentionallyClosed;
       this.setStatus("closed");
@@ -217,6 +226,7 @@ export class WsClient<Out extends { type: string } = WsMessage> {
   /** Close the socket and suppress auto-reconnect. */
   disconnect(): void {
     this.intentionallyClosed = true;
+    this.clearIdleTimer();
     if (this.reopenTimer) {
       clearTimeout(this.reopenTimer);
       this.reopenTimer = null;
@@ -247,5 +257,34 @@ export class WsClient<Out extends { type: string } = WsMessage> {
       this.reopenTimer = null;
       if (!this.intentionallyClosed) this.connect();
     }, delay);
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
+  }
+
+  /** (Re)start the idle watchdog for `socket`; no-op unless `idleTimeoutMs` is set. */
+  private armIdleTimer(socket: WsSocketLike): void {
+    const ms = this.options.idleTimeoutMs;
+    if (ms === undefined) return;
+    this.clearIdleTimer();
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      if (this.ws !== socket) return;
+      // A half-open socket may not fire onclose for minutes; detach it so a
+      // late close event cannot schedule a second reopen.
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      this.ws = null;
+      socket.close();
+      this.setStatus("closed");
+      this.options.onClose?.({ intentional: false });
+      this.scheduleReopen();
+    }, ms);
   }
 }

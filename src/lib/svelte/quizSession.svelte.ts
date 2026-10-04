@@ -3,9 +3,9 @@
  * across the `/quiz/*` route tree: identity, lobby meta, players, role, the
  * live question UI, and the single WebSocket connection.
  *
- * Replaces JoinQuiz's client `view` enum with server-authoritative `membership`
- * + `phase`; the `(game)/quiz` layout reads `routeKey` and navigates. Pages are
- * dumb renderers that read this store from context.
+ * Server-authoritative `membership` + `phase` drive routing; the `(game)/quiz`
+ * layout reads `routeKey` and navigates. Pages are dumb renderers that read
+ * this store from context.
  */
 
 import {
@@ -22,6 +22,7 @@ import type {
   GameAnswerRecord,
   GameErrorMessage,
   GameQuestionMessage,
+  QuestionRating,
   ServerMessage,
   StreakFlourish,
 } from "@orakl/protocol";
@@ -50,6 +51,12 @@ import {
   type PlayerSessionDeps,
   type WsStatus,
 } from "../player-session.js";
+import {
+  ackRating,
+  type RatingState,
+  ratingFor,
+  tapRating,
+} from "../question-rating-state.js";
 import { storage } from "../storage.js";
 import { toast } from "../toast.js";
 import type { GameQuestion } from "../types/game.types.js";
@@ -61,7 +68,7 @@ import type {
   PlayerSessionView,
 } from "./player-session-view.js";
 
-// Back-compat re-export — canonical home is now player-session-view.ts (ADR 0010).
+// Re-export — canonical home is player-session-view.ts (ADR 0010).
 export type { FeedbackStatus, PlayerData } from "./player-session-view.js";
 
 /** Copy for `game:error` codes the UI owns; anything else falls back to the
@@ -123,7 +130,15 @@ export class QuizSession implements PlayerSessionView {
    *  unification) — same journey, same routes, plus the curator toolbox. */
   isCurator = $state(false);
 
-  // ── Server-authoritative routing axes (replace the old `view` enum) ──
+  // ── Question rating ──
+  /** Rating of the current question at the reveal; reset when a question arrives. */
+  rating = $state<RatingState>(ratingFor(""));
+  /** The server attached the player's own streak to this round's result: they answered or timed out. */
+  playedRound = $state(false);
+  /** Signed-in players who played the round, and the curator, may rate at the reveal. */
+  canRate = $derived(this.isLoggedIn && (this.isCurator || this.playedRound));
+
+  // ── Server-authoritative routing axes ──
   membership = $state<Membership>("none");
   phase = $state<ServerPhase | null>(null);
   /** Round result overlay sits on /quiz/play (phase stays "playing"). */
@@ -200,8 +215,7 @@ export class QuizSession implements PlayerSessionView {
   showSaveToProfileCheckbox = $derived(this.isLoggedIn);
 
   // ── Question UI ──
-  /** Folded in from the retired gameStore.store.ts (ADR 0010) — one reactive
-   *  home for the live question instead of a second store per page. */
+  /** One reactive home for the live question (ADR 0010), shared by every page. */
   currentQuestion = $state<GameQuestion | null>(null);
   timeRemaining = $state(0);
   correctAnswerId = $state("");
@@ -258,7 +272,7 @@ export class QuizSession implements PlayerSessionView {
   // ── Non-reactive internals ──
   private _session: PlayerSession | null = null;
   private _countdownTimer: CountdownTimer | null = null;
-  /** Pre-join lobby poll (replaces the old pre-join status stream). */
+  /** Pre-join lobby poll. */
   private _statusPollTimer: ReturnType<typeof setInterval> | null = null;
   private static readonly _STATUS_POLL_MS = 4000;
   /** Self emotes rendered optimistically whose server echo we still expect and
@@ -372,9 +386,9 @@ export class QuizSession implements PlayerSessionView {
   }
 
   /**
-   * Terminal socket failure — the server keeps rejecting the upgrade (policy
-   * close: lobby gone / unknown player / expired token) or retries are
-   * exhausted. Stop the "Reconnecting…" spinner, tear down stored identity and
+   * Terminal socket failure — the server closed with 1008 (lobby gone, unknown
+   * player, expired token, or a failed reconnect). Stop the "Reconnecting…"
+   * spinner, tear down stored identity and
    * flag `connectionLost` so the layout can route the player back to /join
    * instead of pinning them on an overlay forever.
    */
@@ -433,7 +447,6 @@ export class QuizSession implements PlayerSessionView {
             this.setPhase(null);
           }
         }
-        this.error = "";
       } catch {
         /* transient — next tick retries */
       }
@@ -509,11 +522,61 @@ export class QuizSession implements PlayerSessionView {
     this.playerId = null;
   }
 
+  /**
+   * Player leaves the lobby or the running quiz (DELETE /api/lobby/me). On
+   * success the socket closes, the stored seat is forgotten so init() cannot
+   * rejoin it, and membership/phase drop to code-entry, which the layout
+   * routes to /join. On failure the player stays and sees a toast.
+   */
+  async leaveLobby() {
+    try {
+      const res = await fetch("/api/lobby/me", { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Couldn't leave. Try again.");
+        return;
+      }
+    } catch {
+      toast.error("Couldn't leave. Try again.");
+      return;
+    }
+    this.destroy();
+    storage.removePlayerId();
+    storage.removeLobbyCode();
+    this.playerId = null;
+    this.lobbyCode = "";
+    this.isReconnecting = false;
+    this.isDisconnected = false;
+    this.membership = "none";
+    this.setPhase(null);
+  }
+
   validateNickname(nick: string): string | null {
     if (!nick) return "Nickname is required";
     if (nick.length > MAX_NICKNAME_LENGTH)
       return `Nickname must be ${MAX_NICKNAME_LENGTH} characters or fewer`;
     return null;
+  }
+
+  /**
+   * Failed join POST: show `message` and re-enable the form. A reconnect
+   * attempt drops the stored seat and falls back to code-entry, which the
+   * layout routes to /join; a first join resumes the pre-join poll so the
+   * setup page's quiz meta stays live.
+   */
+  private failJoin(message: string) {
+    this.error = message;
+    this.isJoining = false;
+    if (this.isReconnecting) {
+      this.membership = "none";
+      this.setPhase(null);
+      this.isReconnecting = false;
+      this.isDisconnected = false;
+      this.playerId = null;
+      storage.removePlayerId();
+      storage.removeLobbyCode();
+      return;
+    }
+    this.connectStatusStream();
   }
 
   async connect(nicknameArg: string) {
@@ -544,26 +607,18 @@ export class QuizSession implements PlayerSessionView {
 
       if (!res.ok) {
         const errorData = await res.json();
-        if (errorData.code === "device_in_lobby") {
-          this.error = JOIN_ERROR_COPY.device_in_lobby;
-          this.isJoining = false;
-          return;
-        }
         if (errorData.code === "device_blocked") {
-          this.error = JOIN_ERROR_COPY.device_blocked;
-          this.isJoining = false;
+          // A blocked device's seat is gone for good; never retry it.
+          storage.removePlayerId();
+          this.playerId = null;
+          this.failJoin(JOIN_ERROR_COPY.device_blocked);
           return;
         }
-        this.error = errorData.error || JOIN_ERROR_COPY.failed;
-        this.isJoining = false;
-        if (this.isReconnecting) {
-          this.membership = "none";
-          this.setPhase(null);
-          this.isReconnecting = false;
-          this.isDisconnected = false;
-          storage.removePlayerId();
-          storage.removeLobbyCode();
-        }
+        this.failJoin(
+          errorData.code === "device_in_lobby"
+            ? JOIN_ERROR_COPY.device_in_lobby
+            : errorData.error || JOIN_ERROR_COPY.failed,
+        );
         return;
       }
 
@@ -606,16 +661,7 @@ export class QuizSession implements PlayerSessionView {
       this.isJoining = false;
     } catch (err) {
       console.error("[QuizSession] connect error:", err);
-      this.error = "Could not connect to the game server.";
-      this.isJoining = false;
-      if (this.isReconnecting) {
-        this.membership = "none";
-        this.setPhase(null);
-        this.isReconnecting = false;
-        this.isDisconnected = false;
-        storage.removePlayerId();
-        storage.removeLobbyCode();
-      }
+      this.failJoin("Could not connect to the game server.");
     }
   }
 
@@ -669,6 +715,8 @@ export class QuizSession implements PlayerSessionView {
         // (untick "Play along") — this frame is the only signal for that,
         // there's no player:role round trip for it like role_selection has.
         if (me) this.isObserver = me.role === "observer";
+        if (me?.status === "active" && this.membership === "pending")
+          this.onApproved(me.role === "observer");
       }
     },
     onLobbyEnded: () => {
@@ -790,12 +838,36 @@ export class QuizSession implements PlayerSessionView {
         this.wasRemoved = true;
       }
     },
+    onRateAck: (msg) => {
+      const r = ackRating(this.rating, msg.questionId, msg.ok);
+      this.rating = r.state;
+      if (r.send) this.sendRating(r.send);
+    },
     onGameError: (msg) => {
       // Only ever arrives on the socket whose own action failed.
       this.isStarting = false;
       toast.error(GAME_ERROR_COPY[msg.code] ?? msg.message);
     },
   };
+
+  /**
+   * Curator admitted this pending player — via `lobby:approved`, or via a
+   * `lobby:update` whose own row is active when that frame was missed while
+   * the socket was down. Phase is overridden by the snapshot the server
+   * replays right after.
+   */
+  private onApproved(asObserver: boolean) {
+    this.membership = "active";
+    this.setPhase("lobby");
+    this.isDisconnected = false;
+    this.isReconnecting = false;
+    if (asObserver) {
+      // Approved mid-game → observer. The server subscribes this socket to
+      // the game stream and replays the snapshot, so no restore is needed.
+      this.isObserver = true;
+      this.selectedRole = "observer";
+    }
+  }
 
   /**
    * Player-approval frames — not part of `ServerMessage` (they're the
@@ -807,21 +879,9 @@ export class QuizSession implements PlayerSessionView {
   private handleMessage(rawMsg: Record<string, unknown>) {
     const msg = rawMsg as { type: string } & Record<string, unknown>;
     switch (msg.type) {
-      case "lobby:approved": {
-        const midGame = !!msg.midGame;
-        this.membership = "active";
-        this.setPhase("lobby"); // overridden by the snapshot the server replays on approval
-        this.isDisconnected = false;
-        this.isReconnecting = false;
-        if (midGame) {
-          // Approved mid-game → observer. The socket is already open; the server
-          // subscribes us to the game stream and replays the snapshot on approval,
-          // so no reconnect/restore is needed here.
-          this.isObserver = true;
-          this.selectedRole = "observer";
-        }
+      case "lobby:approved":
+        this.onApproved(!!msg.midGame);
         return;
-      }
       case "lobby:rejected":
         this.error = "Your request to join was declined.";
         this._session?.destroy();
@@ -854,6 +914,8 @@ export class QuizSession implements PlayerSessionView {
     this.playerAnswers = {};
     this.feedbackStatus = "none";
     this.activeEmotes = [];
+    this.rating = ratingFor(msg.questionId);
+    this.playedRound = false;
     // Snapshot replay carries the live tally; a fresh question carries neither.
     this.answeredCount = msg.answeredCount ?? 0;
     this.totalToAnswer = msg.answeredTotal ?? 0;
@@ -893,6 +955,22 @@ export class QuizSession implements PlayerSessionView {
     this.selectedAnswerId = answerId;
     this.feedbackStatus = "pending";
     this.getSession().send({ type: "player:answer", answerId });
+  }
+
+  /** Rates the current question at the reveal; one rating in flight, a later tap waits for its ack. */
+  rate(rating: QuestionRating) {
+    const r = tapRating(this.rating, rating);
+    this.rating = r.state;
+    if (r.send) this.sendRating(r.send);
+  }
+
+  private sendRating(rating: QuestionRating) {
+    if (!this.rating.questionId) return;
+    this.getSession().send({
+      type: "player:rate",
+      questionId: this.rating.questionId,
+      rating,
+    });
   }
 
   selectMatchItem(column: "left" | "right", item: string) {
@@ -953,6 +1031,7 @@ export class QuizSession implements PlayerSessionView {
     countdownRemaining?: number;
   }) {
     this.showingResult = true;
+    this.playedRound = !this.isObserver && msg.yourStreak !== undefined;
     this.streak = msg.yourStreak?.streak ?? 0;
     this.streakFlourish = msg.yourStreak?.flourish ?? null;
     if (msg.yourStreak) this.streakNonce++;

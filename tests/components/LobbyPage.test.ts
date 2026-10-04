@@ -290,3 +290,89 @@ describe("lobby roster", () => {
       expect(screen.getByText(otherTitle.suffix.trim())).toBeInTheDocument();
   });
 });
+
+describe("lobby roster — pending join requests", () => {
+  const pendingRow = {
+    id: "p-pending",
+    nickname: "Lurker",
+    avatar: "",
+    score: 0,
+    status: "pending" as const,
+  };
+
+  it("player view does not render a pending row's nickname", () => {
+    const session = makeRosterSession(false);
+    session.players = [...session.players, pendingRow];
+    const { container } = render(
+      LobbyPage as never,
+      {},
+      { wrapper: LobbySessionHarness, wrapperProps: { session } },
+    );
+    expect(container.textContent).not.toContain("Lurker");
+    expect(container.textContent).toContain("Rival");
+  });
+
+  it("curator view still lists it under Awaiting approval", () => {
+    const session = makeRosterSession(true);
+    session.players = [...session.players, pendingRow];
+    const { container } = render(
+      LobbyPage as never,
+      {},
+      { wrapper: LobbySessionHarness, wrapperProps: { session } },
+    );
+    expect(container.textContent).toContain("Awaiting approval (1)");
+    expect(container.textContent).toContain("Lurker");
+  });
+});
+
+describe("lobby seat count", () => {
+  const row = (
+    id: string,
+    extra: Partial<MockQuizSession["players"][number]> = {},
+  ) => ({
+    id,
+    nickname: id,
+    avatar: "",
+    score: 0,
+    status: "active" as const,
+    ...extra,
+  });
+
+  function seatSession(maxPlayers: number | null) {
+    const session = makeRosterSession(false);
+    session.lobbyAccessMode = "open";
+    session.lobbyMaxPlayers = maxPlayers;
+    session.players = [
+      row("p-me"),
+      row("rival"),
+      row("waiting", { status: "pending" }),
+      row("watcher", { role: "observer" }),
+      row("host", { isCurator: true }),
+    ];
+    return session;
+  }
+
+  it("counts active and pending heroes, not observers or the curator", () => {
+    const { container } = render(
+      LobbyPage as never,
+      {},
+      {
+        wrapper: LobbySessionHarness,
+        wrapperProps: { session: seatSession(4) },
+      },
+    );
+    expect(container.textContent).toContain("3/4 players");
+  });
+
+  it("shows no readout without a cap", () => {
+    const { container } = render(
+      LobbyPage as never,
+      {},
+      {
+        wrapper: LobbySessionHarness,
+        wrapperProps: { session: seatSession(null) },
+      },
+    );
+    expect(container.textContent).not.toMatch(/\d+\/\d+ players/);
+  });
+});

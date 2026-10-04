@@ -25,6 +25,7 @@ import type {
   PlayerAnsweredMessage,
   PlayerEmoteBroadcastMessage,
   PlayerNicknameChangedMessage,
+  PlayerRateAckMessage,
   PlayerRemovedMessage,
   RoleSelectionLockedMessage,
   RoleSelectionStartMessage,
@@ -56,6 +57,7 @@ export interface GameFrameSink {
   onPlayerEmote?(msg: PlayerEmoteBroadcastMessage): void;
   onGameError?(msg: GameErrorMessage): void;
   onPing?(msg: GamePingMessage): void;
+  onRateAck?(msg: PlayerRateAckMessage): void;
 }
 
 /**
@@ -133,6 +135,9 @@ export function dispatchGameFrame(
       break;
     case "game:ping":
       sink.onPing?.(msg);
+      break;
+    case "player:rate-ack":
+      sink.onRateAck?.(msg);
       break;
     default: {
       const _exhaustive: never = msg;

@@ -40,7 +40,16 @@ export async function requireJourney(
     if (journey.miss === "lobby_lost") {
       error(503, "Lobby unavailable — reload to retry");
     }
-    redirect(303, journey.route);
+    // A pre-join target needs the hinted code: the /quiz layout and setup
+    // loads read ?code=, and without it they resolve the cookie's lobby.
+    const keepCode =
+      codeHint && (journey.state === "setup" || journey.state === "pending");
+    redirect(
+      303,
+      keepCode
+        ? `${journey.route}?code=${encodeURIComponent(codeHint)}`
+        : journey.route,
+    );
   }
   return journey;
 }

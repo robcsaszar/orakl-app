@@ -1,6 +1,5 @@
 <script lang="ts">
 import { findPlayer } from "@orakl/shared";
-  import { goto } from "$app/navigation";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
   import {
     headerActionState,
@@ -25,7 +24,13 @@ import { findPlayer } from "@orakl/shared";
 
   const isInviteOnly = $derived(session.lobbyAccessMode === "invite-only");
   const maxPlayers = $derived(session.lobbyMaxPlayers);
-  const activeCount = $derived(session.players.filter((p) => p.status === "active").length);
+  // Seats the join cap counts (game-store joinPlayer): active or pending
+  // heroes, the curator's own row exempt.
+  const seatCount = $derived(
+    session.players.filter(
+      (p) => (p.status === "active" || p.status === "pending") && p.role !== "observer" && !p.isCurator,
+    ).length,
+  );
 
   const me = $derived(findPlayer(session.players, session.playerId));
   const soloNpc = $derived(getNpcForLobby(session.lobbyCode || session.playerId || ""));
@@ -33,9 +38,13 @@ import { findPlayer } from "@orakl/shared";
   // observer is — hidden from everyone else's roster, not just absent from
   // scoring. Only the curator's own view (isCurator branch above) shows
   // their Host/Observer row.
+  // Pending join requests are the curator's to vet, so a player sees admitted peers only.
   const others = $derived(
     session.players.filter(
-      (p) => p.id !== session.playerId && !(p.isCurator && p.role === "observer"),
+      (p) =>
+        p.id !== session.playerId &&
+        p.status !== "pending" &&
+        !(p.isCurator && p.role === "observer"),
     ),
   );
   // Curator's own roster shows every other player, pending approvals aside —
@@ -163,7 +172,7 @@ import { findPlayer } from "@orakl/shared";
   }
 
   // Lobby liveness is resolved server-side by the layout load (redirects to /join
-  // when the lobby is gone) and by the lobby:ended SSE event — no client probe needed.
+  // when the lobby is gone) and by the lobby:ended frame — no client probe needed.
 
   let disconnectToastId: string | number | undefined;
 
@@ -179,18 +188,11 @@ import { findPlayer } from "@orakl/shared";
     };
   });
 
-  async function leave() {
-    try {
-      const res = await fetch("/api/lobby/me", { method: "DELETE" });
-      if (res.ok) goto("/join");
-    } catch {
-      // network failure — stay on page, SSE reconnect will handle state
-    }
-  }
-
   $effect(() => {
     if (isCurator) return;
-    return registerHeaderActions(headerActionState, { leaveLobby: leave });
+    return registerHeaderActions(headerActionState, {
+      leaveLobby: () => void session.leaveLobby(),
+    });
   });
 
   $effect(() => {
@@ -344,11 +346,13 @@ import { findPlayer } from "@orakl/shared";
         {/if}
       </div>
     {/if}
-    {#if isInviteOnly}
+    {#if isInviteOnly || maxPlayers !== null}
       <div class="flex items-center gap-3 mt-1 flex-wrap">
-        <Badge variant="pill">Invite only</Badge>
+        {#if isInviteOnly}
+          <Badge variant="pill">Invite only</Badge>
+        {/if}
         {#if maxPlayers !== null}
-          <span class="text-sm text-foreground-darker">{activeCount}/{maxPlayers} players</span>
+          <span class="text-sm text-foreground-darker">{seatCount}/{maxPlayers} players</span>
         {/if}
       </div>
     {/if}

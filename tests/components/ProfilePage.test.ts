@@ -374,6 +374,24 @@ describe("/profile page — tabs", () => {
     );
   });
 
+  it("Question ratings link needs the moderate power and the QUESTION_RATING flag", () => {
+    const moderator = {
+      tab: "tools",
+      tools: true,
+      user: { ...profileData().user, powers: ["can-moderate-questions"] },
+    };
+    renderPage({ ...moderator, uiFlags: { QUESTION_RATING: true } });
+    expect(
+      screen.getByRole("link", { name: "Question ratings" }),
+    ).toHaveAttribute("href", "/manage/question-ratings");
+    cleanup();
+
+    renderPage({ ...moderator, uiFlags: {} });
+    expect(
+      screen.queryByRole("link", { name: "Question ratings" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("ledger heading follows Avatar in Account when a history flag is on", () => {
     renderPage({ uiFlags: { PLAYER_HISTORY: true } });
     const headings = screen.getAllByRole("heading").map((h) => h.textContent);

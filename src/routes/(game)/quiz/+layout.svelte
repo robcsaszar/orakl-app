@@ -27,7 +27,7 @@ import { buildAvatarGroups } from "@orakl/shared";
   setQuizSession(session);
 
   // Seed once from the server-resolved journey so the client doesn't bounce to
-  // /join before init() restores the live session; SSE owns phase/membership
+  // /join before init() restores the live session; the server owns phase/membership
   // thereafter (these reads run at component init and don't track `data`).
   // svelte-ignore state_referenced_locally
   const { membership, phase, lobby, avatars, emotesEnabled, playerId, isCurator } =
@@ -64,7 +64,7 @@ import { buildAvatarGroups } from "@orakl/shared";
   if (codeFromUrl) session.lobbyCode = codeFromUrl.trim().toLowerCase();
 
   // Seed lobby meta (name/description/categories/difficulty) for pre-join pages;
-  // SSE keeps it fresh once joined.
+  // The lobby stream keeps it fresh once joined.
   if (lobby) {
     session.quizName = lobby.quizName;
     session.description = lobby.description;
@@ -73,7 +73,7 @@ import { buildAvatarGroups } from "@orakl/shared";
   }
 
   // SSR roster + identity seed (LOBBY-1) — first paint shows the roster before
-  // the first `lobby:update` SSE frame, which then replaces players wholesale.
+  // the first `lobby:update` frame, which then replaces players wholesale.
   session.seedLobbyRoster({
     playerId,
     players: lobby?.players,

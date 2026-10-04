@@ -20,10 +20,12 @@ import type {
 import type {
   CuratorStartMessage,
   GameAnswerRecord,
+  QuestionRating,
   StreakFlourish,
 } from "@orakl/protocol";
 import type { Membership, ServerPhase } from "@orakl/shared";
 import type { AdvanceMode } from "../../../data/game.settings.js";
+import type { RatingState } from "../question-rating-state.js";
 import type { GameQuestion } from "../types/game.types.js";
 
 export interface PlayerData {
@@ -65,6 +67,14 @@ export interface PlayerSessionView {
   /** Non-anonymous account (any role above "anonymous") — gates the question-
    *  flag FAB (ADR 0020), which only a logged-in identity can submit under. */
   isLoggedIn: boolean;
+
+  // ── Question rating ──
+  /** Rating of the current question at the reveal; reset when a question arrives. */
+  rating: RatingState;
+  /** Signed-in players who played the round, and the curator, may rate at the reveal. */
+  canRate: boolean;
+  /** Rates the current question; one rating in flight, a later tap waits for its ack. */
+  rate(rating: QuestionRating): void;
 
   // ── Server-authoritative routing axes ──
   membership: Membership;
@@ -204,6 +214,8 @@ export interface PlayerSessionView {
   validateCode(): Promise<boolean>;
   validateNickname(nick: string): string | null;
   clearStoredData(): void;
+  /** Leave the lobby or running quiz; on success forget the seat and drop to code-entry. */
+  leaveLobby(): Promise<void>;
   connect(nicknameArg: string): Promise<void>;
   selectAnswer(answerId: string): void;
   selectMatchItem(column: "left" | "right", item: string): void;

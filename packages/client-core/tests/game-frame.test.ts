@@ -125,6 +125,10 @@ const CASES: {
     callback: "onPing",
     msg: { type: "game:ping" },
   },
+  {
+    callback: "onRateAck",
+    msg: { type: "player:rate-ack", questionId: "q1", ok: true },
+  },
 ];
 
 const ALL_CALLBACK_NAMES = CASES.map((c) => c.callback);

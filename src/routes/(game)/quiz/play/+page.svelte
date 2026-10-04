@@ -2,7 +2,6 @@
 import { percent } from "@orakl/shared";
   import RingTimer from "$lib/components/ui/RingTimer.svelte";
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
   import {
@@ -23,6 +22,7 @@ import { percent } from "@orakl/shared";
   import ImageMatchingGrid from "$lib/components/quiz/ImageMatchingGrid.svelte";
   import QuestionMedia from "$lib/components/quiz/QuestionMedia.svelte";
   import PostAnswerNote from "$lib/components/quiz/PostAnswerNote.svelte";
+  import RatingThumbs from "$lib/components/quiz/RatingThumbs.svelte";
   import { cn } from "tailwind-variants";
   import { fly, scale, slide } from "svelte/transition";
   import Icon from '@/lib/components/ui/Icon.svelte';
@@ -40,11 +40,14 @@ import { percent } from "@orakl/shared";
   let { data }: { data?: import("./$types").PageData } = $props();
 
   const session = getQuizSession();
+  const uiFlags = $derived(
+    (page.data as { uiFlags?: { QUESTION_RATING?: boolean } }).uiFlags ?? {},
+  );
 
   onMount(() => {
     // SSR seed: on a fresh refresh/deep-link the store is empty, so replay the
     // server-captured state messages to paint the question immediately. Skip
-    // when a question is already present (forward nav populated it via SSE);
+    // when a question is already present (forward nav populated it via the socket);
     // the layout's reconnect path still runs and reconciles idempotently.
     const msgs = data?.stateMessages;
     if (msgs?.length && !session.currentQuestion) {
@@ -144,17 +147,10 @@ import { percent } from "@orakl/shared";
       session.pickedEmotes.length > 0,
   );
 
-  async function exitQuiz() {
-    try {
-      const res = await fetch("/api/lobby/me", { method: "DELETE" });
-      if (res.ok) goto("/join");
-    } catch {
-      // network failure — stay on page, SSE reconnect will handle state
-    }
-  }
-
   $effect(() => {
-    return registerHeaderActions(headerActionState, { exitQuiz });
+    return registerHeaderActions(headerActionState, {
+      exitQuiz: () => void session.leaveLobby(),
+    });
   });
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -369,9 +365,13 @@ import { percent } from "@orakl/shared";
     </div>
   {/if}
 
-  {#if session.nextQuestionCountdown > 0}
+  {#snippet nextQuestionRing(padded: boolean)}
     <!-- Hidden, not removed, during an intermission so the page keeps its height under the rest overlay. -->
-    <div class="flex flex-col items-center gap-2 py-4" class:invisible={session.isIntermission}>
+    <div
+      class="flex flex-col items-center gap-2"
+      class:py-4={padded}
+      class:invisible={session.isIntermission}
+    >
       <RingTimer
         size="sm"
         timerState={isLastQuestion ? "final" : "counting"}
@@ -384,6 +384,18 @@ import { percent } from "@orakl/shared";
         </p>
       {/if}
     </div>
+  {/snippet}
+
+  {#if uiFlags.QUESTION_RATING === true && session.canRate && correctAnswerId}
+    <div class="py-4" class:invisible={session.isIntermission}>
+      <RatingThumbs rating={session.rating} onrate={(r) => session.rate(r)}>
+        {#if session.nextQuestionCountdown > 0}
+          {@render nextQuestionRing(false)}
+        {/if}
+      </RatingThumbs>
+    </div>
+  {:else if session.nextQuestionCountdown > 0}
+    {@render nextQuestionRing(true)}
   {/if}
 </div>
 

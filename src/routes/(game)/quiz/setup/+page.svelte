@@ -1,6 +1,5 @@
 <script lang="ts">
 import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, shouldAutoRally } from "@orakl/shared";
-  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
   import {
@@ -48,18 +47,9 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
     session.confirmAvatar();
   }
 
-  async function leave() {
-    try {
-      const res = await fetch("/api/lobby/me", { method: "DELETE" });
-      if (res.ok) goto("/join");
-    } catch {
-      // network failure — stay on page
-    }
-  }
-
   $effect(() => {
     if (session.membership === "pending") {
-      return registerHeaderActions(headerActionState, { leaveLobby: leave });
+      return registerHeaderActions(headerActionState, { leaveLobby: () => void session.leaveLobby() });
     }
   });
 
@@ -96,7 +86,7 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
       <p class="text-base font-semibold">Waiting for approval</p>
       <p class="text-sm text-foreground-darker">The curator will let you in shortly.</p>
     </div>
-    <Button type="button" variant="ghost" intent="compact" onclick={leave} class="text-sm text-foreground-darker hover:text-foreground">
+    <Button type="button" variant="ghost" intent="compact" onclick={() => session.leaveLobby()} class="text-sm text-foreground-darker hover:text-foreground">
       Leave lobby
     </Button>
   </Card>

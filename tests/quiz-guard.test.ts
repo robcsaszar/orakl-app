@@ -83,4 +83,33 @@ describe("requireJourney (client helper over GET /api/quiz/journey)", () => {
       status: 502,
     });
   });
+
+  it("keeps the ?code hint on a redirect to a pre-join target", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "none",
+      phase: "lobby",
+      state: "setup",
+      route: "/quiz/setup",
+      miss: null,
+    });
+    await expect(
+      requireJourney(fetchFn, ["code-entry"], "iron-vault"),
+    ).rejects.toMatchObject({
+      status: 303,
+      location: "/quiz/setup?code=iron-vault",
+    });
+  });
+
+  it("drops the ?code hint on a redirect to /join", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "none",
+      phase: null,
+      state: "code-entry",
+      route: "/join",
+      miss: null,
+    });
+    await expect(
+      requireJourney(fetchFn, ["setup", "pending"], "iron-vault"),
+    ).rejects.toMatchObject({ status: 303, location: "/join" });
+  });
 });

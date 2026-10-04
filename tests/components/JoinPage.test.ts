@@ -1,3 +1,4 @@
+import { ADJECTIVES, NOUNS } from "@orakl/shared";
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { MockQuizSession } from "../../src/lib/svelte/mockQuizSession.svelte.js";
@@ -96,5 +97,20 @@ describe("JoinPage", () => {
     expect(JOIN_ERROR_COPY.lobby_full).toBe(
       "The lobby is full. You're watching as an observer.",
     );
+  });
+
+  it("lobby-code input fits the longest generated code", () => {
+    const session = makeSession();
+    render(
+      JoinPage as never,
+      {},
+      { wrapper: LobbySessionHarness, wrapperProps: { session } },
+    );
+    const longest =
+      Math.max(...ADJECTIVES.map((w) => w.length)) +
+      1 +
+      Math.max(...NOUNS.map((w) => w.length));
+    const input = screen.getByLabelText("Lobby code") as HTMLInputElement;
+    expect(input.maxLength).toBeGreaterThanOrEqual(longest);
   });
 });

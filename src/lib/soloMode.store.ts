@@ -5,9 +5,11 @@ import {
   selectMatchItem as selectMatchItemHelper,
   type TimerState,
   WsClient,
+  type WsClientOptions,
 } from "@orakl/client-core";
 import type {
   MediaType,
+  QuestionRating,
   QuestionSource,
   QuizQuestion,
   SoloClientMessage,
@@ -21,6 +23,12 @@ import type {
 } from "../../data/game.settings.js";
 import { isFalseAnswerText } from "./answer-variants.js";
 import { drawMatchLines as drawMatchLinesHelper } from "./question-helpers.js";
+import {
+  ackRating,
+  type RatingState,
+  ratingFor,
+  tapRating,
+} from "./question-rating-state.js";
 import {
   calculateMaxGameTime,
   calculateTotalQuestionPool,
@@ -53,6 +61,13 @@ interface QuestionResult {
 function buildWsUrl(): string {
   return buildWsUrlBase("/api/solo/ws");
 }
+
+/** Backoff between resume attempts after a drop (ms); the last entry repeats. */
+const RESUME_DELAYS_MS = [1000, 2000, 4000, 8000];
+/** Failed reopens before the run is given up: 1+2+4+8+8+8 = 31 s, past the
+ *  server's 30 s abandon window (ABANDON_WINDOW_MS in solo-ws-server.ts). */
+const MAX_RESUME_ATTEMPTS = 6;
+const CONNECTION_LOST = "Connection lost. Your trial has ended.";
 
 // Survives a full page refresh so an in-flight game resumes seamlessly (review
 // list included) and a finished game keeps its results screen. Cleared when a
@@ -169,6 +184,8 @@ export function createSoloModeStore(
     // The curator's explanation, revealed alongside the round result (map
     // #912, decision 2) — undefined while playing and cleared per question.
     postAnswerNote: undefined as string | undefined,
+    // Rating of the current question at the reveal; reset when a question arrives.
+    rating: ratingFor("") as RatingState,
 
     totalQuestions: null as number | null,
     sessionId: null as string | null,
@@ -176,6 +193,8 @@ export function createSoloModeStore(
     claimId: null as string | null,
     // True while attempting to resume a server session after a refresh/drop.
     reconnecting: false,
+    /** True from Begin trial until the first question or a rejection; disables the submit button. */
+    starting: false,
 
     // Image matching state
     matchItems: null as { left: string[]; right: string[] } | null,
@@ -263,22 +282,15 @@ export function createSoloModeStore(
 
     // ─── Internal WS helpers ────────────────────────────────────────────────
 
-    _createWs(handlers: {
-      onOpen: () => void;
-      onClose?: () => void;
-      onError?: () => void;
-    }) {
+    _createWs(options: Omit<WsClientOptions<SoloClientMessage>, "onMessage">) {
       const url = buildWsUrl();
       if (!url) return;
       _ws = new WsClient<SoloClientMessage>(url, {
+        onError: () => {
+          this.errors = ["Connection error — check your connection"];
+        },
+        ...options,
         onMessage: (msg) => this._dispatch(msg),
-        onOpen: handlers.onOpen,
-        onClose: handlers.onClose ?? (() => {}),
-        onError:
-          handlers.onError ??
-          (() => {
-            this.errors = ["Connection error — check your connection"];
-          }),
       });
       _ws.connect();
     },
@@ -304,14 +316,15 @@ export function createSoloModeStore(
             this._sendStart();
           }
         },
-        onClose: () => {
-          if (this.phase === "playing" || this.showingAnswer) {
-            this.errors = ["Connection lost — reconnecting…"];
-            setTimeout(() => {
-              if (this.phase === "playing" || this.showingAnswer) {
-                this._wsReconnect();
-              }
-            }, 1000);
+        onClose: ({ intentional }) => {
+          if (intentional) return;
+          if (this.phase === "playing") {
+            this._wsReconnect();
+          } else if (this.starting) {
+            // Closed before the run began (e.g. a 1011 with no frame). Same
+            // text as the open-failure path, so setup toasts it once.
+            this.starting = false;
+            this.errors = ["Connection error — check your connection"];
           }
         },
       });
@@ -328,10 +341,30 @@ export function createSoloModeStore(
       _ws?.send(msg);
     },
 
+    /**
+     * Resume socket for the rest of the run: reopens with backoff after every
+     * unintentional drop and sends solo:resume on each open. Ends the run
+     * (back to setup) once the attempts are spent or the server closes fatally.
+     */
     _wsReconnect() {
+      if (!buildWsUrl()) return; // SSR guard before flipping reconnecting
       if (_ws && (_ws.isConnected() || _ws.status === "connecting")) return;
-      // Default no-op onClose: don't recurse-reconnect after second failure.
-      this._createWs({ onOpen: () => this._sendResume() });
+      this.reconnecting = true;
+      this._createWs({
+        onOpen: () => this._sendResume(),
+        // Each drop re-enters the resume handshake, so a session_expired
+        // answer ends the run (see solo:error).
+        onClose: ({ intentional }) => {
+          if (!intentional) this.reconnecting = true;
+        },
+        autoReconnect: true,
+        reopenDelays: RESUME_DELAYS_MS,
+        maxReopenAttempts: MAX_RESUME_ATTEMPTS,
+        // 1011: the server failed the frame. Each open resets the attempt
+        // count, so retrying it could loop forever.
+        fatalCloseCodes: [1008, 1011],
+        onFatal: () => this._failResume(CONNECTION_LOST),
+      });
     },
 
     /**
@@ -376,6 +409,7 @@ export function createSoloModeStore(
           this.lastAnswerInput = null;
           this.fasterThanPercent = null;
           this.postAnswerNote = undefined;
+          this.rating = ratingFor(q.id);
           this.showingAnswer = false;
           this.lastPointsEarned = 0;
           this.timeRemaining = msg.timeRemaining as number;
@@ -390,8 +424,20 @@ export function createSoloModeStore(
           });
           this.phase = "playing";
           this.reconnecting = false;
+          this.starting = false;
           this.errors = [];
           this._persist();
+          break;
+        }
+
+        case "solo:rate-ack": {
+          const r = ackRating(
+            this.rating,
+            msg.questionId as string,
+            msg.ok as boolean,
+          );
+          this.rating = r.state;
+          if (r.send) this._sendRating(r.send);
           break;
         }
 
@@ -529,16 +575,19 @@ export function createSoloModeStore(
           break;
 
         case "solo:error":
-          // A failed resume (stale/expired session) drops us back to setup
-          // rather than surfacing a scary error mid-reconnect.
+          this.starting = false;
+          // A resume the server cannot honour ends the run: back to
+          // setup, which toasts the message. The reconnecting guard keeps the
+          // engine's late-answer session_expired a plain error.
           if (msg.code === "session_expired" && this.reconnecting) {
-            this._failResume();
+            this._failResume(msg.message as string);
             break;
           }
           this.errors = [(msg.message as string) ?? "An error occurred"];
           break;
 
         case "solo:guest-limit":
+          this.starting = false;
           this.guestLimit = {
             reason: msg.reason as string,
             upgradeHint: msg.upgradeHint as string,
@@ -591,7 +640,7 @@ export function createSoloModeStore(
         // after a full refresh.
         _resumeToken = stored.resumeToken;
         this.phase = "playing"; // hold on /solo/play while we resume
-        this._attemptResume();
+        this._wsReconnect();
       }
     },
 
@@ -613,30 +662,13 @@ export function createSoloModeStore(
       writeStoredState(null);
     },
 
-    _attemptResume() {
-      if (!buildWsUrl()) return; // SSR guard before flipping reconnecting
-      this.reconnecting = true;
-      this._createWs({
-        onOpen: () => this._sendResume(),
-        onClose: () => {
-          if (this.reconnecting) this._failResume();
-        },
-        onError: () => {
-          if (this.reconnecting) this._failResume();
-        },
-      });
-
-      // Safety net if the server never answers the resume.
-      setTimeout(() => {
-        if (this.reconnecting) this._failResume();
-      }, 6000);
-    },
-
-    _failResume() {
+    /** Ends a run that cannot be resumed: clears it and returns to setup, which toasts `message`. */
+    _failResume(message: string) {
       this.reconnecting = false;
       this.sessionId = null;
       writeStoredState(null);
       this._wsDisconnect();
+      this.errors = [message];
       this.phase = "setup";
     },
 
@@ -659,7 +691,7 @@ export function createSoloModeStore(
 
     async startQuiz(e?: Event) {
       e?.preventDefault();
-      if (!this.validate()) return;
+      if (this.starting || !this.validate()) return;
 
       this.errors = [];
       this.guestLimit = null;
@@ -674,6 +706,14 @@ export function createSoloModeStore(
       this.claimId = null;
       this.questions = [];
       writeStoredState(null);
+      this.starting = true;
+
+      // A rejected start (guest limit, empty pool) leaves the socket open with
+      // the engine idle; the new solo:start goes straight onto it.
+      if (_ws?.isConnected()) {
+        this._sendStart();
+        return;
+      }
 
       // Native: authenticate with a bearer token as the first message (cross-
       // origin, no cookie). Web/guest: token is null and the server resolves
@@ -709,6 +749,22 @@ export function createSoloModeStore(
       this._wsSend({ type: "solo:next" });
     },
 
+    /** Rates the current question at the reveal; one rating in flight, a later tap waits for its ack. */
+    rate(rating: QuestionRating) {
+      const r = tapRating(this.rating, rating);
+      this.rating = r.state;
+      if (r.send) this._sendRating(r.send);
+    },
+
+    _sendRating(rating: QuestionRating) {
+      if (!this.rating.questionId) return;
+      this._wsSend({
+        type: "solo:rate",
+        questionId: this.rating.questionId,
+        rating,
+      });
+    },
+
     endRound() {
       this._wsDisconnect();
       this.reconnecting = false;
@@ -738,6 +794,12 @@ export function createSoloModeStore(
     },
 
     handleKeyDown(e: KeyboardEvent) {
+      // A focused rating thumb activates itself on Enter/Space; it must not advance.
+      if (
+        e.target instanceof Element &&
+        e.target.closest("[data-rating-thumb]")
+      )
+        return;
       // During the answer reveal, Enter/Space advances to the next question.
       if (this.showingAnswer) {
         if (e.key === "Enter" || e.key === " ") {

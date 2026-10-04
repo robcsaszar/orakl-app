@@ -348,7 +348,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     },
     footer: {
       showNav: false,
-      useCases: ["solo"],
+      useCases: ["solo", "ratings"],
     },
   },
   "/solo/results": {
@@ -636,7 +636,10 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
         },
       ],
     },
-    footer: { showNav: true },
+    footer: {
+      showNav: true,
+      useCases: ["player", "browser-storage"],
+    },
   },
   "/quiz/lobby": {
     header: {
@@ -693,7 +696,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     },
     footer: {
       showNav: false,
-      useCases: ["answers"],
+      useCases: ["answers", "ratings"],
     },
   },
   "/quiz/roles": {
@@ -752,6 +755,7 @@ export const TEMPLATE_FLAGS: FeatureFlagName[] = [
   "QUIZ_PRESETS",
   "BADGE_DISPLAY",
   "ROLE_SELECTION",
+  "QUESTION_RATING",
 ];
 
 /**
