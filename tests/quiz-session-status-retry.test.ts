@@ -1,6 +1,5 @@
 /**
- * Pre-join lobby watch — connectStatusStream now POLLS /api/lobby (the old SSE
- * status stream + retry/backoff was removed with the WS migration).
+ * Pre-join lobby watch — connectStatusStream polls /api/lobby on an interval.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuizSession } from "../src/lib/svelte/quizSession.svelte.js";
@@ -144,5 +143,62 @@ describe("connectStatusStream (pre-join poll)", () => {
     session.destroy();
     await vi.advanceTimersByTimeAsync(20000);
     expect(fetchMock.mock.calls.length).toBe(count); // no further polls
+  });
+  it("resumes polling after a failed first join (409 nickname_taken)", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST")
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({ code: "nickname_taken", error: "Taken" }),
+        };
+      return lobbyResponse(true, { quizName: "Trivia" });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const session = new QuizSession();
+    session.lobbyCode = "iron-vault";
+
+    await session.connect("Ada");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(session.error).toBe("Taken");
+    expect(fetchMock).toHaveBeenCalledWith("/api/lobby?code=iron-vault");
+    session.destroy();
+  });
+
+  it("keeps an error set while polling", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(lobbyResponse(false)));
+    const session = new QuizSession();
+    session.connectStatusStream();
+    await vi.advanceTimersByTimeAsync(0);
+
+    session.error = "Not connected";
+    await vi.advanceTimersByTimeAsync(4000);
+
+    expect(session.error).toBe("Not connected");
+    session.destroy();
+  });
+
+  it("leaves polling stopped after a 201 join", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST")
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({ playerId: "p1", status: "active" }),
+        };
+      return lobbyResponse(false);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const session = new QuizSession();
+    session.connectStatusStream();
+    await vi.advanceTimersByTimeAsync(0);
+
+    await session.connect("Ada");
+    fetchMock.mockClear();
+    await vi.advanceTimersByTimeAsync(8000);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    session.destroy();
   });
 });

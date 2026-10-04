@@ -147,10 +147,10 @@ import type { GuestEntitlements } from "@orakl/shared";
 
 <QuizSetupFooter
   formId="solo-setup"
-  disabled={!s.isFormValid}
+  disabled={!s.isFormValid || s.starting}
   submitLabel="Begin trial"
   poolText={s.totalQuestionPool}
   maxTimeText={s.maxGameTime}
-  disabledTooltip="Select at least one category"
+  disabledTooltip={s.starting ? "Opening the trial…" : "Select at least one category"}
   enabledTooltip={s.mode !== "endless" ? "Good luck" : "Defy the endless oracle"}
 />

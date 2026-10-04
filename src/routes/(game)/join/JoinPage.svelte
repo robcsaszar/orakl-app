@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ADJECTIVES, NOUNS } from "@orakl/shared";
   import { storage } from "@/lib/storage.js";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
   import { goto } from "$app/navigation";
@@ -10,6 +11,10 @@
   import { toast } from "@/lib/toast.js";
 
   const session = getQuizSession();
+
+  // Longest code generateLobbyCode can emit: longest adjective + "-" + longest noun.
+  const MAX_CODE_LENGTH =
+    Math.max(...ADJECTIVES.map((w) => w.length)) + 1 + Math.max(...NOUNS.map((w) => w.length));
 
   $effect(() => {
     if (session.error) toast.error(session.error);
@@ -52,7 +57,7 @@
       onkeydown={(e) => {
         if (e.key === "Enter") next();
       }}
-      maxlength={20}
+      maxlength={MAX_CODE_LENGTH}
       placeholder="e.g. iron-vault"
       autofocus
       autocomplete="off"

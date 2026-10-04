@@ -321,4 +321,72 @@ describe("WsClient", () => {
       vi.useRealTimers();
     });
   });
+
+  describe("idle watchdog", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function idleClient(extra: { idleTimeoutMs?: number } = {}) {
+      const onStatus = vi.fn();
+      const client = new WsClient("ws://host/x", {
+        onMessage: vi.fn(),
+        onStatus,
+        autoReconnect: true,
+        reopenDelays: [100],
+        ...extra,
+      });
+      client.connect();
+      FakeWS.last!.onopen?.();
+      return { client, onStatus };
+    }
+
+    it("drops a silent open socket and reopens after the backoff", () => {
+      const { client } = idleClient({ idleTimeoutMs: 1000 });
+      vi.advanceTimersByTime(1000);
+      expect(client.status).toBe("reconnecting");
+      expect(FakeWS.instances).toHaveLength(1);
+      vi.advanceTimersByTime(100);
+      expect(FakeWS.instances).toHaveLength(2);
+    });
+
+    it("resets the timer on every inbound frame", () => {
+      const { client } = idleClient({ idleTimeoutMs: 1000 });
+      vi.advanceTimersByTime(900);
+      FakeWS.last!.onmessage?.({ data: JSON.stringify({ type: "x" }) });
+      vi.advanceTimersByTime(900);
+      expect(client.status).toBe("open");
+      expect(FakeWS.instances).toHaveLength(1);
+      vi.advanceTimersByTime(100); // 1000 ms after the frame
+      expect(client.status).toBe("reconnecting");
+    });
+
+    it("never times out without idleTimeoutMs", () => {
+      const { client } = idleClient();
+      vi.advanceTimersByTime(10 * 60 * 1000);
+      expect(client.status).toBe("open");
+      expect(FakeWS.instances).toHaveLength(1);
+    });
+
+    it("disconnect() clears the timer so nothing reopens", () => {
+      const { client } = idleClient({ idleTimeoutMs: 1000 });
+      expect(vi.getTimerCount()).toBe(1);
+      client.disconnect();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(5000);
+      expect(FakeWS.instances).toHaveLength(1);
+      expect(client.status).toBe("closed");
+    });
+
+    it("detaches the dropped socket's handlers", () => {
+      const { client } = idleClient({ idleTimeoutMs: 1000 });
+      const dropped = FakeWS.last!;
+      vi.advanceTimersByTime(1000);
+      expect(dropped.onclose).toBeNull();
+      expect(client.status).toBe("reconnecting");
+    });
+  });
 });

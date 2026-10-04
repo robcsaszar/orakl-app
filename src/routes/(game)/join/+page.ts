@@ -5,8 +5,12 @@ import type { PageLoad } from "./$types";
 
 // /join is code-entry only. Members (and visitors to an active lobby) are sent
 // straight to the route matching their journey state (ADR 0004).
-export const load: PageLoad = async ({ fetch, parent }) => {
-  await requireJourney(fetch, ["code-entry"]);
+export const load: PageLoad = async ({ fetch, parent, url }) => {
+  await requireJourney(
+    fetch,
+    ["code-entry"],
+    url.searchParams.get("code") ?? undefined,
+  );
 
   // A Display screen is not signed in. Asked by rank, so a display token —
   // its own role, not "anonymous" — is excluded along with anonymous.

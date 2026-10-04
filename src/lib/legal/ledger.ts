@@ -25,6 +25,7 @@ export type UseCaseId =
   | "answers"
   | "solo"
   | "flags"
+  | "ratings"
   | "uploads"
   | "questions"
   | "session-cookie"
@@ -185,7 +186,7 @@ export const LEDGER: readonly LedgerRow[] = [
     element: "Player nickname and avatar",
     sentence:
       "Joining a quiz needs only a nickname and an avatar; they appear to the other players, in the curator's chronicle of the game, and in each co-player's own history as that night's standings.",
-    routes: ["/join"],
+    routes: ["/join", "/quiz/setup"],
     parser:
       "Typed into the join form and passed through our own nickname sanitiser; no account is needed.",
     storage:
@@ -241,6 +242,20 @@ export const LEDGER: readonly LedgerRow[] = [
     parser: "Submitted from the results page through our own form.",
     storage: "The question flags table in our database.",
     retention: "Until you delete your account.",
+    basis: "legitimate-interest",
+  },
+  {
+    id: "ratings",
+    element: "Question ratings",
+    sentence:
+      "Rating a question with a thumb stores your rating so the people who look after the questions can see which ones players like.",
+    routes: ["/solo/play", "/quiz/play"],
+    parser:
+      "Sent from the answer reveal over the game connection by our own code.",
+    storage:
+      "The question ratings table in our database: one rating per account per question, with the time of the tap. Others see only counts, never who rated.",
+    retention:
+      "Until you delete your account or the question is deleted. A later rating of the same question replaces the earlier one.",
     basis: "legitimate-interest",
   },
   {
@@ -312,7 +327,7 @@ export const LEDGER: readonly LedgerRow[] = [
     element: "Browser storage for your quiz state",
     sentence:
       "Your nickname, avatar, a random device id and the state of the quiz you are in are kept in your browser so a refresh does not lose them.",
-    routes: ["/join"],
+    routes: ["/join", "/quiz/setup"],
     parser:
       "Written by the page with the browser's localStorage and sessionStorage APIs; the device id is a random value with no link to you.",
     storage:

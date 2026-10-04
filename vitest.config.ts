@@ -72,6 +72,11 @@ export default defineConfig({
       "$app/navigation": fileURLToPath(
         new URL("./tests/stubs/app-navigation.ts", import.meta.url),
       ),
+      // `ws` is server-only, and its "browser" export is a stub that throws;
+      // socket-server tests need the Node build whatever the condition.
+      ws: fileURLToPath(
+        new URL("./node_modules/ws/wrapper.mjs", import.meta.url),
+      ),
     },
   },
 });

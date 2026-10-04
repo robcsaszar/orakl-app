@@ -10,6 +10,7 @@
   import ImageMatchingGrid from "$lib/components/quiz/ImageMatchingGrid.svelte";
   import QuestionMedia from "$lib/components/quiz/QuestionMedia.svelte";
   import PostAnswerNote from "$lib/components/quiz/PostAnswerNote.svelte";
+  import RatingThumbs from "$lib/components/quiz/RatingThumbs.svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import Icon from "$lib/components/ui/Icon.svelte";
   import type { TimerState } from "@orakl/client-core";
@@ -21,6 +22,11 @@
   const nickname = $derived(
     (page.data as { nickname?: string }).nickname ?? "",
   );
+
+  const uiFlags = $derived(
+    (page.data as { uiFlags?: { QUESTION_RATING?: boolean } }).uiFlags ?? {},
+  );
+  const showRating = $derived(!s.isGuest && uiFlags.QUESTION_RATING === true);
 
   // On the final fixed-count question the next step is results, not a question.
   const isLastQuestion = $derived(
@@ -147,6 +153,10 @@
             Faster than {s.fasterThanPercent}% of players on this question.
           </p>
         </div>
+      {/if}
+
+      {#if showRating}
+        <RatingThumbs rating={s.rating} onrate={(r) => s.rate(r)} />
       {/if}
 
       <div class="flex justify-end">

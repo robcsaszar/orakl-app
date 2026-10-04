@@ -59,6 +59,7 @@ describe("/join load", () => {
     const result = await joinLoad({
       fetch: fetchFn,
       parent: anonParent(),
+      url: new URL("http://localhost/join"),
     } as never);
     expect(result).toEqual({ isLoggedIn: false, profileAvatarId: "" });
   });
@@ -68,7 +69,11 @@ describe("/join load", () => {
       "/api/quiz/journey": { body: journey("lobby", "/quiz/lobby") },
     });
     await expect(
-      joinLoad({ fetch: fetchFn, parent: memberParent() } as never),
+      joinLoad({
+        fetch: fetchFn,
+        parent: memberParent(),
+        url: new URL("http://localhost/join"),
+      } as never),
     ).rejects.toMatchObject({ status: 303, location: "/quiz/lobby" });
   });
 
@@ -79,6 +84,7 @@ describe("/join load", () => {
     const result = await joinLoad({
       fetch: fetchFn,
       parent: memberParent("av-9"),
+      url: new URL("http://localhost/join"),
     } as never);
     expect(result).toEqual({ isLoggedIn: true, profileAvatarId: "av-9" });
   });

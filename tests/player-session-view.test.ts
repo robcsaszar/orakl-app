@@ -7,7 +7,7 @@
  * here) and adds a tiny runtime smoke test that the mock's no-op stubs never
  * throw when a page calls them.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MockQuizSession } from "../src/lib/svelte/mockQuizSession.svelte.js";
 import type { PlayerSessionView } from "../src/lib/svelte/player-session-view.js";
 import { QuizSession } from "../src/lib/svelte/quizSession.svelte.js";
@@ -35,6 +35,7 @@ describe("MockQuizSession stubs (runtime smoke)", () => {
     await expect(mock.validateCode()).resolves.toBe(true);
     await expect(mock.connect("Dev Player")).resolves.toBeUndefined();
     await expect(mock.confirmAvatar()).resolves.toBeUndefined();
+    await expect(mock.leaveLobby()).resolves.toBeUndefined();
 
     expect(() => mock.destroy()).not.toThrow();
     expect(() => mock.seedLobbyRoster({})).not.toThrow();
@@ -51,5 +52,27 @@ describe("MockQuizSession stubs (runtime smoke)", () => {
     expect(() => mock.getAvatarSrc("nope")).not.toThrow();
     expect(() => mock.getMyScore()).not.toThrow();
     expect(() => mock.validateNickname("")).not.toThrow();
+  });
+});
+
+describe("MockQuizSession.rate", () => {
+  it("goes pending, then ends in an ok result", async () => {
+    vi.useFakeTimers();
+    const session = new MockQuizSession();
+    session.rate("up");
+    expect(session.rating.pending).toBe("up");
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+    expect(session.rating.pending).toBeNull();
+    expect(session.rating.result).toMatchObject({ rating: "up", ok: true });
+  });
+
+  it("canRate only on a revealed round for a signed-in non-observer", () => {
+    const session = new MockQuizSession();
+    expect(session.canRate).toBe(false);
+    session.showingResult = true;
+    expect(session.canRate).toBe(true);
+    session.isObserver = true;
+    expect(session.canRate).toBe(false);
   });
 });

@@ -459,6 +459,11 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
                 <Button href="/manage/flagged-questions" variant="secondary"
                   >Flagged questions</Button
                 >
+                {#if data.uiFlags.QUESTION_RATING === true}
+                  <Button href="/manage/question-ratings" variant="secondary"
+                    >Question ratings</Button
+                  >
+                {/if}
               {/if}
               {#if canPublishQuestions}
                 <Button href="/manage/questions" variant="secondary"
@@ -628,8 +633,8 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
         <h2 class="text-lg font-semibold">Your data</h2>
         <p class="text-foreground-darker font-sans">
           Download everything we hold about your account as one JSON file: account
-          details, signed-in devices, game results, solo runs, flags, custom
-          questions and presets.
+          details, signed-in devices, game results, solo runs, flags, question
+          ratings, custom questions and presets.
         </p>
         <ExportDataButton />
       </Card>

@@ -46,6 +46,16 @@ describe("connect()", () => {
     expect(c.connect).toHaveBeenCalledTimes(1);
   });
 
+  it("arms the idle watchdog at 65 s", () => {
+    const c = makeFakeClient();
+    const session = createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      url: "ws://x",
+    });
+    session.connect();
+    expect(c.opts()?.idleTimeoutMs).toBe(65_000);
+  });
+
   it("reuses the same client on a second connect()", () => {
     const c = makeFakeClient();
     const session = createPlayerSession(callbacks, {

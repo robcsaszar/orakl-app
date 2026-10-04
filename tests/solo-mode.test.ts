@@ -36,12 +36,27 @@ class FakeWS {
   sent: string[] = [];
   onopen: (() => void) | null = null;
   onmessage: ((e: { data: string }) => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((e?: { code?: number }) => void) | null = null;
   onerror: (() => void) | null = null;
+  createdAt = Date.now();
+  closedAt: number | null = null;
 
   constructor() {
     FakeWS.lastInstance = this;
-    setTimeout(() => this.onopen?.(), 0);
+    FakeWS.instances.push(this);
+    const failOpen = FakeWS.failOpen;
+    setTimeout(() => {
+      if (this.readyState === 3) return;
+      if (failOpen) this.drop();
+      else this.onopen?.();
+    }, 0);
+  }
+
+  /** Close from the network or server side, not through close(). */
+  drop(code = 1006) {
+    this.readyState = 3;
+    this.closedAt = Date.now();
+    this.onclose?.({ code });
   }
 
   send(data: string) {
@@ -54,8 +69,13 @@ class FakeWS {
   }
 
   static lastInstance: FakeWS | null = null;
+  static instances: FakeWS[] = [];
+  /** New sockets close (1006) instead of opening. */
+  static failOpen = false;
   static reset() {
     FakeWS.lastInstance = null;
+    FakeWS.instances = [];
+    FakeWS.failOpen = false;
   }
 }
 
@@ -561,6 +581,30 @@ describe("soloMode (WS store)", () => {
       expect(ws.sent.some((s) => s.includes("solo:resume"))).toBe(true);
     });
 
+    it("init() keeps resuming past 6 s and retries a dropped resume socket", () => {
+      window.sessionStorage.setItem(
+        STATE_KEY,
+        JSON.stringify({
+          phase: "playing",
+          sessionId: "stored-sess",
+          claimId: null,
+          isGuest: true,
+          ownerId: "anon",
+          finalData: null,
+          results: [],
+        }),
+      );
+      const q = createGuest();
+      q.init();
+      vi.advanceTimersByTime(7000);
+      expect(q.phase).toBe("playing");
+      expect(q.reconnecting).toBe(true);
+      FakeWS.lastInstance!.drop();
+      expect(q.phase).toBe("playing");
+      vi.advanceTimersByTime(1001);
+      expect(FakeWS.instances).toHaveLength(2);
+    });
+
     it("init() restores a finished run's results screen (no WS)", () => {
       window.sessionStorage.setItem(
         STATE_KEY,
@@ -713,6 +757,261 @@ describe("soloMode (WS store)", () => {
       expect(blob.claimId).toBe("claim-9");
       expect(blob.finalData.totalScore).toBe(10);
       expect(q.claimId).toBe("claim-9");
+    });
+  });
+
+  describe("in-run reconnect", () => {
+    afterEach(() => {
+      window.sessionStorage.clear();
+    });
+
+    function sentTypes(ws: FakeWS): string[] {
+      return ws.sent.map((s) => JSON.parse(s).type);
+    }
+
+    async function playing() {
+      const q = create();
+      q.selectedCategories = ["science"];
+      await q.startQuiz();
+      vi.advanceTimersByTime(0);
+      serverMsg(q, { type: "solo:ready", isGuest: true, sessionId: "sess-r" });
+      serverMsg(q, {
+        type: "solo:question",
+        question: baseQuestion as never,
+        questionIndex: 0,
+        totalQuestions: 3,
+        timeRemaining: 30,
+        serverTs: 1000,
+      });
+      return q;
+    }
+
+    it("a mid-run close reopens at once and sends solo:resume", async () => {
+      const q = await playing();
+      FakeWS.lastInstance!.drop();
+      expect(FakeWS.instances).toHaveLength(2);
+      expect(q.reconnecting).toBe(true);
+      vi.advanceTimersByTime(0);
+      expect(sentTypes(FakeWS.instances[1])).toEqual(["solo:resume"]);
+    });
+
+    function resumed(q: ReturnType<typeof create>) {
+      serverMsg(q, {
+        type: "solo:question",
+        question: baseQuestion as never,
+        questionIndex: 0,
+        totalQuestions: 3,
+        timeRemaining: 20,
+        serverTs: 2000,
+      });
+    }
+
+    it("a second drop after a resume reopens after 1000 ms with solo:resume", async () => {
+      const q = await playing();
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(0);
+      resumed(q);
+      expect(q.reconnecting).toBe(false);
+      FakeWS.lastInstance!.drop();
+      expect(q.reconnecting).toBe(true);
+      vi.advanceTimersByTime(999);
+      expect(FakeWS.instances).toHaveLength(2);
+      vi.advanceTimersByTime(1);
+      expect(FakeWS.instances).toHaveLength(3);
+      vi.advanceTimersByTime(1); // fire the reopened socket's onopen
+      expect(sentTypes(FakeWS.instances[2])).toEqual(["solo:resume"]);
+    });
+
+    it("failed reopens back off 1 s, 2 s, then 4 s", async () => {
+      await playing();
+      FakeWS.failOpen = true;
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(10_000);
+      const ws = FakeWS.instances;
+      const gaps = [2, 3, 4].map((i) => ws[i].createdAt - ws[i - 1].closedAt!);
+      expect(gaps).toEqual([1000, 2000, 4000]);
+    });
+
+    it("seven failed opens end the run", async () => {
+      const q = await playing();
+      expect(window.sessionStorage.getItem("solo:state")).not.toBeNull();
+      FakeWS.failOpen = true;
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(32_000);
+      expect(FakeWS.instances).toHaveLength(8); // start socket + 7 opens
+      expect(q.phase).toBe("setup");
+      expect(q.reconnecting).toBe(false);
+      expect(q.errors).toEqual(["Connection lost. Your trial has ended."]);
+      expect(window.sessionStorage.getItem("solo:state")).toBeNull();
+      vi.advanceTimersByTime(60_000);
+      expect(FakeWS.instances).toHaveLength(8);
+    });
+
+    it("a 1011 close on the resume socket ends the run at once", async () => {
+      const q = await playing();
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(1);
+      FakeWS.lastInstance!.drop(1011);
+      expect(q.phase).toBe("setup");
+      expect(q.errors).toEqual(["Connection lost. Your trial has ended."]);
+      vi.advanceTimersByTime(60_000);
+      expect(FakeWS.instances).toHaveLength(2);
+    });
+
+    it("session_expired after a drop ends the run with the server message", async () => {
+      const q = await playing();
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(1);
+      serverMsg(q, {
+        type: "solo:error",
+        code: "session_expired",
+        message: "Your trial has ended.",
+      });
+      expect(q.phase).toBe("setup");
+      expect(q.errors).toEqual(["Your trial has ended."]);
+      expect(window.sessionStorage.getItem("solo:state")).toBeNull();
+      vi.advanceTimersByTime(60_000);
+      expect(FakeWS.instances).toHaveLength(2);
+    });
+
+    it("a late-answer session_expired mid-run only sets errors", async () => {
+      const q = await playing();
+      expect(q.reconnecting).toBe(false);
+      serverMsg(q, {
+        type: "solo:error",
+        code: "session_expired",
+        message: "Too late.",
+      });
+      expect(q.errors).toEqual(["Too late."]);
+      expect(q.phase).toBe("playing");
+    });
+
+    it("endRound() during the reveal opens no socket", async () => {
+      const q = await playing();
+      serverMsg(q, {
+        type: "solo:round-result",
+        isCorrect: true,
+        correctAnswerId: "a-correct",
+        score: 100,
+        totalScore: 100,
+        streak: 1,
+        strikes: 0,
+        fasterThanPercent: null,
+      } as never);
+      expect(q.showingAnswer).toBe(true);
+      q.endRound();
+      vi.advanceTimersByTime(5000);
+      expect(FakeWS.instances).toHaveLength(1);
+    });
+
+    it("solo:final after the reveal opens no socket", async () => {
+      const q = await playing();
+      serverMsg(q, {
+        type: "solo:round-result",
+        isCorrect: true,
+        correctAnswerId: "a-correct",
+        score: 100,
+        totalScore: 100,
+        streak: 1,
+        strikes: 0,
+        fasterThanPercent: null,
+      } as never);
+      serverMsg(q, {
+        type: "solo:final",
+        totalScore: 0,
+        totalAnswered: 1,
+        correctCount: 0,
+        timeToAnswerAvgMs: 0,
+        maxStreak: 0,
+        isLeaderboardEligible: false,
+        isStreakEligible: false,
+        claimId: null,
+        mode: "normal",
+        results: [],
+      } as never);
+      vi.advanceTimersByTime(5000);
+      expect(FakeWS.instances).toHaveLength(1);
+    });
+  });
+
+  describe("starting", () => {
+    function sentStarts(ws: FakeWS): number {
+      return ws.sent.filter((s) => JSON.parse(s).type === "solo:start").length;
+    }
+
+    async function started() {
+      const q = create();
+      q.selectedCategories = ["science"];
+      await q.startQuiz();
+      vi.advanceTimersByTime(0);
+      return q;
+    }
+
+    it("startQuiz sets starting; solo:question clears it", async () => {
+      const q = await started();
+      expect(q.starting).toBe(true);
+      serverMsg(q, {
+        type: "solo:question",
+        question: baseQuestion as never,
+        questionIndex: 0,
+        totalQuestions: 1,
+        timeRemaining: 30,
+        serverTs: 1000,
+      });
+      expect(q.starting).toBe(false);
+    });
+
+    it("after solo:guest-limit, startQuiz re-sends solo:start on the same socket", async () => {
+      const q = await started();
+      serverMsg(q, {
+        type: "solo:guest-limit",
+        reason: "Guests max 1 category.",
+        upgradeHint: "Sign in.",
+      });
+      expect(q.starting).toBe(false);
+      q.selectedCategories = ["history"];
+      await q.startQuiz();
+      expect(FakeWS.instances).toHaveLength(1);
+      const ws = FakeWS.lastInstance!;
+      expect(sentStarts(ws)).toBe(2);
+      expect(JSON.parse(ws.sent[1]).categoryIds).toEqual(["history"]);
+    });
+
+    it("after an empty-pool solo:error, startQuiz re-sends solo:start", async () => {
+      const q = await started();
+      serverMsg(q, {
+        type: "solo:error",
+        code: "no_questions",
+        message: "No questions available for this selection.",
+      } as never);
+      expect(q.starting).toBe(false);
+      await q.startQuiz();
+      expect(FakeWS.instances).toHaveLength(1);
+      expect(sentStarts(FakeWS.lastInstance!)).toBe(2);
+    });
+
+    it("two startQuiz calls before any answer send one solo:start", async () => {
+      const q = await started();
+      await q.startQuiz();
+      vi.advanceTimersByTime(0);
+      expect(FakeWS.instances).toHaveLength(1);
+      expect(sentStarts(FakeWS.lastInstance!)).toBe(1);
+    });
+
+    it("a close before the run begins surfaces an error and allows a new start", async () => {
+      const q = await started();
+      FakeWS.lastInstance!.drop(1011);
+      expect(q.phase).toBe("setup");
+      expect(q.starting).toBe(false);
+      expect(q.errors).toEqual(["Connection error — check your connection"]);
+      await q.startQuiz();
+      expect(FakeWS.instances).toHaveLength(2);
+    });
+
+    it("destroy() while starting sets no error", async () => {
+      const q = await started();
+      q.destroy();
+      expect(q.errors).toEqual([]);
     });
   });
 
@@ -933,6 +1232,135 @@ describe("soloMode (WS store)", () => {
       vi.advanceTimersByTime(0);
       q.destroy();
       expect(FakeWS.lastInstance?.readyState).toBe(3);
+    });
+  });
+
+  describe("question rating", () => {
+    afterEach(() => {
+      window.sessionStorage.clear();
+    });
+
+    async function atReveal() {
+      const q = create();
+      q.selectedCategories = ["science"];
+      await q.startQuiz();
+      vi.advanceTimersByTime(0);
+      serverMsg(q, { type: "solo:ready", isGuest: false, sessionId: "sess-q" });
+      serverMsg(q, {
+        type: "solo:question",
+        question: baseQuestion as never,
+        questionIndex: 0,
+        totalQuestions: 3,
+        timeRemaining: 30,
+        serverTs: 1000,
+      });
+      serverMsg(q, {
+        type: "solo:round-result",
+        correctAnswerId: "a-correct",
+        selectedAnswerId: "a-correct",
+        isCorrect: true,
+        score: 100,
+        totalScore: 100,
+        timeToAnswerMs: 1000,
+        streak: 1,
+        strikes: 0,
+        fasterThanPercent: 10,
+      });
+      return q;
+    }
+
+    function frames(type: string) {
+      return FakeWS.lastInstance!.sent.map((s) => JSON.parse(s)).filter(
+        (m) => m.type === type,
+      );
+    }
+
+    function ack(
+      q: ReturnType<typeof create>,
+      questionId: string,
+      ok: boolean,
+    ) {
+      q._handleServerMessage(
+        JSON.stringify({ type: "solo:rate-ack", questionId, ok }),
+      );
+    }
+
+    it("rate sends solo:rate with the bank question id", async () => {
+      const q = await atReveal();
+      q.rate("up");
+      expect(frames("solo:rate")).toHaveLength(1);
+      expect(frames("solo:rate")[0]).toMatchObject({
+        type: "solo:rate",
+        questionId: "q-0",
+        rating: "up",
+      });
+      expect(q.rating.pending).toBe("up");
+    });
+
+    it("a second rate before the ack sends nothing; the ack sends it", async () => {
+      const q = await atReveal();
+      q.rate("up");
+      q.rate("down");
+      expect(frames("solo:rate")).toHaveLength(1);
+      ack(q, "q-0", true);
+      const sent = frames("solo:rate");
+      expect(sent).toHaveLength(2);
+      expect(sent[1]).toMatchObject({ questionId: "q-0", rating: "down" });
+      expect(q.rating.result).toMatchObject({ rating: "up", ok: true });
+    });
+
+    it("an ack for another question is ignored", async () => {
+      const q = await atReveal();
+      q.rate("up");
+      ack(q, "q-other", true);
+      expect(q.rating.pending).toBe("up");
+      expect(q.rating.result).toBeNull();
+    });
+
+    it("a new question resets rating to the new id", async () => {
+      const q = await atReveal();
+      q.rate("up");
+      serverMsg(q, {
+        type: "solo:question",
+        question: { ...baseQuestion, id: "q-1" } as never,
+        questionIndex: 1,
+        totalQuestions: 3,
+        timeRemaining: 30,
+        serverTs: 2000,
+      });
+      expect(q.rating).toEqual({
+        questionId: "q-1",
+        pending: null,
+        queued: null,
+        result: null,
+      });
+    });
+
+    function keyEvent(target: EventTarget | null) {
+      const e = new KeyboardEvent("keydown", {
+        key: "Enter",
+        cancelable: true,
+      });
+      Object.defineProperty(e, "target", { value: target });
+      return e;
+    }
+
+    it("Enter on a rating thumb does not advance", async () => {
+      const q = await atReveal();
+      const wrap = document.createElement("div");
+      wrap.innerHTML = "<button data-rating-thumb><svg></svg></button>";
+      const thumb = wrap.querySelector("button")!;
+      const e = keyEvent(thumb);
+      q.handleKeyDown(e);
+      expect(frames("solo:next")).toHaveLength(0);
+      expect(q.showingAnswer).toBe(true);
+      expect(e.defaultPrevented).toBe(false);
+    });
+
+    it("Enter on another target still advances", async () => {
+      const q = await atReveal();
+      q.handleKeyDown(keyEvent(document.createElement("button")));
+      expect(frames("solo:next")).toHaveLength(1);
     });
   });
 });
