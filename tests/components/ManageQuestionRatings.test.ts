@@ -54,6 +54,10 @@ async function settle() {
 }
 
 describe("ManageQuestionRatings", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders rows in the given order with excerpt and source line", async () => {
     renderList();
     await settle();
@@ -121,7 +125,6 @@ describe("ManageQuestionRatings", () => {
         "Failed to load question ratings.",
       ),
     );
-    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
@@ -437,6 +440,106 @@ describe("ManageQuestionRatings delete", () => {
       "/api/manage/question-ratings?page=1",
     ]);
     expect(screen.getByText(/Page 1/)).toBeInTheDocument();
+  });
+
+  it("reloads the page the user is heading to when a pending delete resolves mid-Next", async () => {
+    let releaseDelete: (v: unknown) => void = () => {};
+    const deleteDone = new Promise((res) => {
+      releaseDelete = res;
+    });
+    let releaseNext: () => void = () => {};
+    const nextGate = new Promise<void>((res) => {
+      releaseNext = res;
+    });
+    const pageTwo = {
+      rows: [{ ...ROWS[0], id: "q-3", excerpt: "Page two question?" }],
+      hasMore: false,
+    };
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") return deleteDone;
+      const page = new URL(url, "http://x").searchParams.get("page");
+      if (page === "2") {
+        if (fetchMock.mock.calls.filter((c) => c[0] === url).length === 1) {
+          await nextGate;
+        }
+        return { ok: true, status: 200, json: async () => pageTwo };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ rows: REMAINING, hasMore: true }),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(ManageQuestionRatings, {
+      props: {
+        initial: ROWS,
+        initialHasMore: true,
+        initialPage: 1,
+        canPublish: true,
+      },
+    });
+    await settle();
+    await confirmDelete(user);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    releaseDelete({ ok: true, status: 200, json: async () => ({ ok: true }) });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    releaseNext();
+    await vi.waitFor(() =>
+      expect(screen.getByText("Page two question?")).toBeInTheDocument(),
+    );
+    await settle();
+    expect(screen.getByText(/Page 2/)).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      "/api/manage/question-ratings/q-1",
+      "/api/manage/question-ratings?page=2",
+      "/api/manage/question-ratings?page=2",
+    ]);
+  });
+
+  it("reloads the shown page when a delete follows a failed Next", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        return { ok: true, status: 200, json: async () => ({ ok: true }) };
+      }
+      if (url.endsWith("page=2")) {
+        return { ok: false, status: 500, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ rows: REMAINING, hasMore: true }),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(ManageQuestionRatings, {
+      props: {
+        initial: ROWS,
+        initialHasMore: true,
+        initialPage: 1,
+        canPublish: true,
+      },
+    });
+    await settle();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to load question ratings.",
+      ),
+    );
+    await confirmDelete(user);
+    await vi.waitFor(() =>
+      expect(screen.queryByText("Which Norse god forged Mjolnir?")).toBeNull(),
+    );
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
+      "/api/manage/question-ratings?page=2",
+      "/api/manage/question-ratings/q-1",
+      "/api/manage/question-ratings?page=1",
+    ]);
   });
 
   it("sends no second DELETE while the first is pending", async () => {

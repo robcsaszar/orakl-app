@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ackRating,
+  clearRating,
   RATING_ERROR_MS,
   ratingFor,
   tapRating,
@@ -95,5 +96,16 @@ describe("question rating state", () => {
     expect(t.send).toBe("down");
     const a = ackRating(t.state, "q-1", true).state;
     expect(a.result).toEqual({ rating: "down", ok: true, seq: 2 });
+  });
+
+  it("clearRating drops pending and queued without a result", () => {
+    const pending = tapRating(ratingFor("q-1"), "up").state;
+    const queued = tapRating(pending, "down").state;
+    expect(clearRating(queued)).toEqual({
+      questionId: "q-1",
+      pending: null,
+      queued: null,
+      result: null,
+    });
   });
 });

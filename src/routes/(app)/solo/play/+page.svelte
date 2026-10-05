@@ -26,7 +26,7 @@
   const uiFlags = $derived(
     (page.data as { uiFlags?: { QUESTION_RATING?: boolean } }).uiFlags ?? {},
   );
-  const showRating = $derived(!s.isGuest && uiFlags.QUESTION_RATING === true);
+  const showRating = $derived(!s.isGuest && !s.ratingDisabled && uiFlags.QUESTION_RATING === true);
 
   // On the final fixed-count question the next step is results, not a question.
   const isLastQuestion = $derived(
@@ -41,6 +41,15 @@
 
   $effect(() => {
     if (s.showingAnswer && s.lastAnswerInput === "keyboard") {
+      tick().then(() => continueButton?.focus());
+    }
+  });
+
+  // The thumbs leave on a "disabled" ack; focus on one moves to Continue.
+  $effect.pre(() => {
+    if (!s.ratingDisabled) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.closest("[data-rating-thumb]")) {
       tick().then(() => continueButton?.focus());
     }
   });

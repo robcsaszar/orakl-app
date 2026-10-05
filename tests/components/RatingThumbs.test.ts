@@ -60,7 +60,9 @@ describe("RatingThumbs", () => {
     expect(screen.getAllByText("Submitted")).toHaveLength(1);
     const status = screen.getByText("Submitted");
     expect(status).toHaveAttribute("aria-live", "polite");
-    const good = screen.getByRole("button", { name: "Good question" });
+    const good = screen.getByRole("button", {
+      name: "Good question, submitted",
+    });
     expect(good.parentElement).toContainElement(status);
     expect(
       screen.getByRole("button", { name: "Bad question" }),
@@ -103,7 +105,19 @@ describe("RatingThumbs", () => {
     expect(container).toContainElement(centre);
   });
 
-  it("aria-pressed is true on the ok thumb only", () => {
+  it("no thumb is a toggle: aria-pressed is absent", () => {
+    render(RatingThumbs, {
+      props: props({
+        ...ratingFor("q-1"),
+        result: { rating: "up", ok: true, seq: 1 },
+      }),
+    });
+    for (const b of screen.getAllByRole("button")) {
+      expect(b).not.toHaveAttribute("aria-pressed");
+    }
+  });
+
+  it("the ✓ thumb's accessible name says submitted; the other keeps its label", () => {
     render(RatingThumbs, {
       props: props({
         ...ratingFor("q-1"),
@@ -111,11 +125,11 @@ describe("RatingThumbs", () => {
       }),
     });
     expect(
-      screen.getByRole("button", { name: "Good question" }),
-    ).toHaveAttribute("aria-pressed", "true");
+      screen.getByRole("button", { name: "Good question, submitted" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Bad question" }),
-    ).toHaveAttribute("aria-pressed", "false");
+    ).toBeInTheDocument();
   });
 
   it("the live region names the rating it reports on", () => {

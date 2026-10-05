@@ -53,6 +53,7 @@ import {
 } from "../player-session.js";
 import {
   ackRating,
+  clearRating,
   type RatingState,
   ratingFor,
   tapRating,
@@ -135,8 +136,14 @@ export class QuizSession implements PlayerSessionView {
   rating = $state<RatingState>(ratingFor(""));
   /** The server attached the player's own streak to this round's result: they answered or timed out. */
   playedRound = $state(false);
+  /** Set when the server answers a rating with "disabled"; kept for the session's life. */
+  ratingDisabled = $state(false);
   /** Signed-in players who played the round, and the curator, may rate at the reveal. */
-  canRate = $derived(this.isLoggedIn && (this.isCurator || this.playedRound));
+  canRate = $derived(
+    this.isLoggedIn &&
+      !this.ratingDisabled &&
+      (this.isCurator || this.playedRound),
+  );
 
   // ── Server-authoritative routing axes ──
   membership = $state<Membership>("none");
@@ -839,6 +846,11 @@ export class QuizSession implements PlayerSessionView {
       }
     },
     onRateAck: (msg) => {
+      if (msg.reason === "disabled") {
+        this.ratingDisabled = true;
+        this.rating = clearRating(this.rating);
+        return;
+      }
       const r = ackRating(this.rating, msg.questionId, msg.ok);
       this.rating = r.state;
       if (r.send) this.sendRating(r.send);

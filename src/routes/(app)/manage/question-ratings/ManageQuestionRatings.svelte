@@ -44,8 +44,11 @@
   let loading = $state(false);
 
   let reqToken = 0;
+  // Page a pending load will show; null once the latest load settles.
+  let targetedPage: number | null = null;
   async function loadPage(targetPage: number) {
     const token = ++reqToken;
+    targetedPage = targetPage;
     loading = true;
     try {
       const params = new URLSearchParams({ page: String(targetPage) });
@@ -63,7 +66,10 @@
       if (token === reqToken)
         toast.error("Failed to load question ratings.");
     } finally {
-      if (token === reqToken) loading = false;
+      if (token === reqToken) {
+        loading = false;
+        targetedPage = null;
+      }
     }
   }
 
@@ -119,7 +125,7 @@
   // Ids whose DELETE is in flight; a repeat confirm on any of them is ignored.
   const deleting = new Set<string>();
 
-  /** Deletes the question for good, then reloads the current page; an emptied page falls back one page. */
+  /** Deletes the question for good, then reloads the page the user is on or heading to; an emptied page falls back one page. */
   async function deleteQuestion(row: QuestionRatingRow) {
     if (deleting.has(row.id)) return;
     deleting.add(row.id);
@@ -133,8 +139,9 @@
         return;
       }
       toast.success("Question deleted.");
-      await loadPage(page);
-      if (rows.length === 0 && page > 1) await loadPage(page - 1);
+      const reloaded = targetedPage ?? page;
+      await loadPage(reloaded);
+      if (rows.length === 0 && reloaded > 1) await loadPage(reloaded - 1);
     } catch {
       toast.error("Network error. Try again.");
     } finally {

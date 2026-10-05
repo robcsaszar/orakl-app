@@ -935,6 +935,29 @@ describe("QuizSession (injectable factory)", () => {
       });
     });
 
+    it("a disabled ack sets ratingDisabled, drops the queue, no ✗, keeps it on the next question", () => {
+      session.isLoggedIn = true;
+      question("q-1");
+      reveal(true);
+      session.rate("up");
+      session.rate("down");
+      send({
+        type: "player:rate-ack",
+        questionId: "q-1",
+        ok: false,
+        reason: "disabled",
+      });
+      expect(session.ratingDisabled).toBe(true);
+      expect(session.rating.pending).toBeNull();
+      expect(session.rating.queued).toBeNull();
+      expect(session.rating.result).toBeNull();
+      expect(stub.send).toHaveBeenCalledTimes(1);
+      question("q-2");
+      reveal(true);
+      expect(session.ratingDisabled).toBe(true);
+      expect(session.canRate).toBe(false);
+    });
+
     it("ignores an ack for another question", () => {
       question("q-1");
       reveal(true);

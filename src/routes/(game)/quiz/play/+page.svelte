@@ -1,7 +1,7 @@
 <script lang="ts">
 import { percent } from "@orakl/shared";
   import RingTimer from "$lib/components/ui/RingTimer.svelte";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { page } from "$app/state";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
   import {
@@ -153,6 +153,17 @@ import { percent } from "@orakl/shared";
     });
   });
 
+  let revealRoot = $state<HTMLDivElement | null>(null);
+
+  // The thumbs leave on a "disabled" ack; focus on one moves to the reveal.
+  $effect.pre(() => {
+    if (session.canRate) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.closest("[data-rating-thumb]")) {
+      tick().then(() => revealRoot?.focus());
+    }
+  });
+
   function handleKeyDown(e: KeyboardEvent) {
     if (
       e.target instanceof HTMLInputElement ||
@@ -184,7 +195,11 @@ import { percent } from "@orakl/shared";
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div class="flex flex-col gap-8">
+<div
+  bind:this={revealRoot}
+  tabindex="-1"
+  class="flex flex-col gap-8 focus:outline-hidden"
+>
   <div class="flex flex-col gap-4">
     <QuestionHeader
       showIdentity={false}
@@ -386,13 +401,17 @@ import { percent } from "@orakl/shared";
     </div>
   {/snippet}
 
+  {#snippet thumbsRing()}
+    {@render nextQuestionRing(false)}
+  {/snippet}
+
   {#if uiFlags.QUESTION_RATING === true && session.canRate && correctAnswerId}
     <div class="py-4" class:invisible={session.isIntermission}>
-      <RatingThumbs rating={session.rating} onrate={(r) => session.rate(r)}>
-        {#if session.nextQuestionCountdown > 0}
-          {@render nextQuestionRing(false)}
-        {/if}
-      </RatingThumbs>
+      <RatingThumbs
+        rating={session.rating}
+        onrate={(r) => session.rate(r)}
+        children={session.nextQuestionCountdown > 0 ? thumbsRing : undefined}
+      />
     </div>
   {:else if session.nextQuestionCountdown > 0}
     {@render nextQuestionRing(true)}
