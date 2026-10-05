@@ -38,12 +38,23 @@
   // to server truth when the prop refreshes.
   let localCategories = $derived<Category[]>(categories);
 
+  /** PATCH saves in flight by question id; `startEdit` waits on these before it fetches. */
+  const pendingSaves = new Map<string, Promise<void>>();
+
   /** Saves the form's payload: POST for a new question, PATCH for the one being edited. */
   async function saveQuestion(payload: Record<string, unknown>): Promise<boolean> {
     const opened = editing;
     const editedId = opened?.id ?? null;
     const isEditing = editedId !== null;
     const categoryId = payload.categoryId;
+    let settle: () => void = () => {};
+    let pending: Promise<void> | null = null;
+    if (editedId !== null) {
+      pending = new Promise<void>((resolve) => {
+        settle = resolve;
+      });
+      pendingSaves.set(editedId, pending);
+    }
     try {
       const res = await fetch(
         isEditing ? `/api/custom-questions/${editedId}` : "/api/custom-questions",
@@ -91,6 +102,11 @@
     } catch {
       toast.error("Network error. Try again.");
       return false;
+    } finally {
+      if (editedId !== null && pendingSaves.get(editedId) === pending) {
+        pendingSaves.delete(editedId);
+      }
+      settle();
     }
   }
 
@@ -128,7 +144,8 @@
     deleting.add(id);
     try {
       const res = await fetch(`/api/custom-questions/${id}`, { method: "DELETE" });
-      if (!res.ok) {
+      // A 404 means the row is gone or its owner changed while the delete ran.
+      if (!res.ok && res.status !== 404) {
         const d = await res.json().catch(() => ({})) as { error?: string };
         toast.error(d.error ?? "Delete failed.");
         return;
@@ -152,17 +169,35 @@
   }
 
 
+  /** Counts Edit clicks and Cancels; a load that a later one superseded is dropped, its errors too. */
+  let editClicks = 0;
+  /** Question whose latest Edit click is still waiting on its save or its GET. */
+  let loadingEditId = $state<string | null>(null);
+
+  function cancelEdit() {
+    editClicks++;
+    loadingEditId = null;
+    editing = null;
+  }
+
   async function startEdit(q: OwnQuestion) {
+    const click = ++editClicks;
+    loadingEditId = q.id;
     try {
+      await pendingSaves.get(q.id);
+      if (click !== editClicks) return;
       const res = await fetch(`/api/custom-questions/${q.id}`);
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(d.error ?? "Could not load question.");
+        if (click === editClicks) toast.error(d.error ?? "Could not load question.");
         return;
       }
-      editing = (await res.json()) as QuestionFormQuestion;
+      const loaded = (await res.json()) as QuestionFormQuestion;
+      if (click === editClicks) editing = loaded;
     } catch {
-      toast.error("Network error. Try again.");
+      if (click === editClicks) toast.error("Network error. Try again.");
+    } finally {
+      if (click === editClicks) loadingEditId = null;
     }
   }
 </script>
@@ -171,7 +206,7 @@
   categories={localCategories}
   question={editing}
   onsubmit={saveQuestion}
-  oncancel={() => (editing = null)}
+  oncancel={cancelEdit}
   oncategoryadded={(c) => (localCategories = [...localCategories, c])}
 />
 
@@ -213,6 +248,8 @@
                 variant="secondary"
                 intent="compact"
                 aria-label="Edit question"
+                loading={loadingEditId === q.id}
+                disabled={loadingEditId === q.id}
                 onclick={() => startEdit(q)}
               >
                 Edit

@@ -12,9 +12,8 @@ import type {
  * enforces that the mock can never drift from the real session's public
  * shape. Built from an audit of every `session.*` access in those consumers;
  * internals (deviceId, profileAvatarId, avatarSrcMap, private methods) are
- * deliberately excluded. `isLoggedIn` is the one exception — the question-
- * flagging FAB (quiz/play/+page.svelte) needs it to hide itself for
- * anonymous players (ADR 0020).
+ * deliberately excluded. `isLoggedIn` is the one exception — no consumer
+ * reads it directly; both sessions derive `canRate` from it.
  */
 
 import type {
@@ -64,8 +63,8 @@ export interface PlayerSessionView {
   /** Curator's own row, one level up from a normal player (ADR 0019 route
    *  unification) — same journey, same routes, plus the curator toolbox. */
   isCurator: boolean;
-  /** Non-anonymous account (any role above "anonymous") — gates the question-
-   *  flag FAB (ADR 0020), which only a logged-in identity can submit under. */
+  /** Non-anonymous account (any role above "anonymous") — gates question
+   *  rating eligibility (`canRate`) and the save-to-profile checkbox. */
   isLoggedIn: boolean;
 
   // ── Question rating ──

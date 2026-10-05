@@ -80,4 +80,40 @@ describe("curator library delete", () => {
     expect(screen.getByText("Capital of France?")).toBeInTheDocument();
     expect(screen.getByText(/Geography \(3 questions\)/)).toBeInTheDocument();
   });
+
+  it("removes the row and decrements the count when DELETE answers 404", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: "Not found" }), { status: 404 }),
+    );
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Delete question" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Click again to delete this question",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Capital of France?")).toBeNull(),
+    );
+    expect(screen.getByText(/Geography \(2 questions\)/)).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps the row and toasts when DELETE answers 403", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 }),
+    );
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Delete question" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Click again to delete this question",
+      }),
+    );
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Forbidden"));
+    expect(screen.getByText("Capital of France?")).toBeInTheDocument();
+    expect(screen.getByText(/Geography \(3 questions\)/)).toBeInTheDocument();
+  });
 });

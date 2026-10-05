@@ -11,6 +11,11 @@ vi.mock("../../src/lib/toast.js", () => ({
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  vi.mocked(toast.info).mockClear();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 const categories = [
@@ -155,6 +160,36 @@ describe("QuestionForm", () => {
     expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
   });
 
+  it("scrolls the form into view smoothly when filled", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: false })),
+    );
+    render(QuestionForm, {
+      props: { categories, question: multipleChoice, onsubmit: vi.fn() },
+    });
+    await screen.findByDisplayValue("Capital of France?");
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
+
+  it("scrolls the form into view instantly under reduced motion", async () => {
+    const matchMedia = vi.fn((query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)",
+    }));
+    vi.stubGlobal("matchMedia", matchMedia);
+    render(QuestionForm, {
+      props: { categories, question: multipleChoice, onsubmit: vi.fn() },
+    });
+    await screen.findByDisplayValue("Capital of France?");
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+      behavior: "instant",
+      block: "start",
+    });
+  });
+
   it("refills when the question changes and returns to add mode on null", async () => {
     const { rerender } = render(QuestionForm, {
       props: { categories, question: multipleChoice, onsubmit: vi.fn() },
@@ -200,6 +235,54 @@ describe("QuestionForm", () => {
     );
     expect(screen.getByDisplayValue("Capital of France?")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Paris")).toBeInTheDocument();
+  });
+
+  it("keeps text typed during a pending add when it resolves ok", async () => {
+    const user = userEvent.setup();
+    let finish!: (ok: boolean) => void;
+    const onsubmit = vi.fn(
+      () =>
+        new Promise<boolean>((r) => {
+          finish = r;
+        }),
+    );
+    render(QuestionForm, { props: { categories, question: null, onsubmit } });
+    await user.selectOptions(screen.getByLabelText("Category"), "cat-sci");
+    await user.type(screen.getByLabelText("Question"), "Symbol for gold?");
+    await user.type(screen.getByPlaceholderText("Answer 1"), "Au");
+    await user.type(screen.getByPlaceholderText("Answer 2"), "Ag");
+    await user.click(screen.getByRole("button", { name: "Add question" }));
+    await waitFor(() => expect(onsubmit).toHaveBeenCalledTimes(1));
+    await user.type(screen.getByLabelText("Question"), " Next");
+    finish(true);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Add question" }),
+      ).toBeEnabled(),
+    );
+    expect(screen.getByLabelText("Question")).toHaveValue(
+      "Symbol for gold? Next",
+    );
+    expect(toast.info).toHaveBeenCalledTimes(1);
+    expect(toast.info).toHaveBeenCalledWith(
+      "Edits made while saving are still in the form.",
+    );
+  });
+
+  it("resets the fields when an add resolves ok with no typing during the submit", async () => {
+    const user = userEvent.setup();
+    const onsubmit = vi.fn().mockResolvedValue(true);
+    render(QuestionForm, { props: { categories, question: null, onsubmit } });
+    await user.selectOptions(screen.getByLabelText("Category"), "cat-sci");
+    await user.type(screen.getByLabelText("Question"), "Symbol for gold?");
+    await user.type(screen.getByPlaceholderText("Answer 1"), "Au");
+    await user.type(screen.getByPlaceholderText("Answer 2"), "Ag");
+    await user.click(screen.getByRole("button", { name: "Add question" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Question")).toHaveValue(""),
+    );
+    expect(screen.getByPlaceholderText("Answer 1")).toHaveValue("");
+    expect(toast.info).not.toHaveBeenCalled();
   });
 
   describe("during an image upload", () => {

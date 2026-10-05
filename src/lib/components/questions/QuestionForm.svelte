@@ -7,6 +7,7 @@
   import Input from "$lib/components/ui/Input.svelte";
   import RadioGroup from "$lib/components/ui/RadioGroup.svelte";
   import Select from "$lib/components/ui/Select.svelte";
+  import { prefersReducedMotion } from "$lib/motion-prefs.js";
   import { toast } from "@/lib/toast.js";
   import { cn } from "tailwind-variants";
   import { untrack } from "svelte";
@@ -232,6 +233,8 @@
     const wasEditing = isEditing;
     const categoryPart = categoryId ? { categoryId } : {};
     const difficultyNow = difficulty;
+    const startFields = fieldsSnapshot();
+    const startFile = pendingFile;
     let payload: Record<string, unknown>;
 
     if (questionType === "image_matching") {
@@ -329,10 +332,33 @@
     submitting = true;
     try {
       const ok = await onsubmit(payload);
-      if (ok && !wasEditing && (question?.id ?? null) === startId) resetFields();
+      // Text typed while the save was pending is kept.
+      if (ok && !wasEditing && (question?.id ?? null) === startId) {
+        if (pendingFile === startFile && fieldsSnapshot() === startFields) {
+          resetFields();
+        } else {
+          toast.info("Edits made while saving are still in the form.");
+        }
+      }
     } finally {
       submitting = false;
     }
+  }
+
+  /** The user-editable values resetFields() clears, serialized for comparison; the pending file is compared by reference. */
+  function fieldsSnapshot(): string {
+    return JSON.stringify([
+      questionText,
+      answers,
+      correctAnswerIndex,
+      trueFalseAnswer,
+      sourceUrl,
+      sourceLabel,
+      postAnswerNote,
+      imageUrl,
+      matchPairs,
+      correctPairIndex,
+    ]);
   }
 
   /** Clears the question fields; category, type and difficulty are left so a
@@ -409,7 +435,7 @@
       correctAnswerIndex = 0;
     }
 
-    formEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    formEl?.scrollIntoView({ behavior: prefersReducedMotion() ? "instant" : "smooth", block: "start" });
   }
 
   // Edit mode follows the question prop: a question fills the fields, null returns to add mode.
@@ -422,7 +448,7 @@
   });
 </script>
 
-<div class="flex flex-col gap-6" bind:this={formEl}>
+<div class="flex flex-col gap-6 scroll-mt-[calc(var(--ui-header-height)+1rem)]" bind:this={formEl}>
   {#if isEditing && showHeading}
     <h2 class="text-xl">Editing question</h2>
   {/if}
