@@ -172,6 +172,36 @@ describe("QuestionForm", () => {
     expect(screen.queryByDisplayValue("Paris is in France.")).toBeNull();
   });
 
+  it("keeps another question's fields when an add finishes after the form switched to it", async () => {
+    const user = userEvent.setup();
+    let finish!: (ok: boolean) => void;
+    const onsubmit = vi.fn(
+      () =>
+        new Promise<boolean>((r) => {
+          finish = r;
+        }),
+    );
+    const { rerender } = render(QuestionForm, {
+      props: { categories, question: null, onsubmit },
+    });
+    await user.selectOptions(screen.getByLabelText("Category"), "cat-sci");
+    await user.type(screen.getByLabelText("Question"), "Symbol for gold?");
+    await user.type(screen.getByPlaceholderText("Answer 1"), "Au");
+    await user.type(screen.getByPlaceholderText("Answer 2"), "Ag");
+    await user.click(screen.getByRole("button", { name: "Add question" }));
+    await waitFor(() => expect(onsubmit).toHaveBeenCalledTimes(1));
+    await rerender({ categories, question: multipleChoice, onsubmit });
+    await screen.findByDisplayValue("Capital of France?");
+    finish(true);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Save changes" }),
+      ).toBeEnabled(),
+    );
+    expect(screen.getByDisplayValue("Capital of France?")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Paris")).toBeInTheDocument();
+  });
+
   describe("during an image upload", () => {
     const sciTrueFalse: QuestionFormQuestion = {
       ...trueFalse,
