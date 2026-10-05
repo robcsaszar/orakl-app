@@ -37,6 +37,11 @@ export function tapRating(
   return { state: { ...state, pending: rating }, send: rating };
 }
 
+/** Drops the in-flight and queued ratings without recording a result. */
+export function clearRating(state: RatingState): RatingState {
+  return { ...state, pending: null, queued: null };
+}
+
 /**
  * Applies a server ack. Ignored for another question or with nothing in
  * flight. Records the result; a queued tap becomes the next send unless this

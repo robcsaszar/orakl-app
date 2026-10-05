@@ -96,6 +96,22 @@ describe("play page — rating thumbs at the reveal", () => {
     expect(container.querySelector("div.py-4 svg.-rotate-90")).toBeNull();
   });
 
+  it("auto advance: the thumb wrappers carry the ring offset", () => {
+    const { container } = renderPage(makeSession(3));
+    for (const thumb of container.querySelectorAll("[data-rating-thumb]")) {
+      expect(thumb.parentElement).toHaveClass("mt-1");
+    }
+  });
+
+  it("manual advance: the thumb wrappers carry no ring offset", () => {
+    const { container } = renderPage(makeSession(0));
+    const thumbs = container.querySelectorAll("[data-rating-thumb]");
+    expect(thumbs).toHaveLength(2);
+    for (const thumb of thumbs) {
+      expect(thumb.parentElement).not.toHaveClass("mt-1");
+    }
+  });
+
   it("an intermission hides the row", () => {
     const session = makeSession(3);
     session.isIntermission = true;
@@ -125,5 +141,41 @@ describe("play page — rating thumbs at the reveal", () => {
     pageData.value = { uiFlags: { QUESTION_RATING: false } };
     const { container } = renderPage(makeSession(3));
     expect(thumbLabels(container)).toEqual([]);
+  });
+
+  it("no thumbs once a disabled ack set ratingDisabled", async () => {
+    const session = makeSession(3);
+    const { container } = renderPage(session);
+    expect(thumbLabels(container)).toEqual(["Bad question", "Good question"]);
+    session.ratingDisabled = true;
+    await vi.waitFor(() => expect(thumbLabels(container)).toEqual([]));
+  });
+
+  it("a disabled ack while a thumb has focus moves focus to the reveal", async () => {
+    const session = makeSession(3);
+    const { container } = renderPage(session);
+    const thumb = container.querySelector<HTMLElement>("[data-rating-thumb]");
+    thumb?.focus();
+    expect(document.activeElement).toBe(thumb);
+    session.ratingDisabled = true;
+    await vi.waitFor(() => expect(thumbLabels(container)).toEqual([]));
+    await vi.waitFor(() => {
+      expect(document.activeElement).not.toBe(document.body);
+      expect(document.activeElement).toHaveAttribute("tabindex", "-1");
+      expect(container.contains(document.activeElement)).toBe(true);
+    });
+  });
+
+  it("a disabled ack leaves focus alone when it was elsewhere", async () => {
+    const session = makeSession(3);
+    const { container } = renderPage(session);
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    outside.focus();
+    session.ratingDisabled = true;
+    await vi.waitFor(() => expect(thumbLabels(container)).toEqual([]));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
   });
 });

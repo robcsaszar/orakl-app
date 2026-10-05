@@ -58,9 +58,8 @@
           state === "ok" && "border-success text-success",
           state === "error" && "border-danger text-danger",
         )}
-        aria-label={thumb.label}
+        aria-label={state === "ok" ? `${thumb.label}, submitted` : thumb.label}
         aria-busy={rating.pending === thumb.value ? "true" : undefined}
-        aria-pressed={state === "ok"}
         data-tooltip={thumb.label}
         data-tooltip-position="top"
         data-rating-thumb

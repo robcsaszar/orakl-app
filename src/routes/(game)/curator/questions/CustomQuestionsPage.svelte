@@ -7,9 +7,9 @@
   import Button from "$lib/components/ui/Button.svelte";
   import Badge from "$lib/components/ui/Badge.svelte";
   import Card from "$lib/components/ui/Card.svelte";
+  import ConfirmButton from "$lib/components/ui/ConfirmButton.svelte";
   import Icon from "$lib/components/ui/Icon.svelte";
   import { toast } from "@/lib/toast.js";
-  import ResponsiveOverlay from "$lib/components/ui/ResponsiveOverlay.svelte";
   import QuestionHistoryModal from "./QuestionHistoryModal.svelte";
 
   type Category = QuestionFormCategory;
@@ -98,8 +98,7 @@
   let libraryQuestions = $derived<OwnQuestion[]>(ownQuestions);
   let nextCursor = $derived<string | null>(questionsCursor);
   let loadingMore = $state(false);
-  let pendingDeleteId = $state<string | null>(null);
-  let deleting = $state(false);
+  const deleting = new Set<string>();
   let historyId = $state<string | null>(null);
 
   async function loadMore() {
@@ -123,10 +122,9 @@
     }
   }
 
-  async function confirmDelete() {
-    const id = pendingDeleteId;
-    if (!id || deleting) return;
-    deleting = true;
+  async function deleteQuestion(id: string) {
+    if (deleting.has(id)) return;
+    deleting.add(id);
     try {
       const res = await fetch(`/api/custom-questions/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -141,11 +139,10 @@
       localCategories = localCategories.map((c) =>
         deleted && c.name === deleted.category ? { ...c, count: Math.max(0, c.count - 1) } : c,
       );
-      pendingDeleteId = null;
     } catch {
       toast.error("Network error. Try again.");
     } finally {
-      deleting = false;
+      deleting.delete(id);
     }
   }
 
@@ -192,12 +189,12 @@
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
               {#if q.ratings}
-                <Badge variant="status" tone="neutral" class="inline-flex items-center gap-1" data-tooltip="{q.ratings.upAllTime} all time">
+                <Badge variant="status" tone="neutral" class="inline-flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-secondary" tabindex={0} data-tooltip="{q.ratings.upAllTime} all time">
                   <Icon name="thumb-up" class="size-4" />
                   <span aria-hidden="true">{q.ratings.up}</span>
                   <span class="sr-only">{q.ratings.up} good since last edit, {q.ratings.upAllTime} all time</span>
                 </Badge>
-                <Badge variant="status" tone="neutral" class="inline-flex items-center gap-1" data-tooltip="{q.ratings.downAllTime} all time">
+                <Badge variant="status" tone="neutral" class="inline-flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-secondary" tabindex={0} data-tooltip="{q.ratings.downAllTime} all time">
                   <Icon name="thumb-down" class="size-4" />
                   <span aria-hidden="true">{q.ratings.down}</span>
                   <span class="sr-only">{q.ratings.down} bad since last edit, {q.ratings.downAllTime} all time</span>
@@ -219,14 +216,20 @@
               >
                 Edit
               </Button>
-              <Button
+              <ConfirmButton
+                label="Delete"
+                ariaLabel="Delete question"
+                confirmLabel="Delete question?"
+                confirmAriaLabel="Click again to delete this question"
                 variant="danger"
-                intent="compact"
-                aria-label="Delete question"
-                onclick={() => (pendingDeleteId = q.id)}
+                progressStyle="border"
+                class="px-3 py-1.5 text-sm leading-none"
+                onConfirm={() => deleteQuestion(q.id)}
               >
-                Delete
-              </Button>
+                {#snippet icon()}
+                  <Icon name="x" class="size-4" />
+                {/snippet}
+              </ConfirmButton>
             </div>
           </Card>
         </li>
@@ -247,20 +250,6 @@
     {/if}
   </section>
 {/if}
-
-<ResponsiveOverlay
-  id="delete-question-dialog"
-  open={pendingDeleteId !== null}
-  hasTitle={true}
-  onClose={() => (pendingDeleteId = null)}
->
-  {#snippet title()}Delete question{/snippet}
-  <p class="text-sm text-foreground-darker">This removes the question from your library. It cannot be undone.</p>
-  {#snippet footer()}
-    <Button variant="outline" intent="compact" onclick={() => (pendingDeleteId = null)}>Cancel</Button>
-    <Button variant="danger" intent="compact" onclick={confirmDelete} loading={deleting} disabled={deleting}>Delete</Button>
-  {/snippet}
-</ResponsiveOverlay>
 
 {#if historyId}
   <QuestionHistoryModal questionId={historyId} open={true} onClose={() => (historyId = null)} />

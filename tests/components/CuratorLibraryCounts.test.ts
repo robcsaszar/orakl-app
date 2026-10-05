@@ -67,6 +67,39 @@ describe("curator library rating counts", () => {
     expect(down).toHaveTextContent("1 bad since last edit, 4 all time");
   });
 
+  it("makes each pill focusable with a focus ring and an all-time tooltip", () => {
+    render(CustomQuestionsPage, {
+      props: {
+        categories,
+        ownQuestions: [
+          row({ ratings: { up: 3, down: 1, upAllTime: 7, downAllTime: 4 } }),
+        ],
+      },
+    });
+    const pills = [
+      screen.getByText("3 good since last edit, 7 all time"),
+      screen.getByText("1 bad since last edit, 4 all time"),
+    ].map((el) => el.closest("[data-tooltip]") as HTMLElement);
+    expect(pills.map((p) => p.getAttribute("data-tooltip"))).toEqual([
+      "7 all time",
+      "4 all time",
+    ]);
+    for (const pill of pills) {
+      expect(pill).toHaveAttribute("tabindex", "0");
+      for (const cls of [
+        "focus-visible:outline-hidden",
+        "focus-visible:ring-2",
+        "focus-visible:ring-offset-2",
+        "focus-visible:ring-offset-background",
+        "focus-visible:ring-secondary",
+      ]) {
+        expect(pill).toHaveClass(cls);
+      }
+      pill.focus();
+      expect(pill).toHaveFocus();
+    }
+  });
+
   it("shows no pills without ratings", () => {
     render(CustomQuestionsPage, {
       props: { categories, ownQuestions: [row()] },

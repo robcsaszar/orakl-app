@@ -95,7 +95,14 @@ export class MockQuizSession implements PlayerSessionView {
 
   // ── Question rating ──
   rating = $state<RatingState>(ratingFor(MOCK_QUESTION_ID));
-  canRate = $derived(this.isLoggedIn && !this.isObserver && this.showingResult);
+  /** Set when the server answers a rating with "disabled". */
+  ratingDisabled = $state(false);
+  canRate = $derived(
+    this.isLoggedIn &&
+      !this.ratingDisabled &&
+      !this.isObserver &&
+      this.showingResult,
+  );
 
   // ── Avatars ──
   dbAvatars = $state<DbAvatar[]>([]);

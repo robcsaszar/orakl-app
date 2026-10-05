@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createSoloModeStore } from "../../src/lib/soloMode.store.js";
 import PlayPage from "../../src/routes/(app)/solo/play/+page.svelte";
+import { makeReactiveSoloStore } from "./reactiveSoloStore.svelte.js";
 import SoloSessionHarness from "./SoloSessionHarness.svelte";
 
 const pageData = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ vi.mock("$app/state", () => ({
 }));
 
 function revealStore(isGuest: boolean) {
-  const store = createSoloModeStore("[]", "", isGuest, "user-1");
+  const store = makeReactiveSoloStore("[]", "", isGuest, "user-1");
   store._handleServerMessage(
     JSON.stringify({
       type: "solo:question",
@@ -100,5 +100,47 @@ describe("solo play page — rating thumbs", () => {
     mount(revealStore(false));
     expect(screen.queryByRole("button", { name: "Good question" })).toBeNull();
     screen.getByRole("button", { name: "Continue" });
+  });
+
+  it("a disabled ack removes the thumbs", async () => {
+    const store = revealStore(false);
+    mount(store);
+    screen.getByRole("button", { name: "Good question" });
+    store._handleServerMessage(
+      JSON.stringify({
+        type: "solo:rate-ack",
+        questionId: "q-0",
+        ok: false,
+        reason: "disabled",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Good question" }),
+      ).toBeNull(),
+    );
+    screen.getByRole("button", { name: "Continue" });
+  });
+
+  it("a disabled ack while a thumb has focus moves focus to Continue", async () => {
+    const store = revealStore(false);
+    mount(store);
+    screen.getByRole("button", { name: "Good question" }).focus();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Good question" }),
+    );
+    store._handleServerMessage(
+      JSON.stringify({
+        type: "solo:rate-ack",
+        questionId: "q-0",
+        ok: false,
+        reason: "disabled",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Continue" }),
+      ),
+    );
   });
 });

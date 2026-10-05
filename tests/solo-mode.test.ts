@@ -1317,6 +1317,34 @@ describe("soloMode (WS store)", () => {
       expect(q.rating.result).toBeNull();
     });
 
+    it("a disabled ack sets ratingDisabled, drops the queue, shows no ✗, survives the next question", async () => {
+      const q = await atReveal();
+      q.rate("up");
+      q.rate("down");
+      q._handleServerMessage(
+        JSON.stringify({
+          type: "solo:rate-ack",
+          questionId: "q-0",
+          ok: false,
+          reason: "disabled",
+        }),
+      );
+      expect(q.ratingDisabled).toBe(true);
+      expect(q.rating.pending).toBeNull();
+      expect(q.rating.queued).toBeNull();
+      expect(q.rating.result).toBeNull();
+      expect(frames("solo:rate")).toHaveLength(1);
+      serverMsg(q, {
+        type: "solo:question",
+        question: { ...baseQuestion, id: "q-1" } as never,
+        questionIndex: 1,
+        totalQuestions: 3,
+        timeRemaining: 30,
+        serverTs: 2000,
+      });
+      expect(q.ratingDisabled).toBe(true);
+    });
+
     it("a new question resets rating to the new id", async () => {
       const q = await atReveal();
       q.rate("up");

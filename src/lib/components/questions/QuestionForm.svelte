@@ -227,6 +227,11 @@
       ...(postAnswerNote.trim() ? { postAnswerNote: postAnswerNote.trim() } : {}),
     };
 
+    // Fields are read before any await: the question prop can change while an upload runs.
+    const startId = question?.id ?? null;
+    const wasEditing = isEditing;
+    const categoryPart = categoryId ? { categoryId } : {};
+    const difficultyNow = difficulty;
     let payload: Record<string, unknown>;
 
     if (questionType === "image_matching") {
@@ -250,17 +255,18 @@
         right.push(r);
       }
 
+      const pairIndex = correctPairIndex;
       submitting = true;
       try {
         const finalImageUrl = await resolveImageUrl();
         payload = {
           questionType: "image_matching",
-          ...(categoryId ? { categoryId } : {}),
+          ...categoryPart,
           questionText: text,
           imageUrl: finalImageUrl,
           matchItems: { left, right },
-          correctPairIndex,
-          difficulty,
+          correctPairIndex: pairIndex,
+          difficulty: difficultyNow,
           ...extras,
         };
       } catch (err) {
@@ -269,16 +275,17 @@
         return;
       }
     } else if (questionType === "true_false") {
+      const correctAnswer = trueFalseAnswer;
       submitting = true;
       try {
         const finalImageUrl = await resolveImageUrl();
         payload = {
           questionType: "true_false",
-          ...(categoryId ? { categoryId } : {}),
+          ...categoryPart,
           questionText: text,
-          correctAnswer: trueFalseAnswer,
+          correctAnswer,
           ...(finalImageUrl ? { imageUrl: finalImageUrl } : {}),
-          difficulty,
+          difficulty: difficultyNow,
           ...extras,
         };
       } catch (err) {
@@ -298,11 +305,11 @@
         const finalImageUrl = await resolveImageUrl();
         payload = {
           questionType: "standard",
-          ...(categoryId ? { categoryId } : {}),
+          ...categoryPart,
           questionText: text,
           answers: filledAnswers,
           ...(finalImageUrl ? { imageUrl: finalImageUrl } : {}),
-          difficulty,
+          difficulty: difficultyNow,
           ...extras,
         };
       } catch (err) {
@@ -312,7 +319,13 @@
       }
     }
 
-    const wasEditing = isEditing;
+    // The form now shows another question; the payload belongs to the one the submit started on.
+    if ((question?.id ?? null) !== startId) {
+      toast.warning("Not saved: the form changed before the upload finished.");
+      submitting = false;
+      return;
+    }
+
     submitting = true;
     try {
       const ok = await onsubmit(payload);
@@ -666,7 +679,7 @@
       {/if}
     </Button>
     {#if isEditing && oncancel}
-      <Button variant="outline" class="self-start" onclick={oncancel}>Cancel</Button>
+      <Button variant="outline" class="self-start" onclick={oncancel} disabled={submitting}>Cancel</Button>
     {/if}
   </div>
 </div>

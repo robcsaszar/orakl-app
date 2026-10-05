@@ -25,6 +25,7 @@ import { isFalseAnswerText } from "./answer-variants.js";
 import { drawMatchLines as drawMatchLinesHelper } from "./question-helpers.js";
 import {
   ackRating,
+  clearRating,
   type RatingState,
   ratingFor,
   tapRating,
@@ -186,6 +187,8 @@ export function createSoloModeStore(
     postAnswerNote: undefined as string | undefined,
     // Rating of the current question at the reveal; reset when a question arrives.
     rating: ratingFor("") as RatingState,
+    // Set when the server answers a rating with "disabled"; kept for the page's life, never persisted.
+    ratingDisabled: false,
 
     totalQuestions: null as number | null,
     sessionId: null as string | null,
@@ -431,6 +434,11 @@ export function createSoloModeStore(
         }
 
         case "solo:rate-ack": {
+          if (msg.reason === "disabled") {
+            this.ratingDisabled = true;
+            this.rating = clearRating(this.rating);
+            break;
+          }
           const r = ackRating(
             this.rating,
             msg.questionId as string,
