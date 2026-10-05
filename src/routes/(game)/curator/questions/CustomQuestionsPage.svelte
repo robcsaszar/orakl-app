@@ -40,7 +40,8 @@
 
   /** Saves the form's payload: POST for a new question, PATCH for the one being edited. */
   async function saveQuestion(payload: Record<string, unknown>): Promise<boolean> {
-    const editedId = editing?.id ?? null;
+    const opened = editing;
+    const editedId = opened?.id ?? null;
     const isEditing = editedId !== null;
     const categoryId = payload.categoryId;
     try {
@@ -75,7 +76,7 @@
               return c;
             });
           }
-          editing = null;
+          if (editing === opened) editing = null;
         } else {
           toast.success("Question added.");
           localCategories = localCategories.map((c) =>

@@ -329,7 +329,7 @@
     submitting = true;
     try {
       const ok = await onsubmit(payload);
-      if (ok && !wasEditing) resetFields();
+      if (ok && !wasEditing && (question?.id ?? null) === startId) resetFields();
     } finally {
       submitting = false;
     }
