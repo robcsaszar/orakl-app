@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "../../src/lib/toast.js";
 import CustomQuestionsPage from "../../src/routes/(game)/curator/questions/CustomQuestionsPage.svelte";
 
 vi.mock("../../src/lib/toast.js", () => ({
@@ -38,14 +39,17 @@ function stubApi() {
   const gate = new Promise<void>((r) => {
     release = r;
   });
+  let saved = false;
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") {
       await gate;
+      saved = true;
       return new Response("{}", { status: 200 });
     }
     const id = url.split("/").pop() as string;
+    const textA = saved ? "Question A saved" : "Question A";
     return new Response(
-      JSON.stringify(detail(id, id === "q-a" ? "Question A" : "Question B")),
+      JSON.stringify(detail(id, id === "q-a" ? textA : "Question B")),
       { status: 200 },
     );
   });
@@ -133,14 +137,42 @@ describe("curator library save", () => {
     await user.click(
       screen.getAllByRole("button", { name: "Edit question" })[0],
     );
-    await waitFor(() =>
-      expect(
-        fetchMock.mock.calls.filter(
-          ([url, init]) => url === "/api/custom-questions/q-a" && !init,
-        ),
-      ).toHaveLength(2),
+    const gets = () =>
+      fetchMock.mock.calls.filter(
+        ([url, init]) => url === "/api/custom-questions/q-a" && !init,
+      );
+    expect(gets()).toHaveLength(1);
+    release();
+    await waitFor(() => expect(gets()).toHaveLength(2));
+    const text = await screen.findByDisplayValue("Question A saved");
+    expect(text).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save changes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a question opened later when an Edit waiting on a save resumes", async () => {
+    const user = userEvent.setup();
+    const release = stubApi();
+    renderPage();
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit question" })[0],
     );
-    const text = await screen.findByDisplayValue("Question A");
+    await screen.findByDisplayValue("Question A");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/custom-questions/q-a",
+        expect.objectContaining({ method: "PATCH" }),
+      ),
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit question" })[0],
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit question" })[1],
+    );
+    const text = await screen.findByDisplayValue("Question B");
     await user.type(text, " typed");
     release();
     await waitFor(() =>
@@ -148,6 +180,137 @@ describe("curator library save", () => {
         screen.getByRole("button", { name: "Save changes" }),
       ).toBeEnabled(),
     );
-    expect(screen.getByDisplayValue("Question A typed")).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByDisplayValue("Question B typed")).toBeInTheDocument();
+  });
+
+  it("shows the row's Edit button loading while its Edit waits on a save", async () => {
+    const user = userEvent.setup();
+    const release = stubApi();
+    renderPage();
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit question" })[0],
+    );
+    await screen.findByDisplayValue("Question A");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/custom-questions/q-a",
+        expect.objectContaining({ method: "PATCH" }),
+      ),
+    );
+    const [editA, editB] = screen.getAllByRole("button", {
+      name: "Edit question",
+    });
+    await user.click(editA);
+    expect(editA).toHaveTextContent("Loading...");
+    expect(editA).toBeDisabled();
+    expect(editB).toHaveTextContent("Edit");
+    release();
+    await screen.findByDisplayValue("Question A saved");
+    await waitFor(() => expect(editA).toHaveTextContent(/^Edit$/));
+    expect(editA).toBeEnabled();
+  });
+
+  it("drops an Edit load that Cancel superseded", async () => {
+    const user = userEvent.setup();
+    let releaseA!: () => void;
+    const heldA = new Promise<void>((r) => {
+      releaseA = r;
+    });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/custom-questions/q-a") await heldA;
+      const id = url.split("/").pop() as string;
+      return new Response(JSON.stringify(detail(id, `Question ${id}`)), {
+        status: 200,
+      });
+    });
+    renderPage();
+    const [editA, editB] = screen.getAllByRole("button", {
+      name: "Edit question",
+    });
+    await user.click(editB);
+    await screen.findByDisplayValue("Question q-b");
+    await user.click(editA);
+    expect(editA).toHaveTextContent("Loading...");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(editA).toHaveTextContent(/^Edit$/));
+    releaseA();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByDisplayValue("Question q-a")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Add question" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no error for a load that a later Edit click superseded", async () => {
+    const user = userEvent.setup();
+    let failA!: () => void;
+    const heldA = new Promise<void>((r) => {
+      failA = r;
+    });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/custom-questions/q-a") {
+        await heldA;
+        return new Response(JSON.stringify({ error: "boom" }), { status: 500 });
+      }
+      return new Response(JSON.stringify(detail("q-b", "Question B")), {
+        status: 200,
+      });
+    });
+    renderPage();
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit question" })[0],
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit question" })[1],
+    );
+    await screen.findByDisplayValue("Question B");
+    failA();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue("Question B")).toBeInTheDocument();
+  });
+
+  it("hands the loading state to a later Edit click", async () => {
+    const user = userEvent.setup();
+    let releaseA!: () => void;
+    const heldA = new Promise<void>((r) => {
+      releaseA = r;
+    });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/custom-questions/q-a") await heldA;
+      const id = url.split("/").pop() as string;
+      return new Response(
+        JSON.stringify(detail(id, id === "q-a" ? "Question A" : "Question B")),
+        { status: 200 },
+      );
+    });
+    renderPage();
+    const edit = () => screen.getAllByRole("button", { name: "Edit question" });
+    await user.click(edit()[0]);
+    expect(edit()[0]).toHaveTextContent("Loading");
+    await user.click(edit()[1]);
+    await screen.findByDisplayValue("Question B");
+    expect(edit()[0]).toHaveTextContent("Edit");
+    expect(edit()[1]).toHaveTextContent("Edit");
+    expect(edit()[1]).toBeEnabled();
+    releaseA();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByDisplayValue("Question B")).toBeInTheDocument();
+    expect(edit()[0]).toHaveTextContent("Edit");
+  });
+
+  it("clears the loading state when the Edit load fails", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: "boom" }), { status: 500 }),
+    );
+    renderPage();
+    const edit = () => screen.getAllByRole("button", { name: "Edit question" });
+    await user.click(edit()[0]);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("boom"));
+    expect(edit()[0]).toHaveTextContent("Edit");
+    expect(edit()[0]).toBeEnabled();
   });
 });

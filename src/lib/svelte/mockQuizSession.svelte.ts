@@ -46,7 +46,7 @@ export class MockQuizSession implements PlayerSessionView {
   curatorEditing = $state(false);
   connectionLost = $state(false);
   isCurator = $state(false);
-  // Demo default: logged-in, so the question-flag FAB is visible in mimic mode.
+  // Demo default: logged-in, so rating is available at the reveal in mimic mode.
   isLoggedIn = $state(true);
 
   // ── Routing (no navigation effect in mock) ──
