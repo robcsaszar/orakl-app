@@ -39,3 +39,6 @@ playwright.local.config.ts
 .claude/.headroom_wrap_*
 .serena/
 .ignore
+
+# Appllama research images (screen refs in the notes restore them)
+docs/research/**/img/

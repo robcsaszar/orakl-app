@@ -76,8 +76,6 @@ export type { FeedbackStatus, PlayerData } from "./player-session-view.js";
  *  server's message. Sentence case, spartan. */
 const GAME_ERROR_COPY: Partial<Record<GameErrorMessage["code"], string>> = {
   game_in_progress: "A game is already underway.",
-  no_questions:
-    "No questions available for the chosen categories and difficulty.",
   no_categories: "Select at least one category to start.",
   already_answered: "You already answered this question.",
   observer_forbidden: "Observers can't do that.",
@@ -155,6 +153,8 @@ export class QuizSession implements PlayerSessionView {
   quizName = $state("");
   description = $state("");
   lobbyCategories = $state<string[]>([]);
+  /** Names of the Seasons the lobby draws from. */
+  lobbySeasons = $state<string[]>([]);
   lobbyDifficulty = $state<string | null>(null);
   error = $state("");
   isJoining = $state(false);
@@ -323,6 +323,7 @@ export class QuizSession implements PlayerSessionView {
     quizName?: string | null;
     description?: string | null;
     categories?: string[] | null;
+    seasons?: string[] | null;
     difficulty?: string | null;
   }) {
     this.quizName = meta.quizName ?? "";
@@ -330,6 +331,7 @@ export class QuizSession implements PlayerSessionView {
     this.lobbyCategories = Array.isArray(meta.categories)
       ? meta.categories
       : [];
+    this.lobbySeasons = Array.isArray(meta.seasons) ? meta.seasons : [];
     this.lobbyDifficulty = meta.difficulty ?? null;
   }
 
@@ -708,6 +710,7 @@ export class QuizSession implements PlayerSessionView {
           quizName: msg.quizName,
           description: msg.description,
           categories: msg.categories ? [...msg.categories] : undefined,
+          seasons: msg.seasons ? [...msg.seasons] : undefined,
           difficulty: msg.difficulty,
         });
       }

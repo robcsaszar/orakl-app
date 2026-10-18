@@ -32,6 +32,7 @@ function data(over: Record<string, unknown> = {}) {
         max_streak: 9,
         mode: "endless",
         category_ids: '["science"]',
+        seasons: [],
         completed_at: 1_717_000_000_000,
       },
     ],
@@ -52,6 +53,7 @@ function data(over: Record<string, unknown> = {}) {
       {
         id: "g1",
         quiz_name: "Friday night myths",
+        seasons: [],
         started_at: "2024-05-30 19:00:00",
         final_score: 720,
         rank: 1,
@@ -96,6 +98,7 @@ describe("/history page — default tab (US #2)", () => {
               max_streak: 9,
               mode: "normal",
               category_ids: '["science"]',
+              seasons: [],
               completed_at: new Date("2024-06-01T00:00:00Z").getTime(),
             },
           ],
@@ -103,6 +106,7 @@ describe("/history page — default tab (US #2)", () => {
             {
               id: "g1",
               quiz_name: "Old game",
+              seasons: [],
               started_at: "2024-01-01 00:00:00",
               final_score: 100,
               rank: 1,
@@ -132,6 +136,7 @@ describe("/history page — default tab (US #2)", () => {
               max_streak: 9,
               mode: "normal",
               category_ids: '["science"]',
+              seasons: [],
               completed_at: new Date("2024-01-01T00:00:00Z").getTime(),
             },
           ],
@@ -139,6 +144,7 @@ describe("/history page — default tab (US #2)", () => {
             {
               id: "g1",
               quiz_name: "New game",
+              seasons: [],
               started_at: "2024-06-01 00:00:00",
               final_score: 100,
               rank: 1,
@@ -169,6 +175,7 @@ describe("/history page — default tab (US #2)", () => {
               max_streak: 9,
               mode: "normal",
               category_ids: '["science"]',
+              seasons: [],
               completed_at: new Date("2024-06-01T00:00:00Z").getTime(),
             },
           ],
@@ -324,6 +331,7 @@ describe("/history page — lifetime reads under a range", () => {
       max_streak: 1,
       mode: "normal",
       category_ids: "[]",
+      seasons: [],
       completed_at: 1_717_000_000_000 - i * 1000,
     }));
     render(HistoryPage, {
@@ -424,5 +432,34 @@ describe("/history page — a click beats a later recency flip", () => {
       "aria-selected",
       "true",
     );
+  });
+});
+
+describe("/history page — Season names on solo rows", () => {
+  it("lists Seasons comma-joined in the meta line, not the title", () => {
+    render(HistoryPage, {
+      props: {
+        data: data({
+          runs: [
+            {
+              id: "r1",
+              total_score: 480,
+              total_answered: 10,
+              correct_count: 9,
+              max_streak: 9,
+              mode: "normal",
+              category_ids: '["science"]',
+              seasons: ["Halloween", "Yule"],
+              completed_at: new Date("2024-06-01T00:00:00Z").getTime(),
+            },
+          ],
+        }),
+      },
+    });
+    const meta = screen.getByText(/Halloween, Yule/);
+    expect(meta.textContent).toMatch(/· Halloween, Yule · 90% · streak 9/);
+    const title = screen.getByText("Science", { selector: "span" });
+    expect(title.className).not.toContain("capitalize");
+    expect(title.textContent).not.toContain("Halloween");
   });
 });

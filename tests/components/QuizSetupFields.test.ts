@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import QuizSetupFields from "$lib/components/quiz-setup/QuizSetupFields.svelte";
 
@@ -113,5 +114,103 @@ describe("QuizSetupFields — is-power-user", () => {
     // The legends stay — the power hides the explanations, not the fields.
     expect(screen.getByText("Categories")).toBeInTheDocument();
     expect(screen.getByText("Answer time")).toBeInTheDocument();
+  });
+});
+
+describe("QuizSetupFields — seasons", () => {
+  const seasons = [
+    {
+      id: "s-open",
+      name: "Halloween",
+      icon: null,
+      color: null,
+      count: 12,
+      locked: false,
+      opensOn: null,
+    },
+    {
+      id: "s-shut",
+      name: "Yule",
+      icon: null,
+      color: null,
+      count: 7,
+      locked: true,
+      opensOn: "2026-12-20",
+    },
+  ];
+
+  it("renders no Seasons group without seasons", () => {
+    setup();
+    expect(screen.queryByText("Seasons")).not.toBeInTheDocument();
+  });
+
+  it("renders the Seasons group above Categories", () => {
+    setup({ seasons });
+    const seasonsLegend = screen.getByText("Seasons");
+    const categoriesLegend = screen.getByText("Categories");
+    expect(
+      seasonsLegend.compareDocumentPosition(categoriesLegend) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("offers an open Season as a checkbox with its question count", () => {
+    setup({ seasons });
+    expect(screen.getByRole("checkbox", { name: /halloween/i })).toBeEnabled();
+    expect(screen.getByText("12 questions")).toBeInTheDocument();
+  });
+
+  it("shows a locked Season with its opening day, not toggleable", () => {
+    setup({ seasons });
+    const yule = screen.getByRole("checkbox", { name: /yule/i });
+    expect(yule).toBeDisabled();
+    expect(screen.getByText(/Opens .*Dec.*2026/)).toBeInTheDocument();
+  });
+
+  it("toggles a Season id into selectedSeasons", async () => {
+    setup({ seasons, selectedSeasons: [] });
+    const box = screen.getByRole("checkbox", { name: /halloween/i });
+    await userEvent.click(box);
+    expect(box).toBeChecked();
+  });
+
+  it("counts a picked Season against the category cap", () => {
+    setup({
+      seasons,
+      selectedSeasons: ["s-open"],
+      selectedCategories: ["cat-1"],
+      maxCategories: 2,
+    });
+    expect(screen.getByRole("checkbox", { name: /science/i })).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: /history/i })).toBeDisabled();
+  });
+
+  it("shows one shared cap line with the number when capped", () => {
+    setup({ seasons, selectedSeasons: ["s-open"], maxCategories: 3 });
+    expect(
+      screen.getAllByText(
+        "Pick up to 3 seasons or categories in total. Sign in to pick more.",
+      ),
+    ).toHaveLength(1);
+    expect(screen.queryByText(/Choose up to/)).not.toBeInTheDocument();
+  });
+
+  it("says '1 question' for a one-question Season", () => {
+    setup({ seasons: [{ ...seasons[0], count: 1 }] });
+    expect(screen.getByText("1 question")).toBeInTheDocument();
+  });
+
+  it("disables a locked tile through the input, not aria-disabled", () => {
+    setup({ seasons });
+    const yule = screen.getByRole("checkbox", { name: /yule/i });
+    expect(yule).toBeDisabled();
+    expect(yule.closest("label")).not.toHaveAttribute("aria-disabled");
+  });
+
+  it("shows the Season icon on a locked tile", () => {
+    setup({
+      seasons: [{ ...seasons[1], icon: "/yule.svg", color: "#aa0000" }],
+    });
+    expect(document.querySelector('img[src="/yule.svg"]')).not.toBeNull();
   });
 });

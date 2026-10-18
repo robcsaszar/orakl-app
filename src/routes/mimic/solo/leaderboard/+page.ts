@@ -13,7 +13,13 @@ const BOARDS: LeaderboardBoard[] = [
   "speed",
   "survival",
 ];
-const SCOPES: LeaderboardScope[] = ["all-time", "daily", "weekly", "monthly"];
+const SCOPES: LeaderboardScope[] = [
+  "all-time",
+  "daily",
+  "weekly",
+  "monthly",
+  "season",
+];
 const DIFFICULTIES: LeaderboardDifficulty[] = ["easy", "medium", "hard"];
 
 // Fixture leaderboard so the real page renders in mimic without a DB.
@@ -87,7 +93,10 @@ export const load: PageLoad = ({ url }) => {
     board,
     scope,
     categoryId,
+    seasonId: null,
+    opening: null,
     difficulty,
+    seasonBoards: [],
     categories: [
       { id: "science", name: "Science" },
       { id: "history", name: "History" },

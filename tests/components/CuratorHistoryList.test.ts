@@ -17,6 +17,7 @@ function entry(overrides: Record<string, unknown>) {
     started_at: "2026-03-05 23:30:00",
     player_count: 2,
     total_questions: 5,
+    seasonNames: [],
     winners: [],
     top_score: null,
     ...overrides,

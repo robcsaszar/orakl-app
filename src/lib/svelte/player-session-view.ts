@@ -85,6 +85,7 @@ export interface PlayerSessionView {
   quizName: string;
   description: string;
   lobbyCategories: string[];
+  lobbySeasons: string[];
   lobbyDifficulty: string | null;
   error: string;
   isJoining: boolean;

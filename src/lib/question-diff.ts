@@ -49,6 +49,12 @@ export function diffQuestions(
     before.postAnswerNote ?? "",
     after.postAnswerNote ?? "",
   );
+  const tags = listChange(
+    "Tags",
+    before.metadata?.tags ?? [],
+    after.metadata?.tags ?? [],
+  );
+  if (tags) out.push(tags);
   if (before.type === "image_matching" || after.type === "image_matching") {
     const change = listChange("Pairs", pairs(before), pairs(after));
     if (change) out.push(change);

@@ -15,9 +15,11 @@
 {/if}
 
 <CreateQuiz
+  seasons={data.seasons}
   categories={data.categories}
   categoryColors={data.categoryColors}
   presets={data.presets}
+  presetMarks={data.presetMarks}
   presetLimit={data.presetLimit}
   scoringModes={data.uiFlags.QUIZ_SCORING_MODES === true}
   accessModes={data.uiFlags.QUIZ_ACCESS_MODES === true}

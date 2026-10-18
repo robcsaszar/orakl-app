@@ -315,7 +315,7 @@ import type { Rarity } from "@orakl/shared";
               {@const cats = categories(run.category_ids)}
               <HistoryRow
                 trailing={run.total_score}
-                meta="{label} · {run.total_answered > 0
+                meta="{label}{run.seasons.length > 0 ? ` · ${run.seasons.join(', ')}` : ''} · {run.total_answered > 0
                   ? `${percent(run.correct_count, run.total_answered)}%`
                   : '—'} · streak {run.max_streak}"
                 href="/history/solo/{run.id}"
@@ -323,7 +323,7 @@ import type { Rarity } from "@orakl/shared";
                 ariaLabel="Review trial from {label}"
               >
                 {#snippet title()}
-                  <span class="capitalize">{cats || "Trial"}</span>
+                  <span>{cats || "Trial"}</span>
                   {#if run.mode === "endless"}
                     <Badge variant="status" tone="warning" class="inline-flex items-center gap-1">
                       <Icon name="infinity" class="size-3" /> Endless
@@ -379,7 +379,7 @@ import type { Rarity } from "@orakl/shared";
               <HistoryRow
                 title={game.quiz_name}
                 trailing="#{game.rank} of {game.player_count}"
-                meta="{label} · {game.final_score} pts{data.uiFlags.BADGE_DISPLAY === true
+                meta="{label}{game.seasons.length > 0 ? ` · ${game.seasons.join(', ')}` : ''} · {game.final_score} pts{data.uiFlags.BADGE_DISPLAY === true
                   ? ` · ${game.badges.length} ${game.badges.length === 1 ? 'badge' : 'badges'}`
                   : ''}"
                 href="/history/game/{game.id}"

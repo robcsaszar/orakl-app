@@ -12,5 +12,6 @@ export const load: LayoutLoad = ({ url }) => {
     userId: isGuest ? "anon" : "mimic-user",
     profileAvatarSrc: "",
     categoryDataJson: FIXTURE_TOPICS_JSON,
+    seasonDataJson: "[]",
   };
 };

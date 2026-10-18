@@ -26,6 +26,7 @@
       data.isGuest,
       data.userId,
       getNativeAuthToken,
+      data.seasonDataJson,
     ),
   );
   setSoloSession(session);

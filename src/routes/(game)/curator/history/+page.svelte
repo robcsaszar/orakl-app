@@ -27,6 +27,7 @@ import { toIsoTimestamp } from "@orakl/shared";
   function metaLabel(entry: (typeof entries)[number]): string {
     const parts = [
       formatDate(entry.started_at),
+      ...(entry.seasonNames.length > 0 ? [entry.seasonNames.join(", ")] : []),
       `${entry.player_count} ${entry.player_count === 1 ? "player" : "players"}`,
       `${entry.total_questions} ${entry.total_questions === 1 ? "question" : "questions"}`,
     ];

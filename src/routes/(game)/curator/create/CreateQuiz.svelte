@@ -18,8 +18,9 @@
     validateQuizSetup,
   } from "@/lib/quiz-setup.js";
   import type { Category } from "@/types/category.js";
-  import type { QuizPreset } from "@orakl/protocol";
+  import type { PresetMarks, QuizPreset, SeasonOption } from "@orakl/protocol";
   import { storage } from "@/lib/storage.js";
+  import { formatDateShort } from "@/lib/format.js";
   import Button from "$lib/components/ui/Button.svelte";
   import ConfirmButton from "$lib/components/ui/ConfirmButton.svelte";
   import { toast } from "@/lib/toast.js";
@@ -32,18 +33,23 @@
   import Checkbox from "@/lib/components/ui/Checkbox.svelte";
 
   let {
+    seasons = [],
     categories = [],
     categoryColors: _initialColors = {},
     presets = [],
+    presetMarks = {},
     presetLimit = 10,
     scoringModes = false,
     accessModes = false,
     maxPlayers = false,
     quizPresets = false,
   }: {
+    seasons?: SeasonOption[];
     categories: Category[];
     categoryColors: Record<string, string>;
     presets: QuizPreset[];
+    /** Per saved quiz id: Seasons closed or gone, categories gone. */
+    presetMarks?: Record<string, PresetMarks>;
     presetLimit: number;
     /** Whether the scoring picker is offered; off pins classic. */
     scoringModes?: boolean;
@@ -59,6 +65,7 @@
   let quizName = $state("");
   let description = $state("");
   let selectedCategories = $state<string[]>([]);
+  let selectedSeasons = $state<string[]>([]);
   let timer = $state<TimerDuration>(30);
   let questionsPerRound = $state<QuestionsPerRound>(10);
   let difficulty = $state<DifficultyFilter>("all");
@@ -76,15 +83,18 @@
   const categoryMap = $derived(new Map(categories.map((c) => [c.id, c])));
 
   // Derived
+  const seasonMap = $derived(new Map(seasons.map((s) => [s.id, s])));
+
   const poolSize = $derived(
     selectedCategories
       .map((id) => categoryMap.get(id))
       .filter(Boolean)
-      .reduce((sum, c) => sum + (c?.count ?? 0), 0),
+      .reduce((sum, c) => sum + (c?.count ?? 0), 0) +
+      selectedSeasons.reduce((sum, id) => sum + (seasonMap.get(id)?.count ?? 0), 0),
   );
 
   const poolWarning = $derived((): string | null => {
-    if (selectedCategories.length === 0) return null;
+    if (selectedCategories.length + selectedSeasons.length === 0) return null;
     if (poolSize < questionsPerRound) {
       return `Only ${poolSize} ${poolSize === 1 ? "question" : "questions"} available — game will use all of them`;
     }
@@ -92,14 +102,21 @@
   });
 
   const isFormValid = $derived(
-    quizName.trim() !== "" && selectedCategories.length > 0,
+    quizName.trim() !== "" &&
+      selectedCategories.length + selectedSeasons.length > 0,
   );
 
-  const totalQuestionPool = $derived(() =>
-    calculateTotalQuestionPool(selectedCategories, categories),
-  );
+  // Seasons and categories together; an estimate, since a Season question can
+  // also sit in a picked category.
+  const totalQuestionPool = $derived(() => {
+    const pool = calculateTotalQuestionPool(
+      [...selectedCategories, ...selectedSeasons],
+      [...categories, ...seasons.map((s) => ({ id: s.id, count: s.count }))],
+    );
+    return pool === "—" ? pool : `up to ${pool}`;
+  });
   const maxGameTime = $derived(() => {
-    if (selectedCategories.length === 0) return "—";
+    if (selectedCategories.length + selectedSeasons.length === 0) return "—";
     return calculateMaxGameTime(questionsPerRound, timer, advanceMode);
   });
 
@@ -141,7 +158,7 @@
     if (!name) errors = [...errors, "Quiz name is required"];
 
     const sharedErrors = validateQuizSetup({
-      selectedCategories,
+      selectedCategories: [...selectedCategories, ...selectedSeasons],
       timer,
       questionsPerRound,
       difficulty,
@@ -178,6 +195,7 @@
       name,
       description: description?.trim() || undefined,
       categoryIds: selectedCategories,
+      seasonIds: selectedSeasons,
       timer,
       questionsPerRound,
       difficulty,
@@ -203,7 +221,12 @@
         body: JSON.stringify({
           quizName: quizConfig.name,
           description: quizConfig.description,
-          categoryIds: quizConfig.categoryIds,
+          // The schema refuses an empty list; a Seasons-only quiz sends none.
+          categoryIds:
+            quizConfig.categoryIds.length > 0
+              ? quizConfig.categoryIds
+              : undefined,
+          seasonIds: quizConfig.seasonIds,
           difficulty: quizConfig.difficulty,
           timerDuration: quizConfig.timer,
           questionsPerRound: quizConfig.questionsPerRound,
@@ -229,6 +252,7 @@
             name: quizConfig.name,
             description: quizConfig.description,
             categoryIds: quizConfig.categoryIds,
+            seasonIds: quizConfig.seasonIds,
             timerDuration: quizConfig.timer,
             questionsPerRound: quizConfig.questionsPerRound,
             difficulty: quizConfig.difficulty,
@@ -269,7 +293,16 @@
   function prefillFromPreset(preset: QuizPreset) {
     quizName = preset.name;
     description = preset.description ?? "";
-    selectedCategories = JSON.parse(preset.category_ids) as string[];
+    // Gone ids are dropped. A Season is kept only when it is listed and open,
+    // the rule the restore applies; a closed Season renders locked and cannot
+    // be unticked, so the marks line says why it is dropped.
+    const marks = presetMarks[preset.id];
+    selectedCategories = (JSON.parse(preset.category_ids) as string[]).filter(
+      (id) => !marks?.missingCategories.includes(id),
+    );
+    selectedSeasons = (JSON.parse(preset.season_ids) as string[]).filter((id) =>
+      seasons.some((s) => s.id === id && !s.locked),
+    );
     timer = preset.timer_duration as TimerDuration;
     questionsPerRound = preset.questions_per_round as QuestionsPerRound;
     difficulty = preset.difficulty as DifficultyFilter;
@@ -280,6 +313,38 @@
     maxPlayersInput =
       preset.max_players != null ? String(preset.max_players) : "";
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /** `opensOn` is a calendar day (YYYY-MM-DD); built in local time so the day
+   *  does not shift with the viewer's offset. */
+  function openingDay(opensOn: string): string {
+    const [y, m, d] = opensOn.split("-").map(Number);
+    return formatDateShort(new Date(y, m - 1, d));
+  }
+
+  function plural(n: number, one: string, many: string): string {
+    return `${n} ${n === 1 ? one : many}`;
+  }
+
+  /** The one line under a saved quiz's name saying what would drop. */
+  function markLine(marks: PresetMarks | undefined): string | null {
+    if (!marks) return null;
+    const parts = [
+      ...marks.closedSeasons.map((s) =>
+        s.opensOn
+          ? `${s.name} closed · opens ${openingDay(s.opensOn)}`
+          : `${s.name} closed`,
+      ),
+      ...(marks.missingSeasons.length > 0
+        ? [`${plural(marks.missingSeasons.length, "season", "seasons")} gone`]
+        : []),
+      ...(marks.missingCategories.length > 0
+        ? [
+            `${plural(marks.missingCategories.length, "category", "categories")} gone`,
+          ]
+        : []),
+    ];
+    return parts.length > 0 ? parts.join(" · ") : null;
   }
 
   async function deletePreset(id: string) {
@@ -308,6 +373,12 @@
         if (config.name) quizName = config.name;
         if (config.description) description = config.description;
         if (config.categoryIds) selectedCategories = config.categoryIds;
+        // A Season that closed or left the list since the config was stored
+        // cannot be unticked (its card is locked), so it is dropped here.
+        if (config.seasonIds)
+          selectedSeasons = (config.seasonIds as string[]).filter((id) =>
+            seasons.some((s) => s.id === id && !s.locked),
+          );
         if (config.timer) timer = config.timer;
         if (config.questionsPerRound)
           questionsPerRound = config.questionsPerRound;
@@ -414,7 +485,9 @@
     <!-- Shared setup fields -->
     <QuizSetupFields
       {categories}
+      {seasons}
       bind:selectedCategories
+      bind:selectedSeasons
       bind:difficulty
       bind:timer
       bind:questionsPerRound
@@ -559,7 +632,7 @@
         : "Host quiz"}
     poolText={totalQuestionPool()}
     maxTimeText={maxGameTime()}
-    disabledTooltip="Add a name & select at least one category to continue"
+    disabledTooltip="Add a name and pick at least one season or category to continue"
     enabledTooltip="Happy quizzing"
   />
 
@@ -574,6 +647,8 @@
       <ul class="flex flex-col gap-2">
         {#each savedPresets as preset (preset.id)}
           {@const categoryIds = JSON.parse(preset.category_ids) as string[]}
+          {@const seasonIds = JSON.parse(preset.season_ids) as string[]}
+          {@const marked = markLine(presetMarks[preset.id])}
           <li>
             <Card
               padding="sm"
@@ -582,9 +657,17 @@
               <div class="flex flex-col gap-0.5 min-w-0">
                 <span class="font-semibold truncate">{preset.name}</span>
                 <span class="text-xs font-sans">{preset.description}</span>
+                {#if marked}
+                  <span class="text-xs text-warning font-sans">{marked}</span>
+                {/if}
                 <span class="text-xs text-foreground-darker font-sans">
-                  {categoryIds.length}
-                  {categoryIds.length === 1 ? "category" : "categories"} · {preset.timer_duration}s
+                  {#if seasonIds.length > 0}
+                    {plural(seasonIds.length, "season", "seasons")} ·
+                  {/if}
+                  {#if categoryIds.length > 0 || seasonIds.length === 0}
+                    {plural(categoryIds.length, "category", "categories")} ·
+                  {/if}
+                  {preset.timer_duration}s
                   · {preset.questions_per_round} questions · {preset.difficulty ===
                   "all"
                     ? "All difficulties"

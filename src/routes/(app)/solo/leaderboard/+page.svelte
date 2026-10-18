@@ -84,11 +84,17 @@ import { percent } from "@orakl/shared";
     board?: string;
     scope?: string;
     categoryId?: string | null;
+    season?: { seasonId: string; opening: string } | null;
     difficulty?: string | null;
     around?: boolean;
   }): string {
     const board = opts.board ?? data.board;
-    const scope = opts.scope ?? data.scope;
+    const scope = opts.season ? "season" : (opts.scope ?? data.scope);
+    const season =
+      opts.season ??
+      (opts.season === undefined && data.seasonId && data.opening
+        ? { seasonId: data.seasonId, opening: data.opening }
+        : null);
     const categoryId =
       opts.categoryId === undefined ? data.categoryId : opts.categoryId;
     const difficulty =
@@ -97,7 +103,12 @@ import { percent } from "@orakl/shared";
     const sp = new URLSearchParams();
     if (board && board !== "score") sp.set("board", board);
     if (scope && scope !== "all-time") sp.set("scope", scope);
-    if (categoryId && board !== "survival") sp.set("categoryId", categoryId);
+    if (scope === "season" && season) {
+      sp.set("seasonId", season.seasonId);
+      sp.set("opening", season.opening);
+    } else if (categoryId && board !== "survival") {
+      sp.set("categoryId", categoryId);
+    }
     if (difficulty) sp.set("difficulty", difficulty);
     if (around) sp.set("around", "1");
     const q = sp.toString();
@@ -112,6 +123,24 @@ import { percent } from "@orakl/shared";
   function onCategoryChange(e: Event) {
     const value = (e.currentTarget as HTMLSelectElement).value;
     goto(buildUrl({ categoryId: value || null }));
+  }
+
+  const seasonKey = $derived(
+    data.seasonId && data.opening ? `${data.seasonId}|${data.opening}` : "",
+  );
+  const scopeLabel = $derived(
+    data.scope === "season"
+      ? data.seasonBoards.find(
+          (b) => b.seasonId === data.seasonId && b.opening === data.opening,
+        )?.label ?? "Season"
+      : SCOPES.find((x) => x.id === data.scope)?.label,
+  );
+
+  function onSeasonChange(e: Event) {
+    const value = (e.currentTarget as HTMLSelectElement).value;
+    if (!value) return goto(buildUrl({ scope: "all-time" }));
+    const [seasonId, opening] = value.split("|");
+    goto(buildUrl({ season: { seasonId, opening } }));
   }
 
   // Carry the active filters so the shared card's rank matches what's on screen.
@@ -141,14 +170,14 @@ import { percent } from "@orakl/shared";
     <div class="flex flex-col gap-1">
       <h1 class="text-2xl font-bold">Oracle rankings</h1>
       <p class="text-sm text-foreground-darker">
-        {SCOPES.find((x) => x.id === data.scope)?.label}
+        {scopeLabel}
         {BOARDS.find((x) => x.id === data.board)?.label.toLowerCase()} from completed
         trials.
       </p>
     </div>
     {#if !s.isGuest}
       <div class="flex items-center gap-3">
-        {#if data.userRank}
+        {#if data.userRank && data.scope !== "season"}
           <Link href={shareUrl} class="flex items-center gap-1 text-sm">
             <Icon name="top-right" class="size-4" /> Share rank
           </Link>
@@ -230,8 +259,25 @@ import { percent } from "@orakl/shared";
         {#snippet option(d)}{d.label}{/snippet}
       </SegmentedPicker>
 
-      {#if data.board !== "survival"}
-        <div class="ml-auto">
+      <div class="ml-auto flex flex-wrap items-center gap-3">
+        {#if data.seasonBoards.length > 0 || data.scope === "season"}
+          <Select
+            id="leaderboard-season"
+            label="Season board"
+            hideLabel
+            name="season"
+            size="compact"
+            value={seasonKey}
+            onchange={onSeasonChange}
+          >
+            <option value="">Season boards</option>
+            {#each data.seasonBoards as b (`${b.seasonId}|${b.opening}`)}
+              <option value={`${b.seasonId}|${b.opening}`}>{b.label}</option>
+            {/each}
+          </Select>
+        {/if}
+
+        {#if data.board !== "survival" && data.scope !== "season"}
           <Select
             id="leaderboard-category"
             label="Filter by category"
@@ -246,8 +292,8 @@ import { percent } from "@orakl/shared";
               <option value={cat.id}>{cat.name}</option>
             {/each}
           </Select>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
   </div>
 

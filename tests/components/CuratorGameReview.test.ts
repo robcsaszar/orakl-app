@@ -16,6 +16,7 @@ const SESSION = {
   started_at: "2026-03-05 23:30:00",
   ended_at: null,
   categoryIds: ["general"],
+  seasonNames: [],
   timer_duration: 30,
   total_questions: 2,
   player_count: 2,

@@ -55,6 +55,7 @@ describe("/history/game/[id] badge section", () => {
   function baseData(uiFlags: { BADGE_DISPLAY?: boolean }) {
     return {
       game: {
+        seasons: [],
         startedAt: "2026-01-01 12:00:00",
         quizName: "Test quiz",
         finalScore: 100,

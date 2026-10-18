@@ -107,7 +107,7 @@ import { percent } from "@orakl/shared";
 </script>
 
 <div class="flex flex-col gap-2">
-  <!-- Select all / Invert — bulk actions don't apply under a selection cap -->
+  <!-- Select all / Invert — bulk actions don't apply under a selection cap; the cap line lives in QuizSetupFields -->
   {#if maxSelected == null}
     <div class="flex gap-2 flex-wrap">
       <Button type="button" variant="outline" intent="compact" onclick={toggleAll}>
@@ -115,10 +115,6 @@ import { percent } from "@orakl/shared";
       </Button>
       <Button type="button" variant="outline" intent="compact" onclick={invertSelection}>Invert selection</Button>
     </div>
-  {:else}
-    <p class="text-sm text-foreground-darker">
-      Choose up to {maxSelected} categories — sign in to pick more.
-    </p>
   {/if}
 
   <!-- Category grid (expandable) -->
@@ -142,13 +138,12 @@ import { percent } from "@orakl/shared";
           disabled={locked}
           describedBy={descriptionId}
           onchange={(e) => setSelected(category.id, e.currentTarget.checked)}
-          aria-disabled={locked || undefined}
         >
           <span class="flex items-start gap-4 flex-1 z-10">
             <span class="flex flex-col gap-1 flex-1">
               <span class="text-foreground">{category.name}</span>
               <span class="font-sans text-sm text-current flex gap-1 flex-wrap">
-                <span>{category.count} questions</span>
+                <span>{category.count} {category.count === 1 ? "question" : "questions"}</span>
                 <span
                   class="text-secondary-300 font-semibold"
                   class:opacity-50={pct === 0}
