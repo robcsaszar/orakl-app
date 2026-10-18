@@ -66,7 +66,7 @@ import { percent } from "@orakl/shared";
   <CeremonyFrame
     kicker="Trial review"
     title="The trial ends"
-    subtitle="{dateLabel(data.run.completedAt)}{data.run.categories.length > 0 ? ` · ${data.run.categories.join(', ')}` : ''}"
+    subtitle="{dateLabel(data.run.completedAt)}{data.run.seasons.length > 0 ? ` · ${data.run.seasons.join(', ')}` : ''}{data.run.categories.length > 0 ? ` · ${data.run.categories.join(', ')}` : ''}"
   >
     {#snippet aside()}
       <StatTile label="Score" value={data.run.totalScore} tone="secondary" />

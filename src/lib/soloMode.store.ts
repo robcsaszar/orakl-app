@@ -12,6 +12,7 @@ import type {
   QuestionRating,
   QuestionSource,
   QuizQuestion,
+  SeasonOption,
   SoloClientMessage,
   SoloFinalMessage,
   SoloRoundResultMessage,
@@ -122,6 +123,8 @@ export function createSoloModeStore(
   // upgrade auth. When it yields a token, the socket authenticates first
   // (US #26 / ADR 0014). Injectable for tests.
   getAuthToken: () => string | null = () => null,
+  // Seasons the setup screen offers (SeasonOption[] as JSON).
+  seasonDataJson = "[]",
 ) {
   let _ws: WsClient<SoloClientMessage> | null = null;
   let _pingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -140,7 +143,9 @@ export function createSoloModeStore(
       icon: string;
       count: number;
     }[],
+    seasons: JSON.parse(seasonDataJson) as SeasonOption[],
     selectedCategories: [] as string[],
+    selectedSeasons: [] as string[],
     timer: 30 as TimerDuration,
     questionCount: 10 as QuestionsPerRound,
     mode: "normal" as "normal" | "endless",
@@ -230,14 +235,15 @@ export function createSoloModeStore(
     },
 
     get categoryCountText(): string {
-      const count = this.selectedCategories.length;
+      const count =
+        this.selectedCategories.length + this.selectedSeasons.length;
       return `${count} ${count === 1 ? "category" : "categories"}`;
     },
 
     get totalQuestionPool(): string {
       return calculateTotalQuestionPool(
-        this.selectedCategories,
-        this.categories,
+        [...this.selectedCategories, ...this.selectedSeasons],
+        [...this.categories, ...this.seasons],
       );
     },
 
@@ -247,17 +253,23 @@ export function createSoloModeStore(
     },
 
     get maxGameTime(): string {
-      if (this.selectedCategories.length === 0) return "—";
+      if (this.selectedCategories.length + this.selectedSeasons.length === 0)
+        return "—";
       if (this.mode === "endless") return "∞";
       return calculateMaxGameTime(this.questionCount, this.timer);
     },
 
     get poolWarning(): string | null {
       if (this.mode === "endless") return null;
-      if (this.selectedCategories.length === 0) return null;
-      const pool = this.categories
-        .filter((c) => this.selectedCategories.includes(c.id))
-        .reduce((sum, c) => sum + c.count, 0);
+      if (this.selectedCategories.length + this.selectedSeasons.length === 0)
+        return null;
+      const pool =
+        this.categories
+          .filter((c) => this.selectedCategories.includes(c.id))
+          .reduce((sum, c) => sum + c.count, 0) +
+        this.seasons
+          .filter((s) => this.selectedSeasons.includes(s.id))
+          .reduce((sum, s) => sum + s.count, 0);
       if (pool < this.questionCount)
         return `Only ${pool} ${pool === 1 ? "question" : "questions"} available — game will use all of them`;
       return null;
@@ -265,7 +277,7 @@ export function createSoloModeStore(
 
     get isFormValid() {
       return (
-        this.selectedCategories.length > 0 &&
+        this.selectedCategories.length + this.selectedSeasons.length > 0 &&
         this.timer > 0 &&
         (this.mode === "endless" || this.questionCount > 0)
       );
@@ -608,6 +620,7 @@ export function createSoloModeStore(
       this._wsSend({
         type: "solo:start",
         categoryIds: this.selectedCategories,
+        seasonIds: this.selectedSeasons,
         timerDuration: this.timer,
         questionCount: this.questionCount,
         mode: this.mode,
@@ -686,7 +699,10 @@ export function createSoloModeStore(
 
     validate(): boolean {
       const errs = validateQuizSetup({
-        selectedCategories: this.selectedCategories,
+        selectedCategories: [
+          ...this.selectedCategories,
+          ...this.selectedSeasons,
+        ],
         timer: this.timer,
         ...(this.mode !== "endless"
           ? { questionsPerRound: this.questionCount }

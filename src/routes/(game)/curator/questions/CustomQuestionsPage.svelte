@@ -25,10 +25,12 @@
 
   let {
     categories,
+    tags = [],
     ownQuestions = [],
     questionsCursor = null,
   }: {
     categories: Category[];
+    tags?: string[];
     ownQuestions?: OwnQuestion[];
     questionsCursor?: string | null;
   } = $props();
@@ -204,6 +206,7 @@
 
 <QuestionForm
   categories={localCategories}
+  {tags}
   question={editing}
   onsubmit={saveQuestion}
   oncancel={cancelEdit}

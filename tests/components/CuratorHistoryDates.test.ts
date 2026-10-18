@@ -26,6 +26,7 @@ describe("curator history dates", () => {
               quiz_name: "Norse gods",
               started_at: SQLITE_STAMP,
               player_count: 2,
+              seasonNames: [],
               total_questions: 5,
               winners: ["Ada"],
               top_score: 80,

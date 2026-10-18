@@ -69,6 +69,7 @@ import { buildAvatarGroups } from "@orakl/shared";
     session.quizName = lobby.quizName;
     session.description = lobby.description;
     session.lobbyCategories = lobby.categories;
+    session.lobbySeasons = lobby.seasons;
     session.lobbyDifficulty = lobby.difficulty;
   }
 

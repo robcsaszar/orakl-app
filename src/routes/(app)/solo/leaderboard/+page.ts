@@ -4,7 +4,15 @@ import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ fetch, url }) => {
   const query = new URLSearchParams();
-  for (const key of ["scope", "board", "difficulty", "categoryId", "around"]) {
+  for (const key of [
+    "scope",
+    "board",
+    "difficulty",
+    "categoryId",
+    "seasonId",
+    "opening",
+    "around",
+  ]) {
     const value = url.searchParams.get(key);
     if (value !== null) query.set(key, value);
   }

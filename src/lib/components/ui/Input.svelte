@@ -38,7 +38,7 @@
     },
   });
 
-  type InputType = "text" | "email" | "tel" | "url" | "color" | "textarea" | "password" | "number" | "search";
+  type InputType = "text" | "email" | "tel" | "url" | "color" | "textarea" | "password" | "number" | "search" | "date";
 
   let {
     id,

@@ -46,6 +46,7 @@ function makeData(over: Record<string, unknown> = {}) {
       difficulty: "all",
       completedAt: Date.now(),
       categories: ["Greek mythology", "Norse lore"],
+      seasons: [],
     },
     badges: [],
     categoryStats: [
@@ -132,5 +133,30 @@ describe("solo run review — mirrors the solo results screen", () => {
   it("renders flag follow-up for rows with a questionId", () => {
     render(SoloRunReviewPage, { props: { data: makeData() } });
     expect(screen.getAllByText("Flag this question").length).toBe(2);
+  });
+});
+
+describe("solo run review — subtitle", () => {
+  function withSeasons(seasons: string[]) {
+    const d = makeData() as { run: Record<string, unknown> };
+    d.run.seasons = seasons;
+    d.run.completedAt = new Date("2024-10-12T12:00:00Z").getTime();
+    return d as never;
+  }
+
+  it("separates one Season from the categories with a single dot", () => {
+    render(SoloRunReviewPage, { props: { data: withSeasons(["Halloween"]) } });
+    expect(
+      screen.getByText(/· Halloween · Greek mythology, Norse lore$/),
+    ).toBeInTheDocument();
+  });
+
+  it("comma-joins several Seasons", () => {
+    render(SoloRunReviewPage, {
+      props: { data: withSeasons(["Halloween", "Yule"]) },
+    });
+    expect(
+      screen.getByText(/· Halloween, Yule · Greek mythology, Norse lore$/),
+    ).toBeInTheDocument();
   });
 });

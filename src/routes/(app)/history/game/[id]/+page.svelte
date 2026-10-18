@@ -61,7 +61,7 @@ import { percent, toIsoTimestamp } from "@orakl/shared";
   <CeremonyFrame
     kicker="Final standings"
     title="Night review"
-    subtitle={`${dateLabel(data.game.startedAt)} · ${data.game.quizName}`}
+    subtitle={`${dateLabel(data.game.startedAt)} · ${[data.game.seasons.join(', '), data.game.quizName].filter(Boolean).join(' · ')}`}
   >
     <CeremonyLeaderboard players={leaderboardPlayers} currentPlayerId={viewerResultId} />
   </CeremonyFrame>

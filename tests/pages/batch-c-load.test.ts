@@ -140,6 +140,7 @@ describe("/history/game/[id] load", () => {
         finalScore: 100,
         rank: 1,
         playerCount: 4,
+        seasons: [],
       },
       standings: [],
       badges: [],
@@ -199,6 +200,7 @@ describe("/history/solo/[id] load", () => {
         difficulty: "medium",
         completedAt: 1700000000000,
         categories: [],
+        seasons: [],
       },
       badges: [],
       categoryStats: [],
@@ -224,6 +226,7 @@ describe("solo/+layout load", () => {
       nickname: "",
       profileAvatarSrc: "",
       categoryDataJson: "[]",
+      seasonDataJson: "[]",
     };
     const { fetchFn, calls } = apiFetch({
       "/api/pages/solo/layout": { body: payload },
@@ -249,6 +252,9 @@ describe("solo/leaderboard load", () => {
       percentile: null,
       around: true,
       viewerId: null,
+      seasonId: null,
+      opening: null,
+      seasonBoards: [],
     };
     const { fetchFn, calls } = apiFetch({
       "/api/pages/solo/leaderboard": { body: payload },

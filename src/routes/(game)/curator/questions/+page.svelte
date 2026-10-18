@@ -11,6 +11,7 @@
 
 <CustomQuestionsPage
   categories={data.categories}
+  tags={data.tags}
   ownQuestions={data.ownQuestions}
   questionsCursor={data.questionsCursor}
 />

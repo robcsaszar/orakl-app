@@ -58,6 +58,7 @@ export class MockQuizSession implements PlayerSessionView {
   quizName = $state("Dev Fixture Quiz");
   description = $state("A mock session driven by URL params.");
   lobbyCategories = $state<string[]>(["science", "history"]);
+  lobbySeasons = $state<string[]>([]);
   lobbyDifficulty = $state<string | null>(null);
   error = $state("");
   isJoining = $state(false);

@@ -116,7 +116,9 @@ import type { GuestEntitlements } from "@orakl/shared";
 >
   <QuizSetupFields
     categories={sortedCategories}
+    seasons={s.seasons}
     bind:selectedCategories={s.selectedCategories}
+    bind:selectedSeasons={s.selectedSeasons}
     bind:difficulty={s.difficulty}
     bind:timer={s.timer}
     bind:questionsPerRound={s.questionCount}
@@ -151,6 +153,6 @@ import type { GuestEntitlements } from "@orakl/shared";
   submitLabel="Begin trial"
   poolText={s.totalQuestionPool}
   maxTimeText={s.maxGameTime}
-  disabledTooltip={s.starting ? "Opening the trial…" : "Select at least one category"}
+  disabledTooltip={s.starting ? "Opening the trial…" : "Pick at least one season or category"}
   enabledTooltip={s.mode !== "endless" ? "Good luck" : "Defy the endless oracle"}
 />

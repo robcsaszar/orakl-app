@@ -97,12 +97,20 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
       <div class="flex flex-col gap-3">
         <h1 class="text-4xl font-bold">{session.quizName}</h1>
         {#if session.description}<p class="text-foreground-darker">{session.description}</p>{/if}
-        {#if session.lobbyCategories.length > 0}
+        {#if session.lobbyCategories.length > 0 || session.lobbySeasons.length > 0}
           <div class="text-sm font-sans text-foreground-darker/70">
-            <div class="flex flex-wrap items-center gap-2">
-              <span>Categories:</span>
-              <span class="font-bold">{session.lobbyCategories.length} selected</span>
-            </div>
+            {#if session.lobbySeasons.length > 0}
+              <div class="flex flex-wrap items-center gap-2">
+                <span>Seasons:</span>
+                <span class="font-bold">{session.lobbySeasons.join(", ")}</span>
+              </div>
+            {/if}
+            {#if session.lobbyCategories.length > 0}
+              <div class="flex flex-wrap items-center gap-2">
+                <span>Categories:</span>
+                <span class="font-bold">{session.lobbyCategories.length} selected</span>
+              </div>
+            {/if}
             {#if session.lobbyDifficulty}
               <div class="flex flex-wrap items-center gap-2">
                 <span>Difficulty:</span>

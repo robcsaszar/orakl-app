@@ -18,6 +18,7 @@ const preset = (n: number) => ({
   name: `Preset ${n}`,
   description: null,
   category_ids: JSON.stringify(["general"]),
+  season_ids: "[]",
   timer_duration: 30,
   questions_per_round: 10,
   difficulty: "all",
@@ -81,5 +82,34 @@ describe("saved-preset count on the create page", () => {
     expect(screen.getByText("Delete preset?")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByText("2/10 saved")).toBeTruthy();
+  });
+});
+
+describe("create footer pool", () => {
+  it("counts a Seasons-only pick as an estimate", async () => {
+    render(CreateQuiz, {
+      props: {
+        categories,
+        categoryColors: {},
+        seasons: [
+          {
+            id: "s1",
+            name: "Halloween",
+            icon: null,
+            color: null,
+            count: 5,
+            locked: false,
+            opensOn: null,
+          },
+        ],
+        presets: [],
+        presetLimit: 10,
+        quizPresets: true,
+      } as never,
+    });
+    await fireEvent.click(screen.getByRole("checkbox", { name: /halloween/i }));
+    expect(
+      screen.getByText("Question pool").nextElementSibling?.textContent,
+    ).toBe("up to 5 questions");
   });
 });

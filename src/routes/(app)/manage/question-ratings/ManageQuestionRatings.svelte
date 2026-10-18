@@ -83,6 +83,7 @@
   }
 
   let editCategories = $state<QuestionFormCategory[]>([]);
+  let editTags = $state<string[]>([]);
   let editing = $state<QuestionFormQuestion | null>(null);
 
   /** Saves the form's payload and patches the edited row: since-edit counts restart, all-time stays. */
@@ -155,6 +156,7 @@
       const data = (await res.json().catch(() => ({}))) as {
         question?: QuestionFormQuestion;
         categories?: QuestionFormCategory[];
+        tags?: string[];
         error?: string;
       };
       if (!res.ok || !data.question) {
@@ -162,6 +164,7 @@
         return;
       }
       editCategories = data.categories ?? [];
+      editTags = data.tags ?? [];
       editing = data.question;
     } catch {
       toast.error("Network error. Try again.");
@@ -326,6 +329,7 @@
   {#snippet title()}Edit question{/snippet}
   <QuestionForm
     categories={editCategories}
+    tags={editTags}
     question={editing}
     showHeading={false}
     onsubmit={saveQuestion}

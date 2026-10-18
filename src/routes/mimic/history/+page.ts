@@ -28,6 +28,7 @@ const RUNS: SoloHistoryEntry[] = [
     mode: "normal",
     difficulty: "all",
     category_ids: '["science","history"]',
+    seasons: [],
     completed_at: 1_717_000_000_000,
   },
   {
@@ -40,6 +41,7 @@ const RUNS: SoloHistoryEntry[] = [
     mode: "normal",
     difficulty: "hard",
     category_ids: '["science"]',
+    seasons: [],
     completed_at: 1_716_500_000_000,
   },
   {
@@ -52,6 +54,7 @@ const RUNS: SoloHistoryEntry[] = [
     mode: "endless",
     difficulty: "all",
     category_ids: '["history"]',
+    seasons: [],
     completed_at: 1_716_000_000_000,
   },
 ];
@@ -71,6 +74,7 @@ const GAMES: PlayerGamePlacement[] = [
     final_score: 720,
     rank: 1,
     player_count: 8,
+    seasons: [],
     badges: ["victor", "quick-draw"],
   },
   {
@@ -80,6 +84,7 @@ const GAMES: PlayerGamePlacement[] = [
     final_score: 540,
     rank: 3,
     player_count: 6,
+    seasons: [],
     badges: ["podium"],
   },
   {
@@ -89,6 +94,7 @@ const GAMES: PlayerGamePlacement[] = [
     final_score: 380,
     rank: 5,
     player_count: 9,
+    seasons: [],
     badges: [],
   },
 ];

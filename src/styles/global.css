@@ -461,6 +461,7 @@ html[data-sky-phase="night"] {
   --color-border: var(--color-secondary-900);
   --color-surface: var(--color-secondary-900);
   --color-surface-raised: var(--color-secondary-800);
+  color-scheme: dark;
 }
 
 /* ── light / morning — cool blue-grey, light sky ────────────────────────── */
@@ -477,6 +478,7 @@ html[data-sky-phase="morning"] {
   --color-warning: oklch(50% 0.17 66.31);
   --color-success: oklch(47% 0.14 156.69);
   --color-danger: oklch(51% 0.22 28.32);
+  color-scheme: light;
 }
 
 /* ── dawn — dark navy-purple, warm peach undertone ──────────────────────── */

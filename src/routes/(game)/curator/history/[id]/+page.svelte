@@ -29,7 +29,7 @@ import { toIsoTimestamp } from "@orakl/shared";
   );
 
   const subtitle = $derived(
-    `${formatDate(session.started_at)} · ${session.player_count} ${session.player_count === 1 ? "player" : "players"} · ${session.total_questions} ${session.total_questions === 1 ? "question" : "questions"} · ${session.timer_duration}s timer`,
+    `${formatDate(session.started_at)} · ${session.seasonNames.length > 0 ? `${session.seasonNames.join(', ')} · ` : ''}${session.player_count} ${session.player_count === 1 ? "player" : "players"} · ${session.total_questions} ${session.total_questions === 1 ? "question" : "questions"} · ${session.timer_duration}s timer`,
   );
 
   const alreadySaved = $derived(session.preset_id !== null);
@@ -62,6 +62,7 @@ import { toIsoTimestamp } from "@orakl/shared";
         body: JSON.stringify({
           name: session.quiz_name,
           categoryIds: session.categoryIds,
+          seasonIds: session.seasonIds,
           timerDuration: session.timer_duration,
           questionsPerRound: session.questions_per_round ?? 10,
           difficulty: session.difficulty ?? "all",

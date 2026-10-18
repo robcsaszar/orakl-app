@@ -8,4 +8,4 @@
 
 <Metatags title="Category management" description="Manage quiz categories, icons, and colors." />
 
-<ManageCategories initial={data.initial} />
+<ManageCategories initial={data.initial} tags={data.tags} seasons={data.seasons} />

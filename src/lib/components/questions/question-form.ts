@@ -20,4 +20,5 @@ export interface QuestionFormQuestion {
   previewUrl?: string;
   source?: { url: string; label?: string };
   postAnswerNote?: string;
+  metadata?: { tags?: string[] };
 }

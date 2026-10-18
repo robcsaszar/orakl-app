@@ -18,6 +18,7 @@
 
   let {
     categories,
+    tags = [],
     question,
     onsubmit,
     oncancel,
@@ -25,6 +26,8 @@
     showHeading = true,
   }: {
     categories: QuestionFormCategory[];
+    /** The admin-defined tag names a question may carry. */
+    tags?: string[];
     /** The question being edited; null is add mode. */
     question: QuestionFormQuestion | null;
     /** Receives the validated payload (image already uploaded); resolves true when the save succeeded. */
@@ -46,6 +49,7 @@
   };
 
   let categoryId = $state("");
+  let selectedTags = $state<string[]>([]);
   let questionText = $state("");
   let questionType = $state<QuestionType>("standard");
   let difficulty = $state<"easy" | "medium" | "hard">("easy");
@@ -91,6 +95,12 @@
   let newCategoryColor = $state(DEFAULT_CATEGORY_COLOR);
   let newCategoryError = $state("");
   let addingCategory = $state(false);
+
+  function toggleTag(name: string) {
+    selectedTags = selectedTags.includes(name)
+      ? selectedTags.filter((t) => t !== name)
+      : [...selectedTags, name];
+  }
 
   async function addCategory() {
     newCategoryError = "";
@@ -224,6 +234,7 @@
 
     const url = sourceUrl.trim();
     const extras = {
+      ...(selectedTags.length ? { tags: selectedTags } : {}),
       ...(url ? { source: { url, label: sourceLabel.trim() || undefined } } : {}),
       ...(postAnswerNote.trim() ? { postAnswerNote: postAnswerNote.trim() } : {}),
     };
@@ -358,6 +369,7 @@
       imageUrl,
       matchPairs,
       correctPairIndex,
+      selectedTags,
     ]);
   }
 
@@ -365,6 +377,7 @@
    *  curator adding several in a row keeps their choices. */
   function resetFields() {
     questionText = "";
+    selectedTags = [];
     answers = [{ text: "" }, { text: "" }, { text: "" }, { text: "" }];
     correctAnswerIndex = 0;
     trueFalseAnswer = "true";
@@ -399,6 +412,7 @@
   function fillFrom(data: QuestionFormQuestion) {
     categoryId = categories.find((c) => c.name === data.category)?.id ?? "";
     questionText = data.question.text;
+    selectedTags = (data.metadata?.tags ?? []).filter((t) => tags.includes(t));
     difficulty = data.difficulty;
     sourceUrl = data.source?.url ?? "";
     sourceLabel = data.source?.label ?? "";
@@ -462,6 +476,25 @@
         <option value={cat.id}>{cat.icon ? `${cat.icon} ` : ""}{cat.name} ({cat.count} {cat.count === 1 ? "question" : "questions"})</option>
       {/each}
     </Select>
+
+    {#if tags.length > 0}
+      <div class="flex flex-col gap-2" role="group" aria-labelledby="question-tags-label">
+        <span id="question-tags-label" class="text-sm font-medium">Tags</span>
+        <div class="flex flex-wrap gap-2">
+          {#each tags as tag}
+            {@const on = selectedTags.includes(tag)}
+            <Button
+              variant={on ? "primary" : "outline"}
+              intent="compact"
+              aria-pressed={on}
+              onclick={() => toggleTag(tag)}
+            >
+              {tag}
+            </Button>
+          {/each}
+        </div>
+      </div>
+    {/if}
 
     {#if !isEditing && oncategoryadded}
       {#if !showNewCategory}

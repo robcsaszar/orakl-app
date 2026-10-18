@@ -5,6 +5,7 @@ import GameReviewPage from "../../src/routes/(app)/history/game/[id]/+page.svelt
 function data(over: Record<string, unknown> = {}) {
   return {
     game: {
+      seasons: [],
       id: "result-viewer",
       quizName: "Myth Trivia",
       startedAt: "2026-01-01 12:00:00",
