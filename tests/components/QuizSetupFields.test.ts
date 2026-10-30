@@ -163,7 +163,7 @@ describe("QuizSetupFields — seasons", () => {
   it("shows a locked Season with its opening day, not toggleable", () => {
     setup({ seasons });
     const yule = screen.getByRole("checkbox", { name: /yule/i });
-    expect(yule).toBeDisabled();
+    expect(yule).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText(/Opens .*Dec.*2026/)).toBeInTheDocument();
   });
 
@@ -200,11 +200,14 @@ describe("QuizSetupFields — seasons", () => {
     expect(screen.getByText("1 question")).toBeInTheDocument();
   });
 
-  it("disables a locked tile through the input, not aria-disabled", () => {
+  it("keeps an out-of-season tile focusable and untoggleable", async () => {
     setup({ seasons });
     const yule = screen.getByRole("checkbox", { name: /yule/i });
-    expect(yule).toBeDisabled();
-    expect(yule.closest("label")).not.toHaveAttribute("aria-disabled");
+    expect(yule).toBeEnabled();
+    yule.focus();
+    expect(yule).toHaveFocus();
+    await userEvent.click(yule);
+    expect(yule).not.toBeChecked();
   });
 
   it("shows the Season icon on a locked tile", () => {

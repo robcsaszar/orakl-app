@@ -13,6 +13,7 @@
     value,
     checked = $bindable(false),
     disabled = false,
+    readonlyLocked = false,
     describedBy,
     onchange,
     class: className = "",
@@ -27,6 +28,8 @@
     value?: string;
     checked?: boolean;
     disabled?: boolean;
+    /** Stays focusable and announced as disabled, but cannot be toggled. For locked options whose label text is information. */
+    readonlyLocked?: boolean;
     describedBy?: string;
     onchange?: (e: Event & { currentTarget: HTMLInputElement }) => void;
     class?: string;
@@ -49,6 +52,8 @@
       bind:checked
       {disabled}
       aria-describedby={describedBy}
+      aria-disabled={readonlyLocked || undefined}
+      onclick={readonlyLocked ? (e) => e.preventDefault() : undefined}
       {onchange}
     />
   {/if}

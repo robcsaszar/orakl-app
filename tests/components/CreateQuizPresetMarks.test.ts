@@ -29,6 +29,7 @@ const presetMarks = {
     closedSeasons: [{ id: "s1", name: "Halloween", opensOn: "2027-10-15" }],
     missingSeasons: [],
     missingCategories: ["gone-1", "gone-2"],
+    hiddenCategories: [],
   },
 };
 
@@ -96,7 +97,12 @@ describe("saved quiz marks on the create page", () => {
         seasons: [],
         presets: [{ ...preset, category_ids: "[]" }],
         presetMarks: {
-          p1: { closedSeasons: [], missingSeasons: [], missingCategories: [] },
+          p1: {
+            closedSeasons: [],
+            missingSeasons: [],
+            missingCategories: [],
+            hiddenCategories: [],
+          },
         },
         presetLimit: 10,
         quizPresets: true,
