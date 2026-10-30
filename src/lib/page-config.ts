@@ -250,6 +250,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
         "preference-cookies",
         "audit",
         "billing",
+        "deletion-log",
       ],
     },
   },
