@@ -102,7 +102,8 @@
           name="seasons"
           value={season.id}
           checked={picked}
-          disabled={locked}
+          disabled={locked && !season.locked}
+          readonlyLocked={season.locked}
           describedBy="seasons-description"
           onchange={(e) => setSeason(season.id, e.currentTarget.checked)}
         >

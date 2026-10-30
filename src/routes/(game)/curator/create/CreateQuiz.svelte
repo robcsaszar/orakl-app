@@ -298,7 +298,9 @@
     // be unticked, so the marks line says why it is dropped.
     const marks = presetMarks[preset.id];
     selectedCategories = (JSON.parse(preset.category_ids) as string[]).filter(
-      (id) => !marks?.missingCategories.includes(id),
+      (id) =>
+        !marks?.missingCategories.includes(id) &&
+        !marks?.hiddenCategories.includes(id),
     );
     selectedSeasons = (JSON.parse(preset.season_ids) as string[]).filter((id) =>
       seasons.some((s) => s.id === id && !s.locked),
@@ -341,6 +343,11 @@
       ...(marks.missingCategories.length > 0
         ? [
             `${plural(marks.missingCategories.length, "category", "categories")} gone`,
+          ]
+        : []),
+      ...(marks.hiddenCategories.length > 0
+        ? [
+            `${plural(marks.hiddenCategories.length, "category", "categories")} hidden`,
           ]
         : []),
     ];
