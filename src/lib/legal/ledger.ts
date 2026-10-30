@@ -36,7 +36,9 @@ export type UseCaseId =
   | "errors"
   | "feedback"
   | "billing"
-  | "server-logs";
+  | "server-logs"
+  | "backups"
+  | "deletion-log";
 
 export type LawfulBasis =
   | "contract"
@@ -356,7 +358,7 @@ export const LEDGER: readonly LedgerRow[] = [
       "When something breaks, the error message, stack trace and route are sent to our own Sentry instance so we can fix it.",
     everywhere: true,
     parser:
-      "The Sentry SDK in the page and on the server; no user identifier is attached and default personal data collection is off.",
+      "The Sentry SDK in the page and on the server; no user identifier is attached and default personal data collection is off. One exception: if a deletion record cannot be written, the report carries the deleted account's id so we can write the record by hand.",
     storage: "Our self-hosted Sentry instance.",
     retention: "Sentry's default event retention.",
     basis: "legitimate-interest",
@@ -387,6 +389,36 @@ export const LEDGER: readonly LedgerRow[] = [
     retention: "The hosting provider's default; not shipped elsewhere.",
     basis: "legitimate-interest",
   },
+  {
+    id: "backups",
+    element: "Encrypted database copies",
+    sentence:
+      "Once a week our database is copied, encrypted, to a private bucket so we can recover from a failure; a copy keeps what you deleted for up to 4 weeks.",
+    everywhere: true,
+    parser:
+      "A full export of the database made by our own scheduled job on our hosting provider's servers in London, compressed and encrypted with age within about a minute; only we hold the key that opens it.",
+    storage:
+      "A private Cloudflare R2 bucket in the European Union, apart from the image bucket. Our database provider also keeps its own restore history.",
+    retention:
+      "Each copy is deleted 28 days after it is made. Data you delete, a deleted account included, can stay in copies for up to 4 weeks, and in the database provider's restore history for up to 10 days. If we ever restore one, we first delete again every account in the deletion records.",
+    basis: "legitimate-interest",
+    recipients: ["Fly.io", "Cloudflare"],
+  },
+  {
+    id: "deletion-log",
+    element: "Deletion record",
+    sentence:
+      "When an account is deleted, its account id and the time are kept for 35 days outside the database, so restoring a backup cannot bring the account back.",
+    routes: ["/profile"],
+    parser:
+      "Written by our own server code when an account is deleted, by you or by an admin; no email address, nickname or other detail.",
+    storage:
+      "A private Cloudflare R2 bucket in the European Union, used for nothing else. The server can add records to it but cannot reach the database copies.",
+    retention:
+      "35 days, then deleted by the bucket's own rule: one week longer than the oldest database copy.",
+    basis: "legitimate-interest",
+    recipients: ["Cloudflare"],
+  },
 ];
 
 export type Processor = {
@@ -401,7 +433,8 @@ export type Processor = {
 export const PROCESSORS: readonly Processor[] = [
   {
     name: "Turso (database)",
-    purpose: "Hosts the database: accounts, sessions, results, questions.",
+    purpose:
+      "Hosts the database: accounts, sessions, results, questions, with a 10-day restore history.",
     location: "European Union.",
     agreement:
       "No data-processing agreement is available on our current plan; we will move to a plan that includes one before public release.",
@@ -415,15 +448,17 @@ export const PROCESSORS: readonly Processor[] = [
       "Polar's data-processing agreement has not yet been reviewed; it will be before public release.",
   },
   {
-    name: "Cloudflare R2 (image storage)",
-    purpose: "Stores uploaded quiz images.",
+    name: "Cloudflare R2 (image and backup storage)",
+    purpose:
+      "Stores uploaded quiz images, the encrypted weekly database copies and the deletion records.",
     location:
-      "European Union jurisdiction; Cloudflare is certified under the EU–US Data Privacy Framework.",
+      "European Union: the copies and the deletion records sit in buckets locked to the EU jurisdiction, the images in a bucket placed in Eastern Europe; Cloudflare is certified under the EU–US Data Privacy Framework.",
     agreement: "Data-processing agreement accepted.",
   },
   {
     name: "Fly.io (hosting)",
-    purpose: "Runs the application server.",
+    purpose:
+      "Runs the application server, and the weekly job that copies and encrypts the database.",
     location:
       "London; Fly.io is certified under the EU–US Data Privacy Framework.",
     agreement:
