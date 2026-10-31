@@ -31,6 +31,9 @@ vi.mock("../src/lib/storage.js", () => ({
   },
 }));
 
+const preloadImage = vi.hoisted(() => vi.fn());
+vi.mock("../src/lib/preload-image.js", () => ({ preloadImage }));
+
 vi.mock("../src/lib/wakeLock.js", () => ({
   requestWakeLock: vi.fn(),
   releaseWakeLock: vi.fn(),
@@ -464,6 +467,20 @@ describe("QuizSession (injectable factory)", () => {
         players: [],
         playerAnswers: {},
       });
+
+    it("preloads the next question's image from the reveal", () => {
+      preloadImage.mockClear();
+      send({
+        type: "game:round-result",
+        correctAnswerId: "a1",
+        players: [],
+        playerAnswers: {},
+        nextMediaUrl: "/media/questions/n.webp?exp=1&sig=s",
+      });
+      expect(preloadImage).toHaveBeenCalledWith(
+        "/media/questions/n.webp?exp=1&sig=s",
+      );
+    });
 
     it("counts the configured delay: auto_10 starts at 10, auto_5 at 5", () => {
       send({

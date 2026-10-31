@@ -25,6 +25,7 @@ import {
   createPlayerSession,
   type PlayerSession,
 } from "@/lib/player-session.js";
+import { preloadImage } from "@/lib/preload-image.js";
 
 export type DisplayView =
   | "waiting"
@@ -234,6 +235,7 @@ export function createDisplaySession(
     },
     onRoundResult(msg) {
       showRoundResult(msg);
+      preloadImage(msg.nextMediaUrl);
     },
     onFinalScores(msg) {
       showFinalScores(msg);

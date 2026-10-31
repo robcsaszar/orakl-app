@@ -51,6 +51,7 @@ import {
   type PlayerSessionDeps,
   type WsStatus,
 } from "../player-session.js";
+import { preloadImage } from "../preload-image.js";
 import {
   ackRating,
   clearRating,
@@ -800,6 +801,7 @@ export class QuizSession implements PlayerSessionView {
     },
     onRoundResult: (msg) => {
       this.showRoundResult(msg);
+      preloadImage(msg.nextMediaUrl);
     },
     onFinalScores: (msg) => {
       this.showFinalScores(msg);
