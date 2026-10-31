@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { getHeapStatistics } from "node:v8";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vitest/config";
 import { BUILD_FLAGS } from "./build-flags.mjs";
@@ -35,6 +36,10 @@ export default defineConfig({
     // One jsdom per worker, files isolated in vm contexts: a fresh jsdom per
     // file is over half the suite's wall time.
     pool: "vmThreads",
+    // A vm worker keeps every file's context until its heap passes this, then
+    // restarts. The default (total RAM / workers) is above V8's heap ceiling on
+    // a one-worker CI runner, so the worker hit the ceiling and died instead.
+    vmMemoryLimit: Math.floor(getHeapStatistics().heap_size_limit * 0.6),
     setupFiles: ["./tests/setup.ts"],
     coverage: {
       provider: "v8",

@@ -29,11 +29,11 @@ importers:
         specifier: workspace:*
         version: link:packages/design-tokens
       '@orakl/protocol':
-        specifier: ^0.7.0
-        version: 0.7.0(effect@3.22.1)
+        specifier: ^0.8.0
+        version: 0.8.0(effect@3.22.1)
       '@orakl/shared':
-        specifier: ^0.4.2
-        version: 0.4.2(effect@3.22.1)
+        specifier: ^0.5.0
+        version: 0.5.0(effect@3.22.1)
       '@sentry/sveltekit':
         specifier: ^10.73.0
         version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@sveltejs/kit@2.70.3(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.0(svelte@5.57.0)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.8.3)))(svelte@5.57.0)(typescript@6.0.3)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.8.3)))(rollup@4.63.1)(supports-color@7.2.0)(svelte@5.57.0)(vite@8.2.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.8.3))
@@ -49,6 +49,9 @@ importers:
       effect:
         specifier: ^3.22.1
         version: 3.22.1
+      fflate:
+        specifier: 0.8.2
+        version: 0.8.2
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -150,8 +153,8 @@ importers:
   packages/client-core:
     dependencies:
       '@orakl/protocol':
-        specifier: ^0.7.0
-        version: 0.7.0(effect@3.22.1)
+        specifier: ^0.8.0
+        version: 0.8.0(effect@3.22.1)
     devDependencies:
       effect:
         specifier: ^3.22.1
@@ -638,18 +641,13 @@ packages:
     resolution: {integrity: sha512-eSYWTm620tTk45EKSedaUL8MFYI8hW164hIXsgIHyxu3VobUB3fFCu5t0hQby6OoWRPsG1KkKUG2M5UadiLiVg==}
     engines: {node: '>=14'}
 
-  '@orakl/protocol@0.6.0':
-    resolution: {integrity: sha512-LTOhOZmtVGCUIfBEcDjspoW5RXV9jyN1CnYO8E4i4uYvFYiB0do174sOpTueEKilyvoOJU5tU2EVPPWAm84DKA==}
+  '@orakl/protocol@0.8.0':
+    resolution: {integrity: sha512-hF1tbv6DHuFjcaT2t0LKZ8Cl65DwmnWeRPHhXQLXzKkokrpe/0b+khyQIE2IdBIfCPoRo55UVdNT0hYePr6ahA==}
     peerDependencies:
       effect: ^3.22.1
 
-  '@orakl/protocol@0.7.0':
-    resolution: {integrity: sha512-jSyuLd1epRVebf2QsTnDRkwKcarcwV2G+Tu1rKf1ccAwg2y6V1TcKs73iZr0ekqWsSVuGxJpWx9Xcuoigd1PGw==}
-    peerDependencies:
-      effect: ^3.22.1
-
-  '@orakl/shared@0.4.2':
-    resolution: {integrity: sha512-gL2iyB/b547ECTR2YF9jdf0jr39lMgf+qrsFEdctppZEBsxPYnHMXbhbs+RibAiDR69eqZbPUX/QzLHIvj3FhQ==}
+  '@orakl/shared@0.5.0':
+    resolution: {integrity: sha512-0ZQ54A7JYktxfvUSgAhwVmvQowqTEULFG9dwZicBnUALX2ltRBOF7Ani3mkGuRL5YKboX9uyB/o8oTVujtXOdg==}
     peerDependencies:
       effect: ^3.22.1
 
@@ -1827,6 +1825,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
   find-up@4.1.0:
     resolution: {integrity: sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw==}
@@ -3475,17 +3476,13 @@ snapshots:
 
   '@opentelemetry/semantic-conventions@1.43.0': {}
 
-  '@orakl/protocol@0.6.0(effect@3.22.1)':
+  '@orakl/protocol@0.8.0(effect@3.22.1)':
     dependencies:
       effect: 3.22.1
 
-  '@orakl/protocol@0.7.0(effect@3.22.1)':
+  '@orakl/shared@0.5.0(effect@3.22.1)':
     dependencies:
-      effect: 3.22.1
-
-  '@orakl/shared@0.4.2(effect@3.22.1)':
-    dependencies:
-      '@orakl/protocol': 0.6.0(effect@3.22.1)
+      '@orakl/protocol': 0.8.0(effect@3.22.1)
       date-fns: 4.4.0
       effect: 3.22.1
 
@@ -4496,6 +4493,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
       picomatch: 4.0.7
+
+  fflate@0.8.2: {}
 
   find-up@4.1.0:
     dependencies:

@@ -459,6 +459,9 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
                 <Button href="/manage/flagged-questions" variant="secondary"
                   >Flagged questions</Button
                 >
+                <Button href="/manage/notices" variant="secondary"
+                  >Image notices</Button
+                >
                 {#if data.uiFlags.QUESTION_RATING === true}
                   <Button href="/manage/question-ratings" variant="secondary"
                     >Question ratings</Button

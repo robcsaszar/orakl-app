@@ -258,7 +258,7 @@ import { percent } from "@orakl/shared";
         session.isIntermission ? "blur-sm pointer-events-none select-none" : "",
       ])}
     >
-      <QuestionMedia src={currentQuestion.mediaUrl} />
+      <QuestionMedia src={currentQuestion.mediaUrl} credit={currentQuestion.mediaCredit} questionId={currentQuestion.questionId} />
     </div>
   {/if}
 

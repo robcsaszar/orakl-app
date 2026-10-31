@@ -42,3 +42,6 @@ playwright.local.config.ts
 
 # Appllama research images (screen refs in the notes restore them)
 docs/research/**/img/
+
+# Image Quiz pack build output
+scripts/image-quiz-pack/out/

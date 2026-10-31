@@ -105,6 +105,7 @@ describe("PAGE_CONFIG completeness", () => {
     "/manage/import",
     "/manage/questions",
     "/manage/avatars",
+    "/manage/notices",
     "/curator/display",
     "/join",
     "/closed",
@@ -114,6 +115,7 @@ describe("PAGE_CONFIG completeness", () => {
     "/quiz/roles",
     "/quiz/results",
     "/mimic/*",
+    "/report-image",
   ];
 
   it("has an entry for every known route", () => {

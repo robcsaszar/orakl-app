@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { QuestionSource } from "@orakl/shared";
+import type { MediaCredit, QuestionSource } from "@orakl/shared";
   import Card from "$lib/components/ui/Card.svelte";
   import Link from "$lib/components/ui/Link.svelte";
   import QuestionMedia from "$lib/components/quiz/QuestionMedia.svelte";
@@ -13,6 +13,7 @@ import type { QuestionSource } from "@orakl/shared";
     index,
     text,
     mediaUrl,
+    mediaCredit,
     postAnswerNote,
     source,
     answered = 0,
@@ -23,6 +24,7 @@ import type { QuestionSource } from "@orakl/shared";
     index: number;
     text: string;
     mediaUrl?: string;
+    mediaCredit?: MediaCredit;
     postAnswerNote?: string;
     source?: QuestionSource;
     answered?: number;
@@ -79,7 +81,7 @@ import type { QuestionSource } from "@orakl/shared";
     {/if}
 
     {#if mediaUrl}
-      <QuestionMedia src={mediaUrl} />
+      <QuestionMedia src={mediaUrl} credit={mediaCredit} />
     {/if}
 
     {#if postAnswerNote}

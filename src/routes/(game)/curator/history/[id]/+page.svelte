@@ -112,6 +112,7 @@ import { toIsoTimestamp } from "@orakl/shared";
             index={q.questionIndex}
             text={q.questionText ?? `Question ${q.questionIndex + 1}`}
             mediaUrl={q.mediaUrl}
+            mediaCredit={q.mediaCredit}
             postAnswerNote={q.postAnswerNote}
             source={q.source}
             answered={q.answered}

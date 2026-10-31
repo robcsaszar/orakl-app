@@ -1,7 +1,15 @@
 <script lang="ts">
-  import { isHttpsUrl } from "@orakl/shared";
+  import {
+    ATTRIBUTION_LICENCES,
+    CREDIT_LICENCE_LABEL,
+    CREDIT_LICENCES,
+    type CreditLicence,
+    isHttpsUrl,
+    type MediaCredit,
+  } from "@orakl/shared";
   import Button from "$lib/components/ui/Button.svelte";
   import Card from "$lib/components/ui/Card.svelte";
+  import Checkbox from "$lib/components/ui/Checkbox.svelte";
   import FileInput from "$lib/components/ui/FileInput.svelte";
   import Icon from "$lib/components/ui/Icon.svelte";
   import Input from "$lib/components/ui/Input.svelte";
@@ -10,7 +18,7 @@
   import { prefersReducedMotion } from "$lib/motion-prefs.js";
   import { toast } from "@/lib/toast.js";
   import { cn } from "tailwind-variants";
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import type { QuestionFormCategory, QuestionFormQuestion } from "./question-form.js";
 
   // Native colour pickers only take #rrggbb; this is the secondary token's hex twin.
@@ -40,7 +48,6 @@
   } = $props();
 
   type QuestionType = "standard" | "true_false" | "image_matching";
-  type ImageMode = "file" | "url";
 
   const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
     standard: "Multiple choice",
@@ -72,7 +79,8 @@
   let postAnswerNoteError = $state("");
 
   // Image matching
-  let imageMode = $state<ImageMode>("url");
+  // Stored canonical URL of the image the question already has; kept on
+  // submit unless a new file is picked or the image is removed.
   let imageUrl = $state("");
   let pendingFile = $state<File | null>(null);
   let imagePreviewUrl = $state("");
@@ -80,6 +88,17 @@
   // Image matching opens the block through its own branch below, so this only
   // tracks a curator choosing to add an image to a type that does not need one.
   let imageExpanded = $state(false);
+
+  // Image credit: empty licence means no credit. The rights tick gates a new upload only.
+  let creditLicence = $state<CreditLicence | "">("");
+  let creditAuthor = $state("");
+  let creditSourceUrl = $state("");
+  let creditLicenceUrl = $state("");
+  let rightsConfirmed = $state(false);
+  let creditAuthorError = $state("");
+  let creditSourceUrlError = $state("");
+  let creditLicenceUrlError = $state("");
+  let rightsError = $state("");
   let matchPairs = $state([
     { left: "", right: "" },
     { left: "", right: "" },
@@ -165,19 +184,29 @@
       return;
     }
     if (imagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(imagePreviewUrl);
+    // A new file replacing the stored image needs its own credit.
+    const replacesStored = !pendingFile && Boolean(imageUrl);
+    if (replacesStored) clearCredit();
+    // A tick refers to one file.
+    rightsConfirmed = false;
+    rightsError = "";
     pendingFile = file;
     imagePreviewUrl = URL.createObjectURL(file);
-    imageStatus = { message: `${file.name} ready to upload.`, type: "success" };
+    imageStatus = replacesStored
+      ? { message: `${file.name} ready to upload. Credit cleared. Add the credit for the new image.`, type: "success" }
+      : { message: `${file.name} ready to upload.`, type: "success" };
   }
 
-  function onImageUrlInput() {
-    const val = imageUrl.trim();
-    if (!val) {
-      imagePreviewUrl = "";
-      return;
-    }
-    imagePreviewUrl = val;
-    imageStatus = null;
+  function clearCredit() {
+    creditLicence = "";
+    creditAuthor = "";
+    creditSourceUrl = "";
+    creditLicenceUrl = "";
+    rightsConfirmed = false;
+    creditAuthorError = "";
+    creditSourceUrlError = "";
+    creditLicenceUrlError = "";
+    rightsError = "";
   }
 
   /** Clears the image reference; leaves the stored file untouched (issue #916) —
@@ -185,30 +214,63 @@
   function removeImage() {
     imageUrl = "";
     pendingFile = null;
+    clearCredit();
     if (imagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(imagePreviewUrl);
     imagePreviewUrl = "";
     imageStatus = null;
   }
 
-  /** Resolves the image to submit: uploads a pending file, or takes the
-   *  pasted/retained URL. Undefined means no image — omitted from the
+  /** Resolves the image to submit: uploads a pending file, or keeps the
+   *  stored URL the question already has. Undefined means no image — omitted from the
    *  payload, which the API stores as no image on any type but
    *  image_matching. Throws with a user-facing message on upload failure. */
   async function resolveImageUrl(): Promise<string | undefined> {
-    if (imageMode === "file") {
-      // Switching to file mode without choosing one keeps the image the
-      // question already has; clearing it is what removeImage() is for.
-      if (!pendingFile) return imageUrl.trim() || undefined;
-      const fd = new FormData();
-      fd.append("file", pendingFile);
-      const uploadRes = await fetch("/api/upload-image", { method: "POST", body: fd });
-      const uploadData = await uploadRes.json() as { url?: string; error?: string };
-      if (!uploadRes.ok || !uploadData.url) {
-        throw new Error(uploadData.error ?? "Image upload failed.");
-      }
-      return uploadData.url;
+    // No new file keeps the image the question already has; clearing it is
+    // what removeImage() is for.
+    if (!pendingFile) return imageUrl.trim() || undefined;
+    const fd = new FormData();
+    fd.append("file", pendingFile);
+    fd.append("rightsConfirmed", "true");
+    const uploadRes = await fetch("/api/upload-image", { method: "POST", body: fd });
+    const uploadData = await uploadRes.json() as { url?: string; error?: string };
+    if (!uploadRes.ok || !uploadData.url) {
+      throw new Error(uploadData.error ?? "Image upload failed.");
     }
-    return imageUrl.trim() || undefined;
+    return uploadData.url;
+  }
+
+  /** Checks the credit and the rights tick; runs before any upload so a refusal leaves no orphan file. */
+  function validateCredit(): boolean {
+    creditAuthorError = "";
+    creditSourceUrlError = "";
+    creditLicenceUrlError = "";
+    rightsError = "";
+    if (!pendingFile && !imageUrl.trim()) return true;
+    if (pendingFile && !rightsConfirmed) {
+      rightsError = "Confirm you hold the rights to this image.";
+    }
+    if (!creditLicence) return !rightsError;
+    if (ATTRIBUTION_LICENCES.includes(creditLicence) && !creditAuthor.trim()) {
+      creditAuthorError = "Author is required for CC BY and CC BY-SA.";
+    }
+    if (creditSourceUrl.trim() && !isHttpsUrl(creditSourceUrl.trim())) {
+      creditSourceUrlError = "Source link must start with https://.";
+    }
+    if (creditLicenceUrl.trim() && !isHttpsUrl(creditLicenceUrl.trim())) {
+      creditLicenceUrlError = "Licence link must start with https://.";
+    }
+    return !rightsError && !creditAuthorError && !creditSourceUrlError && !creditLicenceUrlError;
+  }
+
+  /** The credit to store with the image; undefined when no licence is chosen. */
+  function creditPayload(): MediaCredit | undefined {
+    if (!creditLicence) return undefined;
+    return {
+      licence: creditLicence,
+      ...(creditAuthor.trim() ? { author: creditAuthor.trim() } : {}),
+      ...(creditSourceUrl.trim() ? { sourceUrl: creditSourceUrl.trim() } : {}),
+      ...(creditLicenceUrl.trim() ? { licenceUrl: creditLicenceUrl.trim() } : {}),
+    };
   }
 
   function validateExtras(): boolean {
@@ -231,9 +293,23 @@
     const text = questionText.trim();
     if (!text) { toast.error("Enter a question."); return; }
     if (!validateExtras()) { toast.error("Fix the errors below."); return; }
+    if (!validateCredit()) {
+      toast.error("Fix the errors below.");
+      await tick();
+      const firstError = [
+        creditAuthorError && "credit-author",
+        creditSourceUrlError && "credit-source-url",
+        creditLicenceUrlError && "credit-licence-url",
+        rightsError && "rights-confirmed",
+      ].find(Boolean);
+      if (firstError) document.getElementById(firstError)?.focus();
+      return;
+    }
 
     const url = sourceUrl.trim();
+    const credit = pendingFile || imageUrl.trim() ? creditPayload() : undefined;
     const extras = {
+      ...(credit ? { imageCredit: credit } : {}),
       ...(selectedTags.length ? { tags: selectedTags } : {}),
       ...(url ? { source: { url, label: sourceLabel.trim() || undefined } } : {}),
       ...(postAnswerNote.trim() ? { postAnswerNote: postAnswerNote.trim() } : {}),
@@ -249,12 +325,8 @@
     let payload: Record<string, unknown>;
 
     if (questionType === "image_matching") {
-      if (imageMode === "file" && !pendingFile) {
+      if (!pendingFile && !imageUrl.trim()) {
         toast.error("Select an image.");
-        return;
-      }
-      if (imageMode === "url" && !imageUrl.trim()) {
-        toast.error("Enter an image URL.");
         return;
       }
 
@@ -367,6 +439,10 @@
       sourceLabel,
       postAnswerNote,
       imageUrl,
+      creditLicence,
+      creditAuthor,
+      creditSourceUrl,
+      creditLicenceUrl,
       matchPairs,
       correctPairIndex,
       selectedTags,
@@ -388,6 +464,7 @@
     postAnswerNoteError = "";
     imageUrl = "";
     pendingFile = null;
+    clearCredit();
     if (imagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(imagePreviewUrl);
     imagePreviewUrl = "";
     imageStatus = null;
@@ -405,7 +482,6 @@
     categoryId = "";
     questionType = "standard";
     difficulty = "easy";
-    imageMode = "url";
     imageExpanded = false;
   }
 
@@ -422,9 +498,14 @@
 
     // Media loads the same way for every type: the edit form previews
     // through the signed /media/ route and submits the canonical URL back.
-    imageMode = "url";
     imageUrl = data.question.media?.url ?? "";
     pendingFile = null;
+    clearCredit();
+    const storedCredit = data.question.media?.credit;
+    creditLicence = storedCredit?.licence ?? "";
+    creditAuthor = storedCredit?.author ?? "";
+    creditSourceUrl = storedCredit?.sourceUrl ?? "";
+    creditLicenceUrl = storedCredit?.licenceUrl ?? "";
     imagePreviewUrl = data.previewUrl ?? imageUrl;
     imageStatus = null;
     imageExpanded = data.type === "image_matching" || Boolean(imageUrl);
@@ -618,30 +699,12 @@
         Add an image
       </Button>
     {:else}
-      <RadioGroup options={["url", "file"] as const} bind:selected={imageMode} name="imageMode" legend="Image source">
-        {#snippet optionLabel(mode)}
-          <span class="font-sans text-sm">{mode === "url" ? "URL" : "Upload file"}</span>
-        {/snippet}
-      </RadioGroup>
-
-      {#if imageMode === "url"}
-        <Input
-          id="image-url"
-          label="Image URL"
-          name="imageUrl"
-          type="url"
-          placeholder="https://example.com/image.jpg"
-          bind:value={imageUrl}
-          oninput={onImageUrlInput}
-        />
-      {:else}
-        <FileInput
-          id="image-file"
-          label={pendingFile ? pendingFile.name : "Choose an image"}
-          accept="image/*"
-          onfiles={(files) => handleFile(files[0])}
-        />
-      {/if}
+      <FileInput
+        id="image-file"
+        label={pendingFile ? pendingFile.name : "Choose an image"}
+        accept="image/*"
+        onfiles={(files) => handleFile(files[0])}
+      />
 
       {#if imagePreviewUrl}
         <div class="flex h-40 w-40 self-start overflow-hidden rounded-xl corner-shape-squircle border-2 border-secondary/20">
@@ -655,6 +718,65 @@
         <Button variant="outline" class="self-start min-h-11" onclick={removeImage}>
           Remove image
         </Button>
+      {/if}
+
+      {#if pendingFile || imageUrl}
+        <div class="flex flex-col gap-4">
+          <Select
+            id="credit-licence"
+            label="Licence"
+            name="creditLicence"
+            description="Shown under the image. Sharing a question needs CC0, public domain, CC BY or CC BY-SA."
+            bind:value={creditLicence}
+          >
+            <option value="">No credit</option>
+            {#each CREDIT_LICENCES as licence}
+              <option value={licence}>{CREDIT_LICENCE_LABEL[licence]}</option>
+            {/each}
+          </Select>
+          {#if creditLicence}
+            <Input
+              id="credit-author"
+              label="Author"
+              name="creditAuthor"
+              maxlength={200}
+              description="200 characters or fewer."
+              required={ATTRIBUTION_LICENCES.includes(creditLicence) ? "Author is required for CC BY and CC BY-SA." : undefined}
+              bind:value={creditAuthor}
+              error={creditAuthorError}
+            />
+            <Input
+              id="credit-source-url"
+              label="Source link"
+              name="creditSourceUrl"
+              type="url"
+              maxlength={2048}
+              placeholder="https://"
+              bind:value={creditSourceUrl}
+              error={creditSourceUrlError}
+            />
+            <Input
+              id="credit-licence-url"
+              label="Licence link"
+              name="creditLicenceUrl"
+              type="url"
+              maxlength={2048}
+              placeholder="https://"
+              bind:value={creditLicenceUrl}
+              error={creditLicenceUrlError}
+            />
+          {/if}
+          {#if pendingFile}
+            <Checkbox
+              id="rights-confirmed"
+              label="I hold the rights to use this image, or its licence allows it"
+              description="Required for a new file."
+              aria-required="true"
+              bind:checked={rightsConfirmed}
+              error={rightsError}
+            />
+          {/if}
+        </div>
       {/if}
     {/if}
   </Card>

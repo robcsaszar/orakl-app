@@ -1,5 +1,5 @@
 import type { PlayerStatus } from "@orakl/protocol";
-import type { QuestionType } from "@orakl/shared";
+import type { MediaCredit, QuestionType } from "@orakl/shared";
 import type { Difficulty } from "../../../data/game.settings.js";
 
 export type { PlayerStatus };
@@ -41,6 +41,7 @@ export interface CuratorQuestion {
   matchItems?: { left: string[]; right: string[] };
   mediaUrl?: string;
   mediaType?: "image" | "audio" | "video";
+  mediaCredit?: MediaCredit;
 }
 
 /** Question sent to player client — no isCorrect field (anti-cheat) */
@@ -57,6 +58,7 @@ export interface GameQuestion {
   matchItems?: { left: string[]; right: string[] };
   mediaUrl?: string;
   mediaType?: "image" | "audio" | "video";
+  mediaCredit?: MediaCredit;
   timeRemaining: number;
   serverTs: number;
 }

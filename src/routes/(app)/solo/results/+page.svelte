@@ -248,6 +248,8 @@ import type { BadgeId, Rarity } from "@orakl/shared";
             selectedAnswer={r.selectedAnswer}
             correctAnswer={r.correctAnswer}
             mediaUrl={r.mediaUrl}
+            mediaCredit={r.mediaCredit}
+            questionId={r.questionId}
             postAnswerNote={r.postAnswerNote}
             source={r.source}
           />
