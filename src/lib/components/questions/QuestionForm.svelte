@@ -287,7 +287,7 @@
   }
 
   async function submit() {
-    // An existing question in a category the pickers hide (Image Quiz while
+    // An existing question in a category the pickers hide (Images while
     // its flag is off) resolves to no id; the edit then keeps its category.
     if (!isEditing && !categoryId) { toast.error("Select a category."); return; }
     const text = questionText.trim();
