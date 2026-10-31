@@ -2,15 +2,16 @@ app = "orakl"
 primary_region = "lhr"
 
 # Preview variant of fly.toml: identical, plus the SVELTE_DEV_META build arg
-# so the feedback widget can name Svelte components. Keep the two in step.
+# so the feedback widget can name Svelte components, and the
+# WIP_QUESTION_TYPES build flag. Keep the two in step.
 # Every preview deploy names its own app with `-a`; `app` above is never used.
 [build]
   dockerfile = "Dockerfile"
   [build.args]
     SVELTE_DEV_META = "1"
-    # Build-level flags (map #859): review apps are where an unshipped feature
-    # gets looked at, so they build with the work-in-progress ones on. Prod
-    # (fly.toml) passes none, so every one of them is excluded there.
+    # Build-level flags (map #859): prod's set (fly.toml: SKY, PLAYER_EMOTES)
+    # plus WIP_QUESTION_TYPES, so an unshipped feature gets looked at here
+    # before it ships. SIGNUP_ROLE_SELECTION stays off everywhere deployed.
     BUILD_FEATURE_SKY = "true"
     BUILD_FEATURE_PLAYER_EMOTES = "true"
     BUILD_FEATURE_WIP_QUESTION_TYPES = "true"

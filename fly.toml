@@ -5,8 +5,14 @@ primary_region = "lhr"
   dockerfile = "Dockerfile"
   # Build-level feature flags (map #859, decision 5) are passed here and
   # nowhere else — a build-tier feature has no runtime switch, so an unlisted
-  # flag is absent from the production bundle. SIGNUP_ROLE_SELECTION stays out:
-  # curator is a granted role (docs/flows/ADMIN.md).
+  # flag is absent from the production bundle. Prod ships SKY and
+  # PLAYER_EMOTES; fly.api.toml passes the same pair so the API accepts the
+  # emote frames this bundle sends. SIGNUP_ROLE_SELECTION stays out: curator is
+  # a granted role (docs/flows/ADMIN.md). WIP_QUESTION_TYPES stays out:
+  # unfinished work, review apps only.
+  [build.args]
+    BUILD_FEATURE_SKY = "true"
+    BUILD_FEATURE_PLAYER_EMOTES = "true"
 
 [env]
   NODE_ENV = "production"
