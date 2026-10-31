@@ -83,7 +83,7 @@ export const LEDGER: readonly LedgerRow[] = [
       "Every request carries your IP address; we use it in memory to slow down abuse and do not store it.",
     everywhere: true,
     parser:
-      "The Fly-Client-IP header our hosting proxy sets on each request; no library.",
+      "Read from the headers on each request, no library: the address our hosting proxy saw (Fly-Client-IP), or, when that address is one of Cloudflare's, the address Cloudflare saw (CF-Connecting-IP).",
     storage:
       "Not stored. Held in an in-memory rate limiter on the server; it is never written to the database unless you opt in to sign-in locations (see the security log).",
     retention: "About an hour after your last request, then dropped.",
@@ -96,7 +96,7 @@ export const LEDGER: readonly LedgerRow[] = [
       "Sign-ins, sign-outs and password changes are logged with the time and your account; your IP address is included only if you opted in to sign-in locations (that part rests on your consent).",
     routes: ["/login", "/signup", "/profile"],
     parser:
-      "Written by our own server code when an account event happens; the IP comes from the Fly-Client-IP header. Failed sign-ins and failed sign-ups record no IP and no email address.",
+      "Written by our own server code when an account event happens; the IP is read the same way as for rate limiting. Failed sign-ins and failed sign-ups record no IP and no email address.",
     storage: "The audit_log table in our database.",
     retention:
       "90 days, then pruned. Removed when you delete your account. IP addresses are erased at once when you turn sign-in locations off.",
@@ -109,7 +109,7 @@ export const LEDGER: readonly LedgerRow[] = [
       "If you opt in, each sign-in is labelled with its city so you can recognise your devices; the label is fixed at sign-in and the IP address is discarded.",
     routes: ["/login", "/profile/sessions"],
     parser:
-      'Your IP address is looked up, on our server, in an offline copy of MaxMind\'s GeoLite2 City and Country databases and reduced to "City, Country"; the IP itself is not kept. This product includes GeoLite2 data created by MaxMind.',
+      'Your IP address (read the same way as for rate limiting) is looked up, on our server, in an offline copy of MaxMind\'s GeoLite2 City and Country databases and reduced to "City, Country"; the IP itself is not kept. This product includes GeoLite2 data created by MaxMind.',
     storage: "The location column of your session row.",
     retention:
       "As long as the session lives (at most 30 days). Erased at once when you turn sign-in locations off or delete your account.",
