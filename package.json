@@ -18,7 +18,7 @@
     "@orakl/client-core": "workspace:*",
     "@orakl/design-tokens": "workspace:*",
     "@orakl/protocol": "^0.8.0",
-    "@orakl/shared": "^0.5.0",
+    "@orakl/shared": "^0.5.1",
     "@sentry/sveltekit": "^10.73.0",
     "@sveltejs/adapter-node": "^5.5.7",
     "@sveltejs/kit": "^2.70.3",
@@ -62,7 +62,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
-    "vite": "^8.2.2",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   }
 }
