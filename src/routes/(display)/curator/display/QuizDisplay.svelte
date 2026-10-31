@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { QuestionType } from "@orakl/shared";
+import type { MediaCredit, QuestionType } from "@orakl/shared";
   import type { Snippet } from "svelte";
   
   import { type TimerState } from "@orakl/client-core";
@@ -19,6 +19,7 @@ import type { QuestionType } from "@orakl/shared";
     matchItems?: { left: string[]; right: string[] } | null;
     mediaUrl?: string;
     mediaType?: string;
+    mediaCredit?: MediaCredit;
     correctAnswerId: string;
     timerState: TimerState;
     timeRemaining: number;
@@ -100,7 +101,7 @@ import type { QuestionType } from "@orakl/shared";
   </QuestionBlock>
 
   {#if data.mediaUrl && data.mediaType === "image"}
-    <QuestionMedia src={data.mediaUrl} compact={variant === "display"} />
+    <QuestionMedia src={data.mediaUrl} credit={data.mediaCredit} compact={variant === "display"} />
   {/if}
 
   <div>

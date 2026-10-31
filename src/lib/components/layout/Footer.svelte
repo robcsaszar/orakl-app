@@ -39,6 +39,7 @@ import type { AnalyticsState } from "@orakl/shared";
         <UseCaseNotice {useCases} {pathname} />
       </span>
       <Link href="/legal/terms" class={linkClass}>Terms</Link>
+      <Link href="/report-image" class={linkClass}>Report an image</Link>
       <span class="inline-flex items-center gap-1">
         <Link href="/legal/cookies" class={linkClass}>Cookies</Link>
         {#if analytics}

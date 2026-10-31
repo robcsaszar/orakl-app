@@ -274,7 +274,9 @@ import { toIsoTimestamp } from "@orakl/shared";
         reason:
           r.outcome === "flagged"
             ? "has open reports"
-            : r.outcome === "already"
+            : r.outcome === "unlicensed"
+              ? "image licence is not CC0, public domain, CC BY or CC BY-SA"
+              : r.outcome === "already"
               ? "already in the bank"
               : "not found",
       }));

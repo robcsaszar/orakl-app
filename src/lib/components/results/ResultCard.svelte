@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { QuestionSource } from "@orakl/shared";
+import type { MediaCredit, QuestionSource } from "@orakl/shared";
   import { tv } from "tailwind-variants";
   import Icon from "$lib/components/ui/Icon.svelte";
   import Card from "$lib/components/ui/Card.svelte";
@@ -45,6 +45,8 @@ import type { QuestionSource } from "@orakl/shared";
     selectedAnswer,
     correctAnswer,
     mediaUrl,
+    mediaCredit,
+    questionId,
     postAnswerNote,
     source,
   }: {
@@ -54,6 +56,8 @@ import type { QuestionSource } from "@orakl/shared";
     selectedAnswer: string | null;
     correctAnswer: string;
     mediaUrl?: string;
+    mediaCredit?: MediaCredit;
+    questionId?: string;
     postAnswerNote?: string;
     source?: QuestionSource;
   } = $props();
@@ -97,7 +101,7 @@ import type { QuestionSource } from "@orakl/shared";
       {#if mediaUrl || postAnswerNote || sourceLink}
         <div class="flex flex-col gap-2 border-t border-secondary/10 pt-2">
           {#if mediaUrl}
-            <QuestionMedia src={mediaUrl} />
+            <QuestionMedia src={mediaUrl} credit={mediaCredit} {questionId} />
           {/if}
 
           {#if postAnswerNote}

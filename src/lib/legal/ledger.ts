@@ -27,6 +27,7 @@ export type UseCaseId =
   | "flags"
   | "ratings"
   | "uploads"
+  | "notices"
   | "questions"
   | "session-cookie"
   | "preference-cookies"
@@ -274,6 +275,19 @@ export const LEDGER: readonly LedgerRow[] = [
       "The file stays in the private bucket after its question is deleted; nothing links to it any more and it cannot be reached without a signed link. Ask us to remove a file outright.",
     basis: "contract",
     recipients: ["Cloudflare"],
+  },
+  {
+    id: "notices",
+    element: "Image notices",
+    sentence:
+      "Reporting an image stores your name, your email, the question, your statement and, for a copyright claim, the work and your signature. We email you the outcome; each curator whose question uses the image gets a statement of reasons. A moderator reads the notice at /manage/notices.",
+    routes: ["/report-image", "/manage/notices"],
+    parser: "Submitted through our own form.",
+    storage: "The content notices table in our database.",
+    retention:
+      "Kept as the record of the notice and its outcome; ask us to remove it once no legal claim is open.",
+    basis: "legitimate-interest",
+    recipients: ["Resend"],
   },
   {
     id: "questions",

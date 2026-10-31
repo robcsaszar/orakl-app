@@ -5,6 +5,7 @@
  */
 export const FORWARDED_API_PATHS: ReadonlySet<string> = new Set([
   "/api/feedback",
+  "/api/notices",
   "/api/layout",
   "/api/game",
   "/api/lobby",

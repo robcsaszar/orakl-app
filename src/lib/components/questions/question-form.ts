@@ -1,3 +1,5 @@
+import type { MediaCredit } from "@orakl/shared";
+
 /** A category the question form offers in its select. */
 export interface QuestionFormCategory {
   id: string;
@@ -12,7 +14,7 @@ export interface QuestionFormQuestion {
   category: string;
   difficulty: "easy" | "medium" | "hard";
   type: "text_choice" | "true_false" | "image_matching";
-  question: { text: string; media?: { url: string } };
+  question: { text: string; media?: { url: string; credit?: MediaCredit } };
   correctAnswer: string;
   incorrectAnswers: string[];
   matchItems?: { left: string[]; right: string[] };

@@ -190,6 +190,8 @@ import { percent } from "@orakl/shared";
               selectedAnswer={q.selectedAnswerText}
               correctAnswer={q.correctAnswerText ?? "—"}
               mediaUrl={q.mediaUrl ?? undefined}
+              mediaCredit={q.mediaCredit ?? undefined}
+              questionId={q.questionId ?? undefined}
               postAnswerNote={q.postAnswerNote ?? undefined}
               source={q.source ?? undefined}
             />

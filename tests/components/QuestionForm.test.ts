@@ -43,7 +43,77 @@ const trueFalse: QuestionFormQuestion = {
   incorrectAnswers: ["false"],
 };
 
+const imageMatching: QuestionFormQuestion = {
+  id: "q-4",
+  category: "Geography",
+  difficulty: "easy",
+  type: "image_matching",
+  question: {
+    text: "Match the flags.",
+    media: { type: "image", url: "https://cdn.test/questions/flags.jpg" },
+  },
+  correctAnswer: "A|1",
+  incorrectAnswers: ["B|2", "C|3", "D|4"],
+  matchItems: { left: ["A", "B", "C", "D"], right: ["1", "2", "3", "4"] },
+  previewUrl: "/media/questions/flags.jpg?exp=1&sig=x",
+};
+
 describe("QuestionForm", () => {
+  describe("image section is upload only", () => {
+    it("offers no Image URL input in add mode for any question type", async () => {
+      const user = userEvent.setup();
+      render(QuestionForm, {
+        props: { categories, question: null, onsubmit: vi.fn() },
+      });
+      await user.click(
+        await screen.findByRole("button", { name: "Add an image" }),
+      );
+      expect(screen.queryByLabelText("Image URL")).toBeNull();
+      expect(screen.queryByLabelText("Upload file")).toBeNull();
+      expect(document.getElementById("image-file")).not.toBeNull();
+
+      await user.click(screen.getByText("True/false"));
+      expect(screen.queryByLabelText("Image URL")).toBeNull();
+
+      await user.click(screen.getByText("Image matching"));
+      expect(screen.queryByLabelText("Image URL")).toBeNull();
+      expect(document.getElementById("image-file")).not.toBeNull();
+    });
+
+    it("keeps the stored image URL on edit when no new file is chosen", async () => {
+      const user = userEvent.setup();
+      const onsubmit = vi.fn().mockResolvedValue(true);
+      render(QuestionForm, {
+        props: { categories, question: imageMatching, onsubmit },
+      });
+      await screen.findByDisplayValue("Match the flags.");
+      expect(screen.queryByLabelText("Image URL")).toBeNull();
+      expect(
+        screen.getByAltText("What players will see with this question"),
+      ).toHaveAttribute("src", "/media/questions/flags.jpg?exp=1&sig=x");
+
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      expect(onsubmit).toHaveBeenCalledTimes(1);
+      expect(onsubmit.mock.calls[0]?.[0]).toMatchObject({
+        questionType: "image_matching",
+        imageUrl: "https://cdn.test/questions/flags.jpg",
+      });
+    });
+
+    it("requires an image for image matching once the stored one is removed", async () => {
+      const user = userEvent.setup();
+      const onsubmit = vi.fn().mockResolvedValue(true);
+      render(QuestionForm, {
+        props: { categories, question: imageMatching, onsubmit },
+      });
+      await screen.findByDisplayValue("Match the flags.");
+      await user.click(screen.getByRole("button", { name: "Remove image" }));
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      expect(onsubmit).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith("Select an image.");
+    });
+  });
+
   it("renders the editing heading in edit mode by default", async () => {
     render(QuestionForm, {
       props: { categories, question: multipleChoice, onsubmit: vi.fn() },
@@ -285,6 +355,317 @@ describe("QuestionForm", () => {
     expect(toast.info).not.toHaveBeenCalled();
   });
 
+  describe("image credit and rights tick", () => {
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => "blob:pic");
+      URL.revokeObjectURL = vi.fn();
+      vi.stubGlobal(
+        "Image",
+        class {
+          naturalWidth = 200;
+          naturalHeight = 200;
+          onload: (() => void) | null = null;
+          onerror: (() => void) | null = null;
+          set src(_: string) {
+            queueMicrotask(() => this.onload?.());
+          }
+        },
+      );
+    });
+
+    /** Fills a standard question, picks a file and a licence; leaves the tick to the test. */
+    async function pickFileAndLicence(
+      user: ReturnType<typeof userEvent.setup>,
+      licence: string,
+    ) {
+      await user.selectOptions(
+        await screen.findByLabelText("Category"),
+        "cat-geo",
+      );
+      await user.type(
+        await screen.findByLabelText("Question"),
+        "What is on the painting?",
+      );
+      await user.type(screen.getByPlaceholderText("Answer 1"), "A dog");
+      await user.type(screen.getByPlaceholderText("Answer 2"), "A cat");
+      await user.click(screen.getByRole("button", { name: "Add an image" }));
+      await user.upload(
+        document.getElementById("image-file") as HTMLInputElement,
+        new File(["x"], "pic.png", { type: "image/png" }),
+      );
+      await screen.findByText("pic.png ready to upload.");
+      await user.selectOptions(
+        screen.getByLabelText(/^Licence(?! link)/),
+        licence,
+      );
+    }
+
+    it("describes the licence, marks the rights tick and states the author limit", async () => {
+      const user = userEvent.setup();
+      render(QuestionForm, {
+        props: {
+          categories: [categories[0]],
+          question: null,
+          onsubmit: vi.fn(),
+        },
+      });
+      await pickFileAndLicence(user, "cc-by");
+      expect(
+        screen.getByLabelText(/^Licence(?! link)/),
+      ).toHaveAccessibleDescription(
+        "Shown under the image. Sharing a question needs CC0, public domain, CC BY or CC BY-SA.",
+      );
+      expect(screen.getByLabelText(/I hold the rights/)).toBeRequired();
+      expect(screen.getByLabelText(/^Author/)).toBeRequired();
+      expect(screen.getByLabelText(/^Author/)).toHaveAccessibleDescription(
+        "200 characters or fewer.",
+      );
+      await user.selectOptions(
+        screen.getByLabelText(/^Licence(?! link)/),
+        "cc0",
+      );
+      expect(screen.getByLabelText(/^Author/)).not.toBeRequired();
+    });
+
+    it("focuses the first errored credit field on submit", async () => {
+      const user = userEvent.setup();
+      render(QuestionForm, {
+        props: {
+          categories: [categories[0]],
+          question: null,
+          onsubmit: vi.fn(),
+        },
+      });
+      await pickFileAndLicence(user, "cc-by");
+      await user.click(screen.getByLabelText(/I hold the rights/));
+      await user.click(screen.getByRole("button", { name: "Add question" }));
+      expect(screen.getByLabelText(/^Author/)).toHaveFocus();
+
+      await user.type(screen.getByLabelText(/^Author/), "Jane");
+      await user.click(screen.getByLabelText(/I hold the rights/));
+      await user.click(screen.getByRole("button", { name: "Add question" }));
+      expect(screen.getByLabelText(/I hold the rights/)).toHaveFocus();
+    });
+
+    it("resets the rights tick on every new file", async () => {
+      const user = userEvent.setup();
+      render(QuestionForm, {
+        props: {
+          categories: [categories[0]],
+          question: null,
+          onsubmit: vi.fn(),
+        },
+      });
+      await pickFileAndLicence(user, "cc0");
+      await user.click(screen.getByLabelText(/I hold the rights/));
+      expect(screen.getByLabelText(/I hold the rights/)).toBeChecked();
+      await user.upload(
+        document.getElementById("image-file") as HTMLInputElement,
+        new File(["x"], "second.png", { type: "image/png" }),
+      );
+      await screen.findByText("second.png ready to upload.");
+      expect(screen.getByLabelText(/I hold the rights/)).not.toBeChecked();
+    });
+
+    it("does not upload without the tick and shows an error", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const onsubmit = vi.fn().mockResolvedValue(true);
+      render(QuestionForm, {
+        props: { categories: [categories[0]], question: null, onsubmit },
+      });
+      await pickFileAndLicence(user, "cc0");
+      await user.click(screen.getByRole("button", { name: "Add question" }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(onsubmit).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Confirm you hold the rights to this image."),
+      ).toBeInTheDocument();
+    });
+
+    it("refuses CC BY with no author before any upload", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      render(QuestionForm, {
+        props: {
+          categories: [categories[0]],
+          question: null,
+          onsubmit: vi.fn(),
+        },
+      });
+      await pickFileAndLicence(user, "cc-by");
+      await user.click(screen.getByLabelText(/I hold the rights/));
+      await user.click(screen.getByRole("button", { name: "Add question" }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Author is required for CC BY and CC BY-SA."),
+      ).toBeInTheDocument();
+    });
+
+    it("refuses a non-https source link before any upload", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      render(QuestionForm, {
+        props: {
+          categories: [categories[0]],
+          question: null,
+          onsubmit: vi.fn(),
+        },
+      });
+      await pickFileAndLicence(user, "cc0");
+      await user.type(screen.getByLabelText("Source link"), "http://a.test/x");
+      await user.click(screen.getByLabelText(/I hold the rights/));
+      await user.click(screen.getByRole("button", { name: "Add question" }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(
+        screen.getByText("Source link must start with https://."),
+      ).toBeInTheDocument();
+    });
+
+    it("sends rightsConfirmed with the file and puts imageCredit in the payload", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ url: "https://cdn.test/questions/up.png" }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      const onsubmit = vi.fn().mockResolvedValue(true);
+      render(QuestionForm, {
+        props: { categories: [categories[0]], question: null, onsubmit },
+      });
+      await pickFileAndLicence(user, "cc-by");
+      await user.type(screen.getByLabelText(/^Author/), "Jane Doe");
+      await user.type(
+        screen.getByLabelText("Licence link"),
+        "https://creativecommons.org/licenses/by/4.0/",
+      );
+      await user.click(screen.getByLabelText(/I hold the rights/));
+      await user.click(screen.getByRole("button", { name: "Add question" }));
+
+      await waitFor(() => expect(onsubmit).toHaveBeenCalledTimes(1));
+      const [url, init] = fetchMock.mock.calls[0] as unknown as [
+        string,
+        { body: FormData },
+      ];
+      expect(url).toBe("/api/upload-image");
+      expect(init.body.get("rightsConfirmed")).toBe("true");
+      expect(onsubmit.mock.calls[0]?.[0]).toMatchObject({
+        imageUrl: "https://cdn.test/questions/up.png",
+        imageCredit: {
+          licence: "cc-by",
+          author: "Jane Doe",
+          licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
+        },
+      });
+    });
+
+    it("prefills the stored credit on edit and saves without a tick", async () => {
+      const user = userEvent.setup();
+      const credit = {
+        licence: "cc-by-sa",
+        author: "Jane Doe",
+        sourceUrl: "https://commons.wikimedia.org/wiki/File:Flags.jpg",
+      } as const;
+      const onsubmit = vi.fn().mockResolvedValue(true);
+      render(QuestionForm, {
+        props: {
+          categories,
+          question: {
+            ...imageMatching,
+            question: {
+              ...imageMatching.question,
+              media: {
+                type: "image",
+                url: "https://cdn.test/questions/flags.jpg",
+                credit,
+              },
+            },
+          },
+          onsubmit,
+        },
+      });
+      await screen.findByDisplayValue("Match the flags.");
+      expect(screen.getByLabelText(/^Licence(?! link)/)).toHaveValue(
+        "cc-by-sa",
+      );
+      expect(screen.getByLabelText(/^Author/)).toHaveValue("Jane Doe");
+      expect(screen.getByLabelText("Source link")).toHaveValue(
+        credit.sourceUrl,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      expect(onsubmit.mock.calls[0]?.[0]).toMatchObject({
+        imageCredit: credit,
+      });
+    });
+
+    it("clears the stored credit when a new file replaces the stored image", async () => {
+      const user = userEvent.setup();
+      render(QuestionForm, {
+        props: {
+          categories,
+          question: {
+            ...imageMatching,
+            question: {
+              ...imageMatching.question,
+              media: {
+                type: "image",
+                url: "https://cdn.test/questions/flags.jpg",
+                credit: { licence: "cc-by", author: "Jane Doe" },
+              },
+            },
+          },
+          onsubmit: vi.fn().mockResolvedValue(true),
+        },
+      });
+      await screen.findByDisplayValue("Match the flags.");
+      expect(screen.getByLabelText(/^Licence(?! link)/)).toHaveValue("cc-by");
+      await user.upload(
+        document.getElementById("image-file") as HTMLInputElement,
+        new File(["x"], "other.png", { type: "image/png" }),
+      );
+      await screen.findByText(/other.png ready to upload\./);
+      expect(screen.getByLabelText(/^Licence(?! link)/)).toHaveValue("");
+    });
+
+    it("says the credit was cleared when a new file replaces the stored image", async () => {
+      const user = userEvent.setup();
+      render(QuestionForm, {
+        props: {
+          categories,
+          question: {
+            ...imageMatching,
+            question: {
+              ...imageMatching.question,
+              media: {
+                type: "image",
+                url: "https://cdn.test/questions/flags.jpg",
+                credit: { licence: "cc-by", author: "Jane Doe" },
+              },
+            },
+          },
+          onsubmit: vi.fn().mockResolvedValue(true),
+        },
+      });
+      await screen.findByDisplayValue("Match the flags.");
+      await user.upload(
+        document.getElementById("image-file") as HTMLInputElement,
+        new File(["x"], "other.png", { type: "image/png" }),
+      );
+      expect(
+        await screen.findByText(
+          /Credit cleared\. Add the credit for the new image\./,
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("during an image upload", () => {
     const sciTrueFalse: QuestionFormQuestion = {
       ...trueFalse,
@@ -313,12 +694,12 @@ describe("QuestionForm", () => {
     /** Picks a file in upload mode and starts the submit; the upload stays pending. */
     async function startUpload(user: ReturnType<typeof userEvent.setup>) {
       await user.click(screen.getByRole("button", { name: "Add an image" }));
-      await user.click(screen.getByLabelText("Upload file"));
       await user.upload(
         document.getElementById("image-file") as HTMLInputElement,
         new File(["x"], "pic.png", { type: "image/png" }),
       );
       await screen.findByText("pic.png ready to upload.");
+      await user.click(screen.getByLabelText(/I hold the rights/));
       await user.click(
         screen.getByRole("button", { name: /Save changes|Add question/ }),
       );

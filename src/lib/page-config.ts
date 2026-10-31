@@ -289,6 +289,15 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     },
     footer: { showNav: true },
   },
+  "/report-image": {
+    header: {
+      showWordmark: true,
+      href: "/",
+      back: "/",
+      rightLinks: [{ type: "logout", showWhen: "member" }],
+    },
+    footer: { showNav: true, useCases: ["notices"] },
+  },
   "/admin/*": {
     header: {
       showWordmark: true,
@@ -587,6 +596,15 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
       rightLinks: [{ type: "logout", showWhen: "member" }],
     },
     footer: { showNav: true, useCases: ["questions"] },
+  },
+  "/manage/notices": {
+    header: {
+      showWordmark: true,
+      href: "/",
+      back: "/profile",
+      rightLinks: [{ type: "logout", showWhen: "member" }],
+    },
+    footer: { showNav: true, useCases: ["notices"] },
   },
   "/manage/avatars": {
     header: {

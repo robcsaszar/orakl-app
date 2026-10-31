@@ -196,6 +196,7 @@ import { avatars } from "@orakl/shared";
           matchItems,
           mediaUrl: currentQuestion?.mediaUrl,
           mediaType: currentQuestion?.mediaType,
+          mediaCredit: currentQuestion?.mediaCredit,
           correctAnswerId,
           timerState,
           timeRemaining,

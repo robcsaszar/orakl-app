@@ -101,7 +101,7 @@
     </div>
 
     {#if s.displayMediaUrl && s.currentQuestion.mediaType === "image"}
-      <QuestionMedia src={s.displayMediaUrl} />
+      <QuestionMedia src={s.displayMediaUrl} credit={s.currentQuestion.mediaCredit} questionId={s.currentQuestion.id} />
     {/if}
 
     <div>

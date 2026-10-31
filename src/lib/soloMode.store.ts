@@ -8,6 +8,7 @@ import {
   type WsClientOptions,
 } from "@orakl/client-core";
 import type {
+  MediaCredit,
   MediaType,
   QuestionRating,
   QuestionSource,
@@ -52,6 +53,7 @@ interface QuestionResult {
    *  present before the run ends. */
   mediaUrl?: string;
   mediaType?: MediaType;
+  mediaCredit?: MediaCredit;
   source?: QuestionSource;
   postAnswerNote?: string;
   /** Whether this account already has a flag on this question — hides the
@@ -575,6 +577,7 @@ export function createSoloModeStore(
                   ...r,
                   mediaUrl: extras.mediaUrl,
                   mediaType: extras.mediaType,
+                  mediaCredit: extras.mediaCredit,
                   source: extras.source,
                   postAnswerNote: extras.postAnswerNote,
                   alreadyFlagged: extras.alreadyFlagged,
