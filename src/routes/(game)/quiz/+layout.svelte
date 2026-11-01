@@ -30,11 +30,12 @@ import { buildAvatarGroups } from "@orakl/shared";
   // /join before init() restores the live session; the server owns phase/membership
   // thereafter (these reads run at component init and don't track `data`).
   // svelte-ignore state_referenced_locally
-  const { membership, phase, lobby, avatars, emotesEnabled, playerId, isCurator } =
+  const { membership, phase, lobby, avatars, emotesEnabled, emotePacks, playerId, isCurator } =
     data;
   session.membership = membership;
   session.phase = phase;
   session.emotesEnabled = emotesEnabled;
+  session.emotePacks = emotePacks;
   session.isCurator = isCurator;
 
   // Toolbox is the curator's only bespoke UI (ADR 0019 route unification) —
@@ -137,7 +138,7 @@ import { buildAvatarGroups } from "@orakl/shared";
 
   $effect(() => {
     if (session.wasRemoved) {
-      toast.error("You were removed from this session by the curator. Redirecting...", { duration: 3500 });
+      toast.error("You were removed from this lobby. Redirecting...", { duration: 3500 });
     }
   });
 
@@ -174,7 +175,19 @@ import { buildAvatarGroups } from "@orakl/shared";
   // the message itself, no toast/delay. Curator's own client isn't routed here.
   $effect(() => {
     if (session.lobbyClosed && !isCurator) {
-      window.location.href = "/closed";
+      window.location.href = session.lobbyEndedReason
+        ? `/closed?reason=${encodeURIComponent(session.lobbyEndedReason)}`
+        : "/closed";
+    }
+  });
+
+  // An Admin closed the lobby: the curator is routed as for a Curator close,
+  // with a toast saying why.
+  $effect(() => {
+    if (session.lobbyClosed && isCurator && session.lobbyEndedReason === "moderated") {
+      toast.info("Orakl closed your lobby. Nothing from this session was saved.", {
+        duration: 8000,
+      });
     }
   });
 

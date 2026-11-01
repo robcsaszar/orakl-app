@@ -18,6 +18,7 @@ import type {
 
 import type {
   CuratorStartMessage,
+  EmotePack,
   GameAnswerRecord,
   QuestionRating,
   StreakFlourish,
@@ -31,6 +32,8 @@ export interface PlayerData {
   id: string;
   nickname: string;
   avatar: string;
+  /** The Player's resolved emote set, in their order. */
+  emotes: string[];
   score: number;
   status: "pending" | "active" | "disconnected";
   role?: "player" | "observer";
@@ -174,6 +177,11 @@ export interface PlayerSessionView {
 
   // ── Emotes ──
   emotesEnabled: boolean;
+  /** The emote gallery the setup picker offers. */
+  emotePacks: EmotePack[];
+  /** This browser's chosen emotes, in order; sent on join. */
+  selectedEmoteIds: string[];
+  /** The fan's emotes this question: the Player's resolved set. */
   pickedEmotes: string[];
   activeEmotes: {
     uid: string;
@@ -223,6 +231,10 @@ export interface PlayerSessionView {
   submitRoleChoice(): void;
   saveNickname(newNick: string): Promise<string | null>;
   getAvatarSrc(avatarId: string): string;
+  /** Adds the emote to the chosen set, or takes it out; a sixth is refused. */
+  toggleEmote(emoteId: string): void;
+  /** Image path of a gallery emote; "" when the gallery does not hold it. */
+  getEmoteSrc(emoteId: string): string;
   getMyScore(): number;
 
   // ── Curator-only actions (ADR 0019 route unification) — only ever invoked

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { emoteStyle } from "@/lib/emotes.js";
   import { Spring } from "svelte/motion";
 
   /**
@@ -7,12 +6,13 @@
    * fading. Reduced motion appears at rest with no wag.
    */
   let {
-    emoteId,
+    src,
     size,
     reducedMotion,
   }: {
-    emoteId: string;
-    /** Sprite size in px. */
+    /** Emote image path. */
+    src: string;
+    /** Rendered size in px. */
     size: number;
     reducedMotion: boolean;
   } = $props();
@@ -56,5 +56,5 @@
 <div
   style="transform-origin:50% 97%;transform: scale({scaleSpring.current}) rotate({rotationSpring.current}deg);opacity:{opacity};transition:opacity 300ms cubic-bezier(0.23, 1, 0.32, 1)"
 >
-  <div style={emoteStyle(emoteId, size)}></div>
+  <img {src} alt="" width={size} height={size} draggable="false" />
 </div>

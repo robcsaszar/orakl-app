@@ -2,7 +2,6 @@
   import type { Snippet } from "svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import { cn } from "tailwind-variants";
-  import { emoteStyle } from "@/lib/emotes.js";
   import { MediaQuery } from "svelte/reactivity";
   import EmotePetal from "./EmotePetal.svelte";
   import SentEmote from "./SentEmote.svelte";
@@ -16,6 +15,7 @@
    */
   let {
     pickedEmotes,
+    emoteSrc,
     activeEmotes,
     canEmote,
     onSend,
@@ -23,6 +23,8 @@
     children,
   }: {
     pickedEmotes: string[];
+    /** Image path of an emote id. */
+    emoteSrc: (emoteId: string) => string;
     activeEmotes: {
       uid: string;
       playerId: string;
@@ -229,7 +231,7 @@
       class="pointer-events-none absolute z-20"
       style="top:calc({emote.offsetY * 100}% - {emoteSize}px);left:calc({emote.offsetX * 100}% - {emoteSize / 2}px)"
     >
-      <SentEmote emoteId={emote.emoteId} size={emoteSize} reducedMotion={reducedMotion.current} />
+      <SentEmote src={emoteSrc(emote.emoteId)} size={emoteSize} reducedMotion={reducedMotion.current} />
     </div>
   {/each}
 
@@ -271,7 +273,7 @@
             title={emoteId}
             aria-label={`Send ${emoteId}`}
           >
-            <div style={emoteStyle(emoteId, petalSize)}></div>
+            <img src={emoteSrc(emoteId)} alt="" width={petalSize} height={petalSize} draggable="false" />
           </Button>
         </EmotePetal>
       {/each}

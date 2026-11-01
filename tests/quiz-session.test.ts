@@ -303,6 +303,16 @@ describe("QuizSession (injectable factory)", () => {
       expect(stub.destroy).toHaveBeenCalled();
     });
 
+    it("records the reason a moderated close carries", () => {
+      send({ type: "lobby:ended", reason: "moderated" });
+      expect(session.lobbyEndedReason).toBe("moderated");
+    });
+
+    it("leaves the reason null for a Curator close", () => {
+      send({ type: "lobby:ended" });
+      expect(session.lobbyEndedReason).toBeNull();
+    });
+
     it("sets lobbyClosed so the layout routes to /closed", () => {
       session.membership = "active";
       send({ type: "lobby:ended" });

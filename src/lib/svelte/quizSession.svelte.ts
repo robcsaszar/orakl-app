@@ -17,14 +17,16 @@ import {
   selectMatchItem as selectMatchItemHelper,
   splitMatchPair,
 } from "@orakl/client-core";
-import type {
-  CuratorStartMessage,
-  GameAnswerRecord,
-  GameErrorMessage,
-  GameQuestionMessage,
-  QuestionRating,
-  ServerMessage,
-  StreakFlourish,
+import {
+  type CuratorStartMessage,
+  type EmotePack,
+  type GameAnswerRecord,
+  type GameErrorMessage,
+  type GameQuestionMessage,
+  MAX_EMOTE_SET,
+  type QuestionRating,
+  type ServerMessage,
+  type StreakFlourish,
 } from "@orakl/protocol";
 import type {
   AvatarGroup,
@@ -43,7 +45,6 @@ import {
 import { getContext, setContext } from "svelte";
 import { type AdvanceMode, GAME } from "../../../data/game.settings.js";
 import { MAX_NICKNAME_LENGTH } from "../constants/game.constants.js";
-import { pickRandomEmotes } from "../emotes.js";
 import {
   createPlayerSession,
   type PlayerSession,
@@ -117,6 +118,10 @@ export class QuizSession implements PlayerSessionView {
   wasRemoved = $state(false);
   /** The curator closed the lobby; the layout routes a player to /closed. */
   lobbyClosed = $state(false);
+  /** The `reason` on the `lobby:ended` frame: `"moderated"` when an Admin
+   *  closed the lobby, `"no_lobby"` when a reconnect found it gone, null for a
+   *  Curator close. */
+  lobbyEndedReason = $state<string | null>(null);
   /** `lobby:reset` arrived ("New quiz" or "Reset to setup") and the curator is
    *  editing the next quiz; cleared on `game:start`. The layout routes the
    *  curator's own client to /curator/create and tells players, who keep
@@ -261,7 +266,21 @@ export class QuizSession implements PlayerSessionView {
 
   // ── Emotes ──
   emotesEnabled = $state(false);
-  pickedEmotes = $state<string[]>([]);
+  emotePacks = $state<EmotePack[]>([]);
+  selectedEmoteIds = $state<string[]>([]);
+  emoteSrcMap = $derived(
+    new Map(
+      this.emotePacks.flatMap((p) =>
+        p.emotes.map((e) => [e.id, e.src] as const),
+      ),
+    ),
+  );
+  /** The set the server resolved for this Player's row, the same every question. */
+  pickedEmotes = $derived(
+    this.emotesEnabled
+      ? (findPlayer(this.players, this.playerId)?.emotes ?? [])
+      : [],
+  );
   activeEmotes = $state<
     {
       uid: string;
@@ -289,6 +308,22 @@ export class QuizSession implements PlayerSessionView {
 
   getAvatarSrc(avatarId: string): string {
     return this.avatarSrcMap.get(avatarId) ?? "";
+  }
+
+  getEmoteSrc(emoteId: string): string {
+    return this.emoteSrcMap.get(emoteId) ?? "";
+  }
+
+  toggleEmote(emoteId: string) {
+    const ids = this.selectedEmoteIds;
+    if (ids.includes(emoteId)) {
+      this.selectedEmoteIds = ids.filter((id) => id !== emoteId);
+    } else if (ids.length < MAX_EMOTE_SET) {
+      this.selectedEmoteIds = [...ids, emoteId];
+    } else {
+      return;
+    }
+    storage.setEmotes(this.selectedEmoteIds);
   }
 
   getMyScore(): number {
@@ -524,11 +559,13 @@ export class QuizSession implements PlayerSessionView {
   clearStoredData() {
     storage.removeNickname();
     storage.removeAvatar();
+    storage.removeEmotes();
     storage.removePlayerId();
     storage.removeLobbyCode();
     this.nickname = "";
     this.lobbyCode = "";
     this.selectedAvatarId = "";
+    this.selectedEmoteIds = [];
     this.playerId = null;
   }
 
@@ -597,12 +634,18 @@ export class QuizSession implements PlayerSessionView {
 
     try {
       const storedPlayerId = this.playerId;
+      // Only ids the gallery still holds, once each, at most five: a stale or
+      // hand-edited stored choice never fails the join.
+      const emoteIds = [...new Set(this.selectedEmoteIds)]
+        .filter((id) => this.emoteSrcMap.has(id))
+        .slice(0, MAX_EMOTE_SET);
       const joinData: Record<string, unknown> = {
         nickname: nicknameArg,
         avatarId: this.selectedAvatarId,
         role: this.selectedRole,
         code: this.lobbyCode || undefined,
         ...(this.deviceId ? { deviceId: this.deviceId } : {}),
+        ...(emoteIds.length > 0 ? { emoteIds } : {}),
       };
       if (storedPlayerId) joinData.playerId = storedPlayerId;
 
@@ -730,8 +773,9 @@ export class QuizSession implements PlayerSessionView {
           this.onApproved(me.role === "observer");
       }
     },
-    onLobbyEnded: () => {
+    onLobbyEnded: (msg) => {
       this.lobbyClosed = true;
+      this.lobbyEndedReason = msg.reason ?? null;
       storage.removePlayerId();
       storage.removeLobbyCode();
       this.playerId = null;
@@ -959,7 +1003,6 @@ export class QuizSession implements PlayerSessionView {
     // Bound the self-echo counter to the current question: a dropped echo (e.g.
     // during reconnect) can't leak across questions and swallow a later emote.
     this._pendingSelfEmotes = 0;
-    this.pickedEmotes = this.emotesEnabled ? pickRandomEmotes(5) : [];
   }
 
   selectAnswer(answerId: string) {
@@ -1358,6 +1401,7 @@ export class QuizSession implements PlayerSessionView {
     curatorAvatarId?: string;
   }) {
     this.lobbyClosed = false;
+    this.lobbyEndedReason = null;
     this.curatorEditing = false;
     this.isCurator = !!opts.isCurator;
     this.isLoggedIn = opts.isLoggedIn;
@@ -1373,6 +1417,7 @@ export class QuizSession implements PlayerSessionView {
 
     this.nickname = storage.getNickname() ?? "";
     this.selectedAvatarId = storage.getAvatar() ?? "";
+    this.selectedEmoteIds = storage.getEmotes();
     // Page access is cookie-driven; a returning player may hold a valid cookie
     // but have lost localStorage. Fall back to the cookie id (and re-persist)
     // so answer/role requests still carry a playerId.
@@ -1425,6 +1470,7 @@ export class QuizSession implements PlayerSessionView {
    */
   async initCodeEntry() {
     this.lobbyClosed = false;
+    this.lobbyEndedReason = null;
     this.curatorEditing = false;
     this.nickname = storage.getNickname() ?? "";
     this.selectedAvatarId = storage.getAvatar() ?? "";

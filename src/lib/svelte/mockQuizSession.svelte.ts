@@ -1,5 +1,6 @@
 import { selectMatchItem as selectMatchItemHelper } from "@orakl/client-core";
 import type {
+  EmotePack,
   GameAnswerRecord,
   QuestionRating,
   StreakFlourish,
@@ -14,6 +15,7 @@ import type {
 } from "@orakl/shared";
 import { findPlayer, avatars as staticAvatars } from "@orakl/shared";
 import { type AdvanceMode, GAME } from "../../../data/game.settings.js";
+import { EMOTE_SEED, EMOTE_SEED_PACK } from "../emote-seed.js";
 import { MOCK_AVATAR_ID } from "../mock/fixtures.js";
 import {
   ackRating,
@@ -43,6 +45,7 @@ export class MockQuizSession implements PlayerSessionView {
   isDisconnected = $state(false);
   wasRemoved = $state(false);
   lobbyClosed = $state(false);
+  lobbyEndedReason = $state<string | null>(null);
   curatorEditing = $state(false);
   connectionLost = $state(false);
   isCurator = $state(false);
@@ -150,6 +153,21 @@ export class MockQuizSession implements PlayerSessionView {
 
   // ── Emotes (seeded by the mimic/quiz layout via the `emotes` param) ──
   emotesEnabled = $state(false);
+  /** The seeded pack, as the gallery serves it. */
+  emotePacks = $state<EmotePack[]>([
+    {
+      ...EMOTE_SEED_PACK,
+      isDefault: true,
+      emotes: EMOTE_SEED.map((e) => ({
+        id: e.id,
+        title: e.title,
+        description: "",
+        src: `/${e.key}`,
+        stillSrc: `/${e.key}`,
+      })),
+    },
+  ]);
+  selectedEmoteIds = $state<string[]>([]);
   pickedEmotes = $state<string[]>([]);
   activeEmotes = $state<
     {
@@ -180,6 +198,18 @@ export class MockQuizSession implements PlayerSessionView {
 
   getAvatarSrc(avatarId: string): string {
     return staticAvatars.find((a) => a.id === avatarId)?.src ?? "";
+  }
+
+  getEmoteSrc(emoteId: string): string {
+    const key = EMOTE_SEED.find((e) => e.id === emoteId)?.key;
+    return key ? `/${key}` : "";
+  }
+
+  toggleEmote(emoteId: string): void {
+    const ids = this.selectedEmoteIds;
+    if (ids.includes(emoteId))
+      this.selectedEmoteIds = ids.filter((id) => id !== emoteId);
+    else if (ids.length < 5) this.selectedEmoteIds = [...ids, emoteId];
   }
 
   getMyScore(): number {

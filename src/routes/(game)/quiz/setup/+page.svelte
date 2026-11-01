@@ -16,6 +16,7 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
   import RadioGroup from "$lib/components/ui/RadioGroup.svelte";
   import { toast } from "@/lib/toast.js";
   import AvatarPlaque from "./AvatarPlaque.svelte";
+  import EmotePicker from "./EmotePicker.svelte";
 
   const session = getQuizSession();
   const roleOptions = ["player", "observer"] as const;
@@ -186,6 +187,14 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
         />
       </div>
     </div>
+
+    {#if session.emotesEnabled && session.emotePacks.length > 0}
+      <EmotePicker
+        packs={session.emotePacks}
+        selected={session.selectedEmoteIds}
+        onToggle={(id) => session.toggleEmote(id)}
+      />
+    {/if}
 
     {#if page.data.uiFlags?.ROLE_SELECTION === true}
       <RadioGroup

@@ -29,8 +29,7 @@ import { percent } from "@orakl/shared";
 
   // Build-level PLAYER_EMOTES flag (map #859, decision 5): the import() sits
   // inside the guard, so with __FEATURE_PLAYER_EMOTES__ false the gesture
-  // layer never enters the bundle. `emotes.ts` itself still ships — quizSession
-  // imports pickRandomEmotes statically — as does static/images/emotes.png.
+  // layer never enters the bundle.
   const emoteLayer = __FEATURE_PLAYER_EMOTES__
     ? import("./EmoteReactionLayer.svelte")
     : null;
@@ -348,6 +347,7 @@ import { percent } from "@orakl/shared";
     {:then { default: EmoteReactionLayer }}
       <EmoteReactionLayer
         pickedEmotes={session.pickedEmotes}
+        emoteSrc={(id) => session.getEmoteSrc(id)}
         activeEmotes={session.activeEmotes}
         {canEmote}
         intermission={session.isIntermission}

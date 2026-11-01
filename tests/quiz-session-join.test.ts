@@ -27,6 +27,9 @@ vi.mock("../src/lib/storage.js", () => ({
     removeLobbyCode: vi.fn(),
     getAvatar: vi.fn().mockReturnValue(null),
     setAvatar: vi.fn(),
+    getEmotes: vi.fn().mockReturnValue([]),
+    setEmotes: vi.fn(),
+    removeEmotes: vi.fn(),
     getRole: vi.fn().mockReturnValue(null),
     setRole: vi.fn(),
     getDeviceId: vi.fn().mockReturnValue("dev-1"),
@@ -142,6 +145,84 @@ describe("validateCode", () => {
 
     expect(await session.validateCode()).toBe(false);
     expect(f).not.toHaveBeenCalled();
+  });
+});
+
+describe("emote set", () => {
+  const gallery = [
+    {
+      id: "classic",
+      title: "Classic",
+      description: "",
+      isDefault: true,
+      emotes: ["e1", "e2", "e3", "e4", "e5", "e6"].map((id) => ({
+        id,
+        title: id,
+        description: "",
+        src: `/emotes/${id}.webp`,
+        stillSrc: `/emotes/${id}.webp`,
+      })),
+    },
+  ];
+
+  it("chooses at most five, in order, and keeps the choice in storage", () => {
+    const { session } = makeSession();
+    for (const id of ["e3", "e1", "e2", "e4", "e5", "e6"])
+      session.toggleEmote(id);
+    expect(session.selectedEmoteIds).toEqual(["e3", "e1", "e2", "e4", "e5"]);
+    session.toggleEmote("e1");
+    expect(session.selectedEmoteIds).toEqual(["e3", "e2", "e4", "e5"]);
+    expect(storage.setEmotes).toHaveBeenLastCalledWith([
+      "e3",
+      "e2",
+      "e4",
+      "e5",
+    ]);
+  });
+
+  it("sends the chosen ids the gallery holds on join", async () => {
+    const f = stubFetch({
+      "POST /api/lobby/join": {
+        status: 201,
+        body: { playerId: "p1", status: "active", role: "player" },
+      },
+    });
+    const { session } = makeSession();
+    session.emotePacks = gallery;
+    // A stale, repeated or over-long stored choice is cut down, not sent as is.
+    session.selectedEmoteIds = [
+      "e2",
+      "retired",
+      "e1",
+      "e2",
+      "e3",
+      "e4",
+      "e5",
+      "e6",
+    ];
+
+    await session.connect("Ada");
+
+    const body = JSON.parse(String(f.mock.calls[0][1]?.body));
+    expect(body.emoteIds).toEqual(["e2", "e1", "e3", "e4", "e5"]);
+  });
+
+  it("the fan is the Player's resolved set from the roster", () => {
+    const { session } = makeSession();
+    session.playerId = "p1";
+    session.players = [
+      {
+        id: "p1",
+        nickname: "Ada",
+        avatar: "",
+        emotes: ["e4", "e2"],
+        score: 0,
+        status: "active",
+      },
+    ];
+    expect(session.pickedEmotes).toEqual([]);
+    session.emotesEnabled = true;
+    expect(session.pickedEmotes).toEqual(["e4", "e2"]);
   });
 });
 

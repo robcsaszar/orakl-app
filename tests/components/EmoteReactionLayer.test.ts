@@ -1,10 +1,10 @@
 import { render } from "@testing-library/svelte";
 import { createRawSnippet, tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SELECTABLE_EMOTE_IDS } from "../../src/lib/emotes.js";
 import EmoteReactionLayer from "../../src/routes/(game)/quiz/play/EmoteReactionLayer.svelte";
 
-const EMOTE = SELECTABLE_EMOTE_IDS[0];
+const EMOTE = "heart";
+const emoteSrc = (id: string) => `/emotes/${id}.webp`;
 
 // jsdom has no matchMedia by default; EmoteReactionLayer reads
 // prefers-reduced-motion via MediaQuery, so tests stub it before render.
@@ -58,6 +58,7 @@ describe("EmoteReactionLayer — mobile hold-to-react dismiss", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -74,6 +75,7 @@ describe("EmoteReactionLayer — mobile hold-to-react dismiss", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -103,6 +105,7 @@ describe("EmoteReactionLayer — mobile hold-to-react dismiss", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -129,6 +132,7 @@ describe("EmoteReactionLayer — mobile hold-to-react dismiss", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -149,6 +153,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart", "emote_laugh"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -171,6 +176,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart", "emote_laugh"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -194,6 +200,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart", "emote_laugh", "emote_clap"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),
@@ -215,6 +222,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend,
@@ -234,6 +242,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [
           {
             uid: "u1",
@@ -260,6 +269,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
+        emoteSrc,
         activeEmotes: [
           {
             uid: "u1",
@@ -290,6 +300,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: [EMOTE],
+        emoteSrc,
         activeEmotes: [
           {
             uid: "u1",
@@ -306,13 +317,13 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     });
     await openFan(container);
     const petal = container.querySelector(
-      `[aria-label="Send ${EMOTE}"] div`,
+      `[aria-label="Send ${EMOTE}"] img`,
     ) as HTMLElement;
-    expect(petal.style.width).toBe("32px");
+    expect(petal.getAttribute("width")).toBe("32");
     const sent = container.querySelector(
-      '[style*="transform-origin"] div',
+      '[style*="transform-origin"] img',
     ) as HTMLElement;
-    expect(sent.style.width).toBe("48px");
+    expect(sent.getAttribute("width")).toBe("48");
   });
 
   it("coarse pointer: petals and the sent emote are half again as large", async () => {
@@ -320,6 +331,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: [EMOTE],
+        emoteSrc,
         activeEmotes: [
           {
             uid: "u1",
@@ -336,23 +348,24 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     });
     await openFan(container);
     const petal = container.querySelector(
-      `[aria-label="Send ${EMOTE}"] div`,
+      `[aria-label="Send ${EMOTE}"] img`,
     ) as HTMLElement;
-    expect(petal.style.width).toBe("48px");
+    expect(petal.getAttribute("width")).toBe("48");
     const wrapper = container.querySelector(
       ".pointer-events-auto.absolute",
     ) as HTMLElement;
     expect(wrapper.style.left).toBe("-24px");
     const sent = container.querySelector(
-      '[style*="transform-origin"] div',
+      '[style*="transform-origin"] img',
     ) as HTMLElement;
-    expect(sent.style.width).toBe("72px");
+    expect(sent.getAttribute("width")).toBe("72");
   });
 
   it("the petal under a held pointer lifts and grows", async () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: [EMOTE],
+        emoteSrc,
         activeEmotes: [],
         canEmote: true,
         onSend: vi.fn(),

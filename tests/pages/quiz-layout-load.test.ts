@@ -33,6 +33,7 @@ const contextPayload = {
   profileAvatarId: "av-9",
   avatars: [],
   emotesEnabled: false,
+  emotePacks: [],
   lobby: null,
   stateMessages: [],
   journey: {
