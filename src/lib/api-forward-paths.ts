@@ -16,6 +16,7 @@ export const FORWARDED_API_PATHS: ReadonlySet<string> = new Set([
   "/api/quiz/context",
   "/api/quiz/results",
   "/api/avatars",
+  "/api/emotes",
   "/api/categories",
   "/api/categories/color",
   "/api/topics",
@@ -41,6 +42,7 @@ export const FORWARDED_API_PREFIXES: readonly string[] = [
   "/api/history/",
   "/api/questions/",
   "/media/",
+  "/emotes/",
 ];
 
 export function isForwardedApiPath(pathname: string): boolean {

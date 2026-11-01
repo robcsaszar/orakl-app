@@ -6,6 +6,7 @@
 export type StorageKey =
   | "orakl-nickname"
   | "orakl-avatar"
+  | "orakl-emotes"
   | "orakl-player-id"
   | "orakl-lobby-code"
   | "orakl-cast-id"
@@ -20,6 +21,8 @@ export type StorageKey =
 const PERSISTENT_KEYS: Set<StorageKey> = new Set([
   "orakl-nickname",
   "orakl-avatar",
+  // Chosen emote ids, a JSON array in order (map #1652).
+  "orakl-emotes",
   "orakl-role",
   // Collection points whose use-case notice has already shone (decision #13).
   "orakl-notice-seen",
@@ -108,6 +111,23 @@ export const storage = {
   getAvatar: (def?: string) => getStorageItem("orakl-avatar") ?? def ?? null,
   setAvatar: (value: string) => setStorageItem("orakl-avatar", value),
   removeAvatar: () => removeStorageItem("orakl-avatar"),
+
+  /** The chosen emote ids; [] when none or unreadable. */
+  getEmotes: (): string[] => {
+    try {
+      const parsed: unknown = JSON.parse(
+        getStorageItem("orakl-emotes") ?? "[]",
+      );
+      return Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  },
+  setEmotes: (ids: readonly string[]) =>
+    setStorageItem("orakl-emotes", JSON.stringify(ids)),
+  removeEmotes: () => removeStorageItem("orakl-emotes"),
 
   getPlayerId: (def?: string) =>
     getStorageItem("orakl-player-id") ?? def ?? null,

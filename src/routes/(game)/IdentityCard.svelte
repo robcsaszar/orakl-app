@@ -73,6 +73,7 @@
       aria-label="Your nickname"
       bind:value={editNicknameValue}
       maxlength={MAX_NICKNAME_LENGTH}
+      error={isEditingNickname ? editNicknameError || undefined : undefined}
       labelEndJustify="start"
       onkeydown={(e) => {
         if (e.key === "Enter") saveNickname();
@@ -102,7 +103,6 @@
             <Button type="button" variant="danger" intent="icon" iconBefore="x" onclick={() => (isEditingNickname = false)} aria-label="Cancel"
             ></Button>
           </div>
-          {#if editNicknameError}<p class="mt-1 text-xs text-danger text-center">{editNicknameError}</p>{/if}
         {/if}
       {/snippet}
     </Input>

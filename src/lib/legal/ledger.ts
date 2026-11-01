@@ -91,15 +91,15 @@ export const LEDGER: readonly LedgerRow[] = [
   },
   {
     id: "audit",
-    element: "Security log of sign-in events",
+    element: "Security log of sign-in events and moderation actions",
     sentence:
-      "Sign-ins, sign-outs and password changes are logged with the time and your account; your IP address is included only if you opted in to sign-in locations (that part rests on your consent).",
+      "Sign-ins, sign-outs and password changes are logged with the time and your account; your IP address is included only if you opted in to sign-in locations (that part rests on your consent). When an Orakl admin acts on a live lobby (closing it, stopping or pausing its game, renaming or removing a player), the log records the admin's account, the lobby code and the curator's account id, and for a player action the player's nickname, player id and account id if signed in. Those moderation rows stay 90 days and are not removed when that player, curator or admin deletes their account; the admin's IP address is erased then.",
     routes: ["/login", "/signup", "/profile"],
     parser:
       "Written by our own server code when an account event happens; the IP is read the same way as for rate limiting. Failed sign-ins and failed sign-ups record no IP and no email address.",
     storage: "The audit_log table in our database.",
     retention:
-      "90 days, then pruned. Removed when you delete your account. IP addresses are erased at once when you turn sign-in locations off.",
+      "90 days, then pruned. Your own sign-in rows are removed when you delete your account; moderation rows that name you, or that record your own action as an admin, are not. IP addresses are erased at once when you turn sign-in locations off.",
     basis: "legitimate-interest",
   },
   {
@@ -186,14 +186,14 @@ export const LEDGER: readonly LedgerRow[] = [
   },
   {
     id: "player",
-    element: "Player nickname and avatar",
+    element: "Player nickname, avatar and emote choice",
     sentence:
-      "Joining a quiz needs only a nickname and an avatar; they appear to the other players, in the curator's chronicle of the game, and in each co-player's own history as that night's standings.",
+      "Joining a quiz needs only a nickname and an avatar; they appear to the other players, in the curator's chronicle of the game, and in each co-player's own history as that night's standings. The emotes you choose are shown to the other players while the game runs; the emotes you send are not recorded.",
     routes: ["/join", "/quiz/setup"],
     parser:
       "Typed into the join form and passed through our own nickname sanitiser; no account is needed.",
     storage:
-      "In memory while the lobby lives, then in the game results of finished games.",
+      "In memory while the lobby lives, then in the game results of finished games; the emote choice is not kept with them.",
     retention:
       'Game results are kept indefinitely as history. If you later link an account and delete it, your nickname on those results is replaced with "Deleted player" and your avatar is removed; scores and answers stay as anonymised history.',
     basis: "contract",
@@ -342,7 +342,7 @@ export const LEDGER: readonly LedgerRow[] = [
     id: "browser-storage",
     element: "Browser storage for your quiz state",
     sentence:
-      "Your nickname, avatar, a random device id and the state of the quiz you are in are kept in your browser so a refresh does not lose them.",
+      "Your nickname, avatar, chosen emotes, a random device id and the state of the quiz you are in are kept in your browser so a refresh does not lose them.",
     routes: ["/join", "/quiz/setup"],
     parser:
       "Written by the page with the browser's localStorage and sessionStorage APIs; the device id is a random value with no link to you.",

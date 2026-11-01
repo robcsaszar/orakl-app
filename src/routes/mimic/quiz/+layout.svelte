@@ -8,7 +8,6 @@
   import { fixtureQuestion, fixturePlayersFromCast, CORRECT_ANSWER_ID, MOCK_PLAYER_ID, PLACEHOLDER_IMG_DARK, PLACEHOLDER_IMG_LIGHT } from "@/lib/mock/fixtures.js";
   import { parseCast, defaultCast } from "@/lib/mock/cast.js";
   import { resolveBotDistribution, assignBotAnswers } from "@/lib/mock/distribution.js";
-  import { SELECTABLE_EMOTE_IDS } from "@/lib/emotes.js";
   import { headerActionState } from "@/lib/header-action-state.svelte.js";
   import { splitMatchPair } from "@orakl/client-core";
   import { GAME, type Difficulty } from "data/game.settings.js";
@@ -138,7 +137,9 @@
     session.roleSubmitted = roleSubmitted;
     session.roleSelectionLocked = roleLocked;
     session.emotesEnabled = emotesEnabled;
-    session.pickedEmotes = emotesEnabled ? SELECTABLE_EMOTE_IDS.slice(0, 5) : [];
+    session.pickedEmotes = emotesEnabled
+      ? session.emotePacks[0].emotes.slice(0, 5).map((e) => e.id)
+      : [];
     session.activeEmotes = [];
     // "+N points" cue — the round's gain on a correct answer. Adjustable via
     // `earned` so the IdentityPill prototypes can be checked against the

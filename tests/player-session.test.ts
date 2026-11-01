@@ -46,6 +46,28 @@ describe("connect()", () => {
     expect(c.connect).toHaveBeenCalledTimes(1);
   });
 
+  it("declares token auth on the URL when a token is sourced (Display)", () => {
+    const c = makeFakeClient();
+    createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      getAuthToken: () => "tok",
+      lobbyCode: () => "lobby-b",
+    }).connect();
+    const url = new URL(c.createClient.mock.calls[0][0]);
+    expect(url.searchParams.get("auth")).toBe("token");
+    expect(url.searchParams.get("code")).toBe("lobby-b");
+  });
+
+  it("leaves a cookie client's URL without token auth", () => {
+    const c = makeFakeClient();
+    createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      lobbyCode: () => "lobby-b",
+    }).connect();
+    const url = new URL(c.createClient.mock.calls[0][0]);
+    expect(url.searchParams.has("auth")).toBe(false);
+  });
+
   it("arms the idle watchdog at 65 s", () => {
     const c = makeFakeClient();
     const session = createPlayerSession(callbacks, {

@@ -59,10 +59,15 @@ export interface PlayerSession {
  *  plus 5 s slack. ws-router.ts is server code, so the value is a literal. */
 const IDLE_TIMEOUT_MS = 65_000;
 
-function buildGameWsUrl(lobbyCode: string | null): string {
+/** `auth=token` tells the server to wait for the first-frame token and not
+ *  read the cookie, which may belong to another Lobby in the same browser. */
+function buildGameWsUrl(lobbyCode: string | null, tokenAuth: boolean): string {
+  const query: Record<string, string> = {};
+  if (lobbyCode) query.code = lobbyCode;
+  if (tokenAuth) query.auth = "token";
   return buildWsUrl(
     "/api/game/ws",
-    lobbyCode ? { code: lobbyCode } : undefined,
+    Object.keys(query).length ? query : undefined,
   );
 }
 
@@ -75,7 +80,12 @@ export function createPlayerSession(
   let client: WsClient<ClientMessage> | null = null;
 
   function makeClient(): WsClient<ClientMessage> {
-    const url = deps?.url ?? buildGameWsUrl(deps?.lobbyCode?.() ?? null);
+    const url =
+      deps?.url ??
+      buildGameWsUrl(
+        deps?.lobbyCode?.() ?? null,
+        deps?.getAuthToken !== undefined,
+      );
     const opts = {
       onMessage: (m: WsMessage) => {
         // Keepalive: answer the server's game:ping with a pong so the round-trip
