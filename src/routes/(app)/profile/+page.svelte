@@ -479,6 +479,7 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
                 >
               {/if}
               {#if data.user.role === "admin"}
+                <Button href="/admin/lobbies" variant="secondary">Lobbies</Button>
                 <Button href="/admin/settings" variant="secondary">Settings</Button>
               {/if}
               {#if canAccessMimic}
