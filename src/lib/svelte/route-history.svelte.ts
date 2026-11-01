@@ -11,3 +11,24 @@ export function recordRoute(pathname: string): void {
   routeHistory.paths.push(pathname);
   if (routeHistory.paths.length > MAX_ENTRIES) routeHistory.paths.shift();
 }
+
+/** Pathname the current page was pushed from, or null when that is unknown
+ *  (first load, browser back/forward). `BackButton` reads it: when it equals
+ *  the button's target, a `history.back()` returns to that exact entry — tab,
+ *  filters and scroll intact — instead of pushing a fresh copy. */
+export const backTrail = $state({ from: null as string | null });
+
+/** Updates `backTrail` from one `afterNavigate`. A query-only change on the
+ *  same path (a tab or filter swap) keeps the trail; a popstate clears it,
+ *  since the entry behind the new page is unknown. */
+export function recordNavigation(nav: {
+  type: string;
+  from: string | null;
+  to: string | null;
+}): void {
+  if (nav.from !== null && nav.from === nav.to) return;
+  backTrail.from =
+    nav.type === "link" || nav.type === "goto" || nav.type === "form"
+      ? nav.from
+      : null;
+}

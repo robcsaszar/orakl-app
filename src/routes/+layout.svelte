@@ -9,7 +9,10 @@ import type { SkyPhase } from "@orakl/shared";
   import "$lib/styles/fonts.css";
   
   import { subscribeSkyPhase } from "@/lib/sky-phase";
-  import { recordRoute } from "@/lib/svelte/route-history.svelte.js";
+  import {
+    recordNavigation,
+    recordRoute,
+  } from "@/lib/svelte/route-history.svelte.js";
   import { setPowerUser } from "@/lib/svelte/powerUser.svelte.js";
   
   import { Toaster } from "svelte-sonner";
@@ -23,8 +26,13 @@ import type { SkyPhase } from "@orakl/shared";
   // lands mid-session takes effect on the next navigation.
   setPowerUser(() => hasPower(data.user, "is-power-user"));
 
-  afterNavigate(({ to }) => {
+  afterNavigate(({ type, from, to }) => {
     if (to?.url.pathname) recordRoute(to.url.pathname);
+    recordNavigation({
+      type,
+      from: from?.url.pathname ?? null,
+      to: to?.url.pathname ?? null,
+    });
   });
 
   // Theme changes update the `data-sky-phase` DOM attribute but don't

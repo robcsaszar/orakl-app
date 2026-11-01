@@ -22,6 +22,13 @@ import type { BadgeId, Rarity } from "@orakl/shared";
     stoppedAfterCopy,
   } from "$lib/results-metrics";
 
+  // Build-level PLAYER_EMOTES flag: the import() sits inside the guard, so
+  // with __FEATURE_PLAYER_EMOTES__ false the gesture layer never enters the
+  // bundle.
+  const emoteLayer = __FEATURE_PLAYER_EMOTES__
+    ? import("$lib/components/quiz/EmoteReactionLayer.svelte")
+    : null;
+
   const session = getQuizSession();
   let { data }: { data: PageData } = $props();
   /** BADGE_DISPLAY off: the card keeps score and rank and drops the badges. */
@@ -95,6 +102,13 @@ import type { BadgeId, Rarity } from "@orakl/shared";
     session.isObserver ? null : performanceFromBreakdown(breakdown),
   );
 
+  /** Observers see the results page's emotes but cannot send; no answered rule applies. */
+  const canEmote = $derived(
+    session.phase === "final_scores" &&
+      !session.isObserver &&
+      session.pickedEmotes.length > 0,
+  );
+
   const standingsSubtitle = $derived(
     `${session.stoppedAfter ? `${stoppedAfterCopy(session.stoppedAfter.served)} ` : ""}Ranks settle by score${roleSelection ? ", with observers marked apart from the contest" : ""}. The vault will open for the next quiz shortly.`,
   );
@@ -102,6 +116,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
 
 <svelte:head><title>Final standings — Orakl</title></svelte:head>
 
+{#snippet content()}
 <div class="flex flex-col gap-5 py-4">
   <CeremonyFrame
     kicker="Final standings"
@@ -271,3 +286,31 @@ import type { BadgeId, Rarity } from "@orakl/shared";
     </CeremonyFrame>
   {/if}
 </div>
+{/snippet}
+
+{#if emoteLayer}
+  <!-- Pending branch renders the results bare, so SSR HTML carries the full
+       page and only the emote gesture wrapper arrives with the chunk. -->
+  {#await emoteLayer}
+    {@render content()}
+  {:then { default: EmoteReactionLayer }}
+    <EmoteReactionLayer
+      pickedEmotes={session.pickedEmotes}
+      emoteSrc={(id) => session.getEmoteSrc(id)}
+      emoteStillSrc={(id) => session.getEmoteStillSrc(id)}
+      emoteTitle={(id) => session.getEmoteTitle(id)}
+      activeEmotes={session.activeEmotes}
+      {canEmote}
+      mode="wrapper"
+      onSend={(emoteId, x, y) => session.sendEmote(emoteId, x, y)}
+    >
+      {#snippet children()}
+        {@render content()}
+      {/snippet}
+    </EmoteReactionLayer>
+  {:catch}
+    {@render content()}
+  {/await}
+{:else}
+  {@render content()}
+{/if}

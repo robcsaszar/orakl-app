@@ -168,6 +168,11 @@ export class MockQuizSession implements PlayerSessionView {
     },
   ]);
   selectedEmoteIds = $state<string[]>([]);
+  profileEmoteIds = $state<string[] | undefined>(undefined);
+
+  async saveEmotesToProfile(): Promise<boolean> {
+    return true;
+  }
   pickedEmotes = $state<string[]>([]);
   activeEmotes = $state<
     {
@@ -181,7 +186,9 @@ export class MockQuizSession implements PlayerSessionView {
 
   /** Floats locally, no server round trip — mirrors QuizSession's optimistic add. */
   sendEmote(emoteId: string, offsetX: number, offsetY: number): void {
-    if (!this.answered || !this.playerId) return;
+    // On the results page no answer is needed, as on the server.
+    if ((!this.answered && this.phase !== "final_scores") || !this.playerId)
+      return;
     const uid = Math.random().toString(36).slice(2);
     this.activeEmotes = [
       ...this.activeEmotes,
@@ -203,6 +210,14 @@ export class MockQuizSession implements PlayerSessionView {
   getEmoteSrc(emoteId: string): string {
     const key = EMOTE_SEED.find((e) => e.id === emoteId)?.key;
     return key ? `/${key}` : "";
+  }
+
+  getEmoteStillSrc(emoteId: string): string {
+    return this.getEmoteSrc(emoteId);
+  }
+
+  getEmoteTitle(emoteId: string): string {
+    return emoteId;
   }
 
   toggleEmote(emoteId: string): void {
@@ -303,6 +318,7 @@ export class MockQuizSession implements PlayerSessionView {
   async init(_opts: {
     isLoggedIn: boolean;
     profileAvatarId: string;
+    profileEmoteIds?: string[];
     playerId?: string | null;
     isCurator?: boolean;
     curatorNickname?: string;

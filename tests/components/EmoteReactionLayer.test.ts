@@ -1,7 +1,7 @@
 import { render } from "@testing-library/svelte";
 import { createRawSnippet, tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import EmoteReactionLayer from "../../src/routes/(game)/quiz/play/EmoteReactionLayer.svelte";
+import EmoteReactionLayer from "../../src/lib/components/quiz/EmoteReactionLayer.svelte";
 
 const EMOTE = "heart";
 const emoteSrc = (id: string) => `/emotes/${id}.webp`;
@@ -296,6 +296,41 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     expect(sentWrapper.style.transform).toBe("scale(1) rotate(0deg)");
   });
 
+  it.each([
+    [true, "/emotes/emote_heart-still.webp"],
+    [false, "/emotes/emote_heart.webp"],
+  ])(
+    "with reduced motion %s, petals and the sent emote draw %s",
+    async (reduced, expected) => {
+      stubMatchMedia((q) => reduced && q.includes("reduced-motion"));
+      const { container } = render(EmoteReactionLayer, {
+        props: {
+          pickedEmotes: ["emote_heart"],
+          emoteSrc,
+          emoteStillSrc: (id: string) => `/emotes/${id}-still.webp`,
+          activeEmotes: [
+            {
+              uid: "u1",
+              playerId: "p1",
+              emoteId: "emote_heart",
+              offsetX: 0.5,
+              offsetY: 0.5,
+            },
+          ],
+          canEmote: true,
+          onSend: vi.fn(),
+          children: makeChildren(),
+        },
+      });
+      await openFan(container);
+      const sources = [...container.querySelectorAll("img")].map((i) =>
+        i.getAttribute("src"),
+      );
+      // One sent emote, one petal.
+      expect(sources.filter((s) => s === expected)).toHaveLength(2);
+    },
+  );
+
   it("desktop: 32 px petals and a 48 px sent emote", async () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
@@ -396,5 +431,159 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     );
     await tick();
     expect(btn.classList.contains("-translate-y-1.5")).toBe(false);
+  });
+});
+
+describe("EmoteReactionLayer — wrapper mode (results page)", () => {
+  function renderWrapper(onContentClick: () => void, canEmote = true) {
+    const children = createRawSnippet(() => ({
+      render: () =>
+        '<div><button type="button" id="content-btn">Subscribe</button></div>',
+      setup: (node) => {
+        node.querySelector("button")?.addEventListener("click", onContentClick);
+      },
+    }));
+    const { container } = render(EmoteReactionLayer, {
+      pickedEmotes: [EMOTE],
+      emoteSrc,
+      activeEmotes: [],
+      canEmote,
+      mode: "wrapper",
+      onSend: vi.fn(),
+      children,
+    });
+    const wrapper = container.querySelector(
+      '[role="presentation"]',
+    ) as HTMLElement;
+    wrapper.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 300, height: 100 }) as DOMRect;
+    return {
+      container,
+      button: container.querySelector("#content-btn") as HTMLButtonElement,
+    };
+  }
+
+  const press = (el: HTMLElement, type: string) =>
+    el.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        clientX: 50,
+        clientY: 50,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+  it("leaves the content clickable: no overlay, a short press clicks through", () => {
+    const onClick = vi.fn();
+    const { container, button } = renderWrapper(onClick);
+    expect(container.querySelector(".emote-area")).toBeNull();
+    press(button, "pointerdown");
+    press(button, "pointerup");
+    button.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("a long press opens the fan and swallows the click that ends it", async () => {
+    const onClick = vi.fn();
+    const { container, button } = renderWrapper(onClick);
+    press(button, "pointerdown");
+    vi.advanceTimersByTime(500);
+    await tick();
+    press(button, "pointerup");
+    button.click();
+    await tick();
+    expect(onClick).not.toHaveBeenCalled();
+    expect(container.querySelector('[aria-label="Send heart"]')).toBeTruthy();
+    // The swallow is one click only: the content works again afterwards.
+    vi.advanceTimersByTime(1);
+    button.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("a touch tap on a petal after the opening release sends it", async () => {
+    const onSend = vi.fn();
+    const children = createRawSnippet(() => ({
+      render: () => "<div><span id='txt'>Results</span></div>",
+    }));
+    const { container } = render(EmoteReactionLayer, {
+      pickedEmotes: [EMOTE],
+      emoteSrc,
+      activeEmotes: [],
+      canEmote: true,
+      mode: "wrapper",
+      onSend,
+      children,
+    });
+    const wrapper = container.querySelector(
+      '[role="presentation"]',
+    ) as HTMLElement;
+    wrapper.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 300, height: 100 }) as DOMRect;
+    const txt = container.querySelector("#txt") as HTMLElement;
+    const at = (el: Element, type: string, x: number, y: number) =>
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          clientX: x,
+          clientY: y,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    at(txt, "pointerdown", 50, 50);
+    vi.advanceTimersByTime(500);
+    await tick();
+    at(txt, "pointerup", 50, 50); // bubbles to window, as in a browser
+    await tick();
+    // One petal: straight up from the press point, 64 px on a fine pointer.
+    const petal = container.querySelector(
+      '[aria-label="Send heart"]',
+    ) as HTMLElement;
+    expect(petal).toBeTruthy();
+    at(petal, "pointerdown", 50, -14);
+    at(petal, "pointerup", 50, -14);
+    expect(onSend).toHaveBeenCalledWith(EMOTE, 50 / 300, 0.5);
+  });
+
+  it("a right-click on a link keeps the browser's own menu", () => {
+    const children = createRawSnippet(() => ({
+      render: () => "<div><a id='lnk' href='/x'>Subscribe</a></div>",
+    }));
+    const { container } = render(EmoteReactionLayer, {
+      pickedEmotes: [EMOTE],
+      emoteSrc,
+      activeEmotes: [],
+      canEmote: true,
+      mode: "wrapper",
+      onSend: vi.fn(),
+      children,
+    });
+    const ev = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    (container.querySelector("#lnk") as HTMLElement).dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  it("a press cancelled into a scroll after the fan opened leaves no click swallowed", async () => {
+    const onClick = vi.fn();
+    const { button } = renderWrapper(onClick);
+    press(button, "pointerdown");
+    vi.advanceTimersByTime(500);
+    await tick();
+    press(button, "pointercancel");
+    vi.advanceTimersByTime(1);
+    button.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens nothing when the viewer cannot emote", async () => {
+    const { container, button } = renderWrapper(vi.fn(), false);
+    press(button, "pointerdown");
+    vi.advanceTimersByTime(500);
+    await tick();
+    expect(container.querySelector('[aria-label="Send heart"]')).toBeNull();
   });
 });

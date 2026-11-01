@@ -52,6 +52,7 @@ function profileData(over: Record<string, unknown> = {}) {
     verified: false,
     tab: "account",
     tools: false,
+    emotePacks: [],
     uiFlags: {},
     analytics: { enabled: true, browserSignal: false },
     ...over,
@@ -403,6 +404,88 @@ describe("/profile page — tabs", () => {
     renderPage({ uiFlags: {} });
     expect(
       screen.queryByRole("heading", { name: "Your ledger" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("Account panel shows the emote picker with the saved set pressed (map #1652)", () => {
+    const emote = (id: string) => ({
+      id,
+      title: id,
+      description: "",
+      src: `/emotes/${id}.webp`,
+      stillSrc: `/emotes/${id}.webp`,
+    });
+    renderPage({
+      user: {
+        nickname: "Rob",
+        role: "member",
+        powers: [],
+        avatar: "",
+        // "gone" was retired after it was saved: it is not counted or sent.
+        emoteIds: ["gone", "laugh"],
+        emailVerified: true,
+      },
+      emotePacks: [
+        {
+          id: "classic",
+          title: "Classic",
+          description: "",
+          isDefault: true,
+          emotes: [emote("heart"), emote("laugh")],
+        },
+      ],
+    });
+    expect(screen.getByRole("button", { name: "laugh" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "heart" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByText("1 of 5 chosen")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save emotes" }),
+    ).toBeInTheDocument();
+  });
+
+  it("Save emotes stays disabled until a toggle changes the set", async () => {
+    const emote = (id: string) => ({
+      id,
+      title: id,
+      description: "",
+      src: `/emotes/${id}.webp`,
+      stillSrc: `/emotes/${id}.webp`,
+    });
+    renderPage({
+      user: {
+        nickname: "Rob",
+        role: "member",
+        powers: [],
+        avatar: "",
+        emoteIds: ["laugh"],
+        emailVerified: true,
+      },
+      emotePacks: [
+        {
+          id: "classic",
+          title: "Classic",
+          description: "",
+          isDefault: true,
+          emotes: [emote("heart"), emote("laugh")],
+        },
+      ],
+    });
+    const save = screen.getByRole("button", { name: "Save emotes" });
+    expect(save).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "heart" }));
+    expect(save).toBeEnabled();
+  });
+
+  it("Account panel hides the emote picker when the gallery is empty", () => {
+    renderPage({ emotePacks: [] });
+    expect(
+      screen.queryByRole("button", { name: "Save emotes" }),
     ).not.toBeInTheDocument();
   });
 });

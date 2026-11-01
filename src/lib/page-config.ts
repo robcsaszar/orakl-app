@@ -49,6 +49,9 @@ export type HeaderConfig = {
   hidden?: boolean;
   showWordmark: boolean;
   href?: string;
+  /** The page's parent: where its entry point lives, tab included (e.g. the
+   *  profile's Tools tab for the admin and manage areas). `BackButton` goes
+   *  here, or steps back in history when the user came straight from it. */
   back?: string;
   leftLinks?: LinkEntry[];
   rightLinks?: LinkEntry[];
@@ -302,7 +305,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     header: {
       showWordmark: true,
       href: "/",
-      back: "/",
+      back: "/profile?tab=tools",
       rightLinks: [{ type: "logout", showWhen: "member" }],
     },
     footer: { showNav: true },
@@ -314,7 +317,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     header: {
       showWordmark: true,
       href: "/",
-      back: "/",
+      back: "/profile?tab=tools",
       rightLinks: [{ type: "logout", showWhen: "member" }],
     },
     footer: { showNav: true },
@@ -592,7 +595,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     header: {
       showWordmark: true,
       href: "/",
-      back: "/",
+      back: "/profile?tab=tools",
       rightLinks: [{ type: "logout", showWhen: "member" }],
     },
     footer: { showNav: true, useCases: ["questions"] },
@@ -601,7 +604,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     header: {
       showWordmark: true,
       href: "/",
-      back: "/profile",
+      back: "/profile?tab=tools",
       rightLinks: [{ type: "logout", showWhen: "member" }],
     },
     footer: { showNav: true, useCases: ["notices"] },
@@ -610,7 +613,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     header: {
       showWordmark: true,
       href: "/",
-      back: "/profile",
+      back: "/profile?tab=tools",
       rightLinks: [{ type: "logout", showWhen: "member" }],
     },
     footer: { showNav: true },
@@ -738,7 +741,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
     header: {
       showWordmark: false,
       href: "/",
-      back: "/profile",
+      back: "/profile?tab=tools",
     },
     footer: { showNav: false },
   },

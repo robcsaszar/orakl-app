@@ -31,7 +31,7 @@ import { percent } from "@orakl/shared";
   // inside the guard, so with __FEATURE_PLAYER_EMOTES__ false the gesture
   // layer never enters the bundle.
   const emoteLayer = __FEATURE_PLAYER_EMOTES__
-    ? import("./EmoteReactionLayer.svelte")
+    ? import("$lib/components/quiz/EmoteReactionLayer.svelte")
     : null;
 
   // Optional: the Mimic Mode demo (/mimic/quiz/play) renders this page with no
@@ -348,6 +348,8 @@ import { percent } from "@orakl/shared";
       <EmoteReactionLayer
         pickedEmotes={session.pickedEmotes}
         emoteSrc={(id) => session.getEmoteSrc(id)}
+        emoteStillSrc={(id) => session.getEmoteStillSrc(id)}
+        emoteTitle={(id) => session.getEmoteTitle(id)}
         activeEmotes={session.activeEmotes}
         {canEmote}
         intermission={session.isIntermission}

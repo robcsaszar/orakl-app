@@ -449,3 +449,79 @@ describe("leaveLobby", () => {
     expect(joins).toHaveLength(0);
   });
 });
+
+describe("profile emote set", () => {
+  async function initWith(
+    stored: string[],
+    profileEmoteIds: string[] | undefined,
+  ) {
+    vi.mocked(storage.getEmotes).mockReturnValue(stored);
+    stubFetch({ "GET /api/avatars": { body: [] } });
+    const { session } = makeSession();
+    await session.init({
+      isLoggedIn: true,
+      profileAvatarId: "",
+      profileEmoteIds,
+    });
+    vi.mocked(storage.getEmotes).mockReturnValue([]);
+    return session;
+  }
+
+  it("an empty stored choice adopts the profile set, in order", async () => {
+    const session = await initWith([], ["laugh", "heart"]);
+    expect(session.selectedEmoteIds).toEqual(["laugh", "heart"]);
+  });
+
+  it("the profile set wins over a stored choice (saved on another device)", async () => {
+    const session = await initWith(["idea"], ["laugh", "heart"]);
+    expect(session.selectedEmoteIds).toEqual(["laugh", "heart"]);
+  });
+
+  it("an empty profile set keeps the stored choice", async () => {
+    expect((await initWith(["idea"], [])).selectedEmoteIds).toEqual(["idea"]);
+    expect((await initWith([], [])).selectedEmoteIds).toEqual([]);
+  });
+
+  it("keeps the profile set so the page can tell a signed-in player", async () => {
+    expect((await initWith([], [])).profileEmoteIds).toEqual([]);
+    expect((await initWith([], undefined)).profileEmoteIds).toBeUndefined();
+  });
+
+  it("saveEmotesToProfile PATCHes the selection and reports success", async () => {
+    const f = stubFetch({ "PATCH /api/profile": { body: { ok: true } } });
+    const { session } = makeSession();
+    const emote = (id: string) => ({
+      id,
+      title: id,
+      description: "",
+      src: `/${id}.webp`,
+      stillSrc: `/${id}.webp`,
+    });
+    session.emotePacks = [
+      {
+        id: "classic",
+        title: "Classic",
+        description: "",
+        isDefault: true,
+        emotes: [emote("laugh"), emote("heart")],
+      },
+    ];
+    // "gone" is not live (retired): sending it would refuse the whole save.
+    session.selectedEmoteIds = ["laugh", "gone", "heart"];
+
+    expect(await session.saveEmotesToProfile()).toBe(true);
+
+    const [, init] = f.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      emotes: ["laugh", "heart"],
+    });
+  });
+
+  it("saveEmotesToProfile reports a refusal or a network failure as false", async () => {
+    const { session } = makeSession();
+    stubFetch({ "PATCH /api/profile": { status: 400, body: {} } });
+    expect(await session.saveEmotesToProfile()).toBe(false);
+    stubFetch({ "PATCH /api/profile": { throws: true } });
+    expect(await session.saveEmotesToProfile()).toBe(false);
+  });
+});

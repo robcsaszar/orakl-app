@@ -64,6 +64,6 @@
   ondrop={onDrop}
 >
   <input {id} {name} type="file" {accept} class="sr-only" onchange={onChange} {...props} />
-  <span class="text-sm">{label}</span>
+  <span class="min-w-0 text-sm [overflow-wrap:anywhere]">{label}</span>
   {@render children?.()}
 </label>

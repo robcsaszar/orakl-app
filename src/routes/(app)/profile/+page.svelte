@@ -9,6 +9,7 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
   import Link from "$lib/components/ui/Link.svelte";
   import Tabs from "$lib/components/ui/Tabs.svelte";
   import ProfileAvatar from "./ProfileAvatar.svelte";
+  import ProfileEmotes from "./ProfileEmotes.svelte";
   import FontPicker from "./FontPicker.svelte";
   import ExportDataButton from "./ExportDataButton.svelte";
   import ChangePassword from "./ChangePassword.svelte";
@@ -292,6 +293,9 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
           </div>
           <ProfileAvatar profileAvatarId={data.user.avatar} />
         </div>
+        {#if __FEATURE_PLAYER_EMOTES__ && data.emotePacks.length > 0}
+          <ProfileEmotes packs={data.emotePacks} savedIds={data.user.emoteIds ?? []} />
+        {/if}
       </Card>
 
       {#if ledger}
@@ -479,6 +483,9 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
                 >
               {/if}
               {#if data.user.role === "admin"}
+                {#if __FEATURE_PLAYER_EMOTES__}
+                  <Button href="/admin/emotes" variant="secondary">Emote gallery</Button>
+                {/if}
                 <Button href="/admin/lobbies" variant="secondary">Lobbies</Button>
                 <Button href="/admin/settings" variant="secondary">Settings</Button>
               {/if}

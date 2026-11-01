@@ -200,6 +200,7 @@ export interface PlayerSessionView {
   init(opts: {
     isLoggedIn: boolean;
     profileAvatarId: string;
+    profileEmoteIds?: string[];
     playerId?: string | null;
     isCurator?: boolean;
     curatorNickname?: string;
@@ -233,8 +234,16 @@ export interface PlayerSessionView {
   getAvatarSrc(avatarId: string): string;
   /** Adds the emote to the chosen set, or takes it out; a sixth is refused. */
   toggleEmote(emoteId: string): void;
+  /** The signed-in Player's saved emote set; undefined for a guest. */
+  profileEmoteIds: string[] | undefined;
+  /** Saves the chosen emotes to the account; true when stored. */
+  saveEmotesToProfile(): Promise<boolean>;
   /** Image path of a gallery emote; "" when the gallery does not hold it. */
   getEmoteSrc(emoteId: string): string;
+  /** Still first frame of a gallery emote, for reduced motion; "" when the gallery does not hold it. */
+  getEmoteStillSrc(emoteId: string): string;
+  /** Gallery title of an emote; its id when the gallery does not hold it. */
+  getEmoteTitle(emoteId: string): string;
   getMyScore(): number;
 
   // ── Curator-only actions (ADR 0019 route unification) — only ever invoked

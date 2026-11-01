@@ -16,15 +16,22 @@
   let {
     pickedEmotes,
     emoteSrc,
+    emoteStillSrc = emoteSrc,
+    emoteTitle = (id: string) => id,
     activeEmotes,
     canEmote,
     onSend,
     intermission = false,
+    mode = "overlay",
     children,
   }: {
     pickedEmotes: string[];
     /** Image path of an emote id. */
     emoteSrc: (emoteId: string) => string;
+    /** Still first frame of an emote, drawn when the viewer asks for reduced motion. */
+    emoteStillSrc?: (emoteId: string) => string;
+    /** Gallery title of an emote, for its petal's name and tooltip. */
+    emoteTitle?: (emoteId: string) => string;
     activeEmotes: {
       uid: string;
       playerId: string;
@@ -35,6 +42,14 @@
     canEmote: boolean;
     onSend: (emoteId: string, offsetX: number, offsetY: number) => void;
     intermission?: boolean;
+    /**
+     * `overlay` (play page): a surface over the content catches every press;
+     * the answer tiles beneath are disabled by then. `wrapper` (results page):
+     * no surface, so the content's links, buttons and scrolling keep working;
+     * a long press or right-click on it opens the fan, and the click that ends
+     * a long press is swallowed so it does not also press what is under it.
+     */
+    mode?: "overlay" | "wrapper";
     children: Snippet;
   } = $props();
 
@@ -44,11 +59,16 @@
   let hoverIndex = $state<number | null>(null);
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let pressStart: { x: number; y: number } | null = null;
+  /** Wrapper mode: the release that ends the opening press keeps the fan open for a tap. */
+  let keepOnRelease = false;
+  let swallowClick: ((e: MouseEvent) => void) | null = null;
   const LONG_PRESS_MS = 500;
   const MOVE_CANCEL_PX = 10;
   // Fan opens upward from the tap point, spanning this many degrees.
   const FAN_ARC_DEG = 140;
   const reducedMotion = new MediaQuery("(prefers-reduced-motion: reduce)");
+  const srcOf = (emoteId: string) =>
+    reducedMotion.current ? emoteStillSrc(emoteId) : emoteSrc(emoteId);
   // A finger hides what it touches: on coarse pointers the petals, the sent
   // emote, the fan radius and the hit target are all half again as large.
   const coarsePointer = new MediaQuery("(pointer: coarse)");
@@ -73,6 +93,10 @@
   $effect(() => {
     if (!emoteMenu) return;
     const dismissIfNoPick = () => {
+      if (keepOnRelease) {
+        keepOnRelease = false;
+        return;
+      }
       if (hoverIndex === null) emoteMenu = null;
       hoverIndex = null;
     };
@@ -123,6 +147,71 @@
       longPressTimer = null;
       openEmoteMenu(clientX, clientY);
     }, LONG_PRESS_MS);
+  }
+
+  // Wrapper mode: no capture and no touch-action change, so a press that moves
+  // is a scroll and a short one is a click on the content beneath.
+  function wrapperPointerDown(e: PointerEvent) {
+    if (!canEmote || emoteMenu || (e.pointerType === "mouse" && e.button !== 0)) return;
+    pressStart = { x: e.clientX, y: e.clientY };
+    const { clientX, clientY } = e;
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null;
+      openFromWrapper(clientX, clientY);
+    }, LONG_PRESS_MS);
+  }
+
+  function openFromWrapper(clientX: number, clientY: number) {
+    openEmoteMenu(clientX, clientY);
+    if (!emoteMenu || !areaEl) return;
+    keepOnRelease = true;
+    const stop = (ev: MouseEvent) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+    };
+    swallowClick = stop;
+    areaEl.addEventListener("click", stop, { capture: true, once: true });
+  }
+
+  // A touch tap has no hover, so the release point picks the petal.
+  function wrapperPointerUp(e: PointerEvent) {
+    cancelLongPress();
+    if (emoteMenu) updateHoverFromPoint(e.clientX, e.clientY);
+    if (emoteMenu && hoverIndex !== null) {
+      // Picking here closes the fan; the window listener must not see it as
+      // the opening release.
+      keepOnRelease = false;
+      pickEmote(pickedEmotes[hoverIndex]);
+    }
+    hoverIndex = null;
+    dropSwallow();
+  }
+
+  /** Removes the ending-click swallow; the click, if any, is dispatched before this timer runs. */
+  function dropSwallow() {
+    const stop = swallowClick;
+    swallowClick = null;
+    if (stop) setTimeout(() => areaEl?.removeEventListener("click", stop, { capture: true }), 0);
+  }
+
+  // A touch that turns into a scroll: nothing was released, so nothing to keep.
+  function wrapperPointerCancel() {
+    cancelLongPress();
+    keepOnRelease = false;
+    dropSwallow();
+  }
+
+  function wrapperContextMenu(e: MouseEvent) {
+    if (!canEmote) return;
+    // Links and controls keep the browser's own menu (copy, open in new tab).
+    if ((e.target as Element | null)?.closest("a, button, input, select, textarea, label"))
+      return;
+    e.preventDefault();
+    cancelLongPress();
+    if (!emoteMenu) {
+      openEmoteMenu(e.clientX, e.clientY);
+      keepOnRelease = !!emoteMenu;
+    }
   }
 
   function fanOffset(index: number, total: number): { dx: number; dy: number } {
@@ -224,18 +313,23 @@
   bind:this={areaEl}
   class={cn("relative", [intermission ? "blur-sm pointer-events-none select-none" : ""])}
   role="presentation"
-  oncontextmenu={handleContextMenu}
+  oncontextmenu={mode === "wrapper" ? wrapperContextMenu : handleContextMenu}
+  onpointerdown={mode === "wrapper" ? wrapperPointerDown : undefined}
+  onpointermove={mode === "wrapper" ? handlePointerMove : undefined}
+  onpointerup={mode === "wrapper" ? wrapperPointerUp : undefined}
+  onpointercancel={mode === "wrapper" ? wrapperPointerCancel : undefined}
+  style={mode === "wrapper" && canEmote ? "-webkit-touch-callout: none" : undefined}
 >
   {#each activeEmotes as emote (emote.uid)}
     <div
       class="pointer-events-none absolute z-20"
       style="top:calc({emote.offsetY * 100}% - {emoteSize}px);left:calc({emote.offsetX * 100}% - {emoteSize / 2}px)"
     >
-      <SentEmote src={emoteSrc(emote.emoteId)} size={emoteSize} reducedMotion={reducedMotion.current} />
+      <SentEmote src={srcOf(emote.emoteId)} size={emoteSize} reducedMotion={reducedMotion.current} />
     </div>
   {/each}
 
-  {#if canEmote}
+  {#if canEmote && mode === "overlay"}
     <!-- The answer tiles beneath are disabled once answered, and disabled
          buttons swallow pointer events before they bubble — this overlay
          is the only reliable long-press surface. -->
@@ -270,10 +364,10 @@
               "p-1 transition-transform hover:-translate-y-1.5 hover:scale-125 active:scale-90",
               hoverIndex === i ? "-translate-y-1.5 scale-125" : "",
             )}
-            title={emoteId}
-            aria-label={`Send ${emoteId}`}
+            data-tooltip={emoteTitle(emoteId)}
+            aria-label={`Send ${emoteTitle(emoteId)}`}
           >
-            <img src={emoteSrc(emoteId)} alt="" width={petalSize} height={petalSize} draggable="false" />
+            <img src={srcOf(emoteId)} alt="" width={petalSize} height={petalSize} draggable="false" />
           </Button>
         </EmotePetal>
       {/each}
