@@ -152,6 +152,7 @@ import { buildAvatarGroups } from "@orakl/shared";
     session.init({
       isLoggedIn: data.isLoggedIn,
       profileAvatarId: data.profileAvatarId,
+      profileEmoteIds: data.profileEmoteIds,
       playerId: data.playerId,
       isCurator: data.isCurator,
       curatorNickname: data.curatorNickname,

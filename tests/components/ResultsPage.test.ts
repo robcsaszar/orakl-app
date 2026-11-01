@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/svelte";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockQuizSession } from "../../src/lib/svelte/mockQuizSession.svelte.js";
 import ResultsPage from "../../src/routes/(game)/quiz/results/+page.svelte";
 import LobbySessionHarness from "./LobbySessionHarness.svelte";
@@ -139,5 +139,104 @@ describe("results page — host allowance banner (map #1184)", () => {
       { wrapper: LobbySessionHarness, wrapperProps: { session } },
     );
     expect(screen.queryByRole("status")).toBeNull();
+  });
+});
+
+describe("results page — emote layer", () => {
+  const me = {
+    id: "p-1",
+    nickname: "Alice",
+    avatar: "",
+    score: 5,
+    status: "active" as const,
+    role: "player" as const,
+  };
+
+  function emoteSession(over: { observer?: boolean; set?: string[] }) {
+    const session = new MockQuizSession();
+    session.phase = "final_scores";
+    session.playerId = "p-1";
+    session.isObserver = over.observer ?? false;
+    session.pickedEmotes = over.set ?? ["heart"];
+    session.finalRoster = [me];
+    session.activeEmotes = [
+      {
+        uid: "u1",
+        playerId: "p-2",
+        emoteId: "heart",
+        offsetX: 0.5,
+        offsetY: 0.5,
+      },
+    ];
+    return session;
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  function renderResults(session: MockQuizSession) {
+    // jsdom lays nothing out; give every box a size so the fan can place itself.
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 300,
+      height: 600,
+    } as DOMRect);
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    return render(
+      ResultsPage as never,
+      { data: makeData() },
+      { wrapper: LobbySessionHarness, wrapperProps: { session } },
+    );
+  }
+
+  /** Waits for the lazy layer: a received emote is drawn once it arrives. */
+  async function layerReady(container: HTMLElement) {
+    await waitFor(() =>
+      expect(
+        container.querySelector("div.pointer-events-none.z-20"),
+      ).toBeTruthy(),
+    );
+  }
+
+  it("a non-Observer opens the fan with a right-click and sends", async () => {
+    const session = emoteSession({});
+    const send = vi.spyOn(session, "sendEmote");
+    const { container } = renderResults(session);
+    await layerReady(container);
+    await fireEvent.contextMenu(screen.getAllByText("Alice")[0], {
+      clientX: 50,
+      clientY: 50,
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Send heart" }));
+    expect(send).toHaveBeenCalledWith(
+      "heart",
+      expect.any(Number),
+      expect.any(Number),
+    );
+  });
+
+  it("covers no control: the results content gets no overlay surface", async () => {
+    const { container } = renderResults(emoteSession({}));
+    await layerReady(container);
+    expect(container.querySelector(".emote-area")).toBeNull();
+  });
+
+  it("an Observer sees a received emote but cannot open the fan", async () => {
+    const { container } = renderResults(emoteSession({ observer: true }));
+    await layerReady(container);
+    await fireEvent.contextMenu(screen.getAllByText("Alice")[0]);
+    expect(screen.queryByRole("button", { name: "Send heart" })).toBeNull();
+  });
+
+  it("a Player with an empty set cannot open the fan", async () => {
+    const { container } = renderResults(emoteSession({ set: [] }));
+    await layerReady(container);
+    await fireEvent.contextMenu(screen.getAllByText("Alice")[0]);
+    expect(screen.queryByRole("button", { name: /^Send / })).toBeNull();
   });
 });

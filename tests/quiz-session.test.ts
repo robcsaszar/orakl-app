@@ -1095,6 +1095,17 @@ describe("QuizSession (injectable factory)", () => {
       );
     });
 
+    it("on the results page sends without an answer (timed out, or reloaded there)", () => {
+      session.answered = false;
+      session.sendEmote("smile", 0.5, 0.5);
+      expect(stub.send).not.toHaveBeenCalled(); // mid-Game: answer first
+      session.phase = "final_scores";
+      session.sendEmote("smile", 0.5, 0.5);
+      expect(stub.send).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "player:emote", emoteId: "smile" }),
+      );
+    });
+
     it("swallows the server echo of our own emote (no duplicate)", () => {
       session.sendEmote("smile", 0.5, 0.5);
       expect(session.activeEmotes).toHaveLength(1);

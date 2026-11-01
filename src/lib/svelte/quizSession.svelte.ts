@@ -131,6 +131,8 @@ export class QuizSession implements PlayerSessionView {
   connectionLost = $state(false);
   isLoggedIn = $state(false);
   profileAvatarId = $state("");
+  /** The signed-in Player's saved emote set; undefined for a guest. */
+  profileEmoteIds = $state<string[] | undefined>(undefined);
   /** Curator's own row, one level up from a normal player (ADR 0019 route
    *  unification) — same journey, same routes, plus the curator toolbox. */
   isCurator = $state(false);
@@ -275,6 +277,13 @@ export class QuizSession implements PlayerSessionView {
       ),
     ),
   );
+  emoteStillSrcMap = $derived(
+    new Map(
+      this.emotePacks.flatMap((p) =>
+        p.emotes.map((e) => [e.id, e.stillSrc] as const),
+      ),
+    ),
+  );
   /** The set the server resolved for this Player's row, the same every question. */
   pickedEmotes = $derived(
     this.emotesEnabled
@@ -312,6 +321,16 @@ export class QuizSession implements PlayerSessionView {
 
   getEmoteSrc(emoteId: string): string {
     return this.emoteSrcMap.get(emoteId) ?? "";
+  }
+
+  getEmoteStillSrc(emoteId: string): string {
+    return this.emoteStillSrcMap.get(emoteId) ?? "";
+  }
+
+  getEmoteTitle(emoteId: string): string {
+    for (const pack of this.emotePacks)
+      for (const e of pack.emotes) if (e.id === emoteId) return e.title;
+    return emoteId;
   }
 
   toggleEmote(emoteId: string) {
@@ -1069,7 +1088,9 @@ export class QuizSession implements PlayerSessionView {
   /** offsetX/offsetY are fractions (0-1) of the answers container, from the
    *  long-press point that opened the emote fan. */
   sendEmote(emoteId: string, offsetX: number, offsetY: number) {
-    if (!this.answered || !this.playerId) return;
+    // On the results page no answer is needed, as on the server.
+    if ((!this.answered && this.phase !== "final_scores") || !this.playerId)
+      return;
     // Optimistic: float it immediately and swallow the server echo
     // (broadcastEmote echoes the sender) so it doesn't render twice.
     this.addEmote(this.playerId, emoteId, offsetX, offsetY);
@@ -1352,6 +1373,25 @@ export class QuizSession implements PlayerSessionView {
     }
   }
 
+  /** Saves the current emote selection to the account; true when stored. */
+  async saveEmotesToProfile(): Promise<boolean> {
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        // Only live ids, as the join sends: a retired one would refuse the save.
+        body: JSON.stringify({
+          emotes: this.selectedEmoteIds.filter((id) =>
+            this.emoteSrcMap.has(id),
+          ),
+        }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async saveNickname(newNick: string): Promise<string | null> {
     const trimmed = newNick.trim();
     const err = this.validateNickname(trimmed);
@@ -1393,6 +1433,8 @@ export class QuizSession implements PlayerSessionView {
   async init(opts: {
     isLoggedIn: boolean;
     profileAvatarId: string;
+    /** Saved emote set of a signed-in Player; absent for a guest. */
+    profileEmoteIds?: string[];
     /** Cookie-derived player id (server load) — fallback when localStorage is cleared. */
     playerId?: string | null;
     isCurator?: boolean;
@@ -1406,6 +1448,7 @@ export class QuizSession implements PlayerSessionView {
     this.isCurator = !!opts.isCurator;
     this.isLoggedIn = opts.isLoggedIn;
     this.profileAvatarId = opts.profileAvatarId;
+    this.profileEmoteIds = opts.profileEmoteIds;
 
     if (this.isCurator) {
       this.nickname = opts.curatorNickname ?? "";
@@ -1438,6 +1481,11 @@ export class QuizSession implements PlayerSessionView {
     }
     if (!this.selectedAvatarId && opts.profileAvatarId) {
       this.selectedAvatarId = opts.profileAvatarId;
+    }
+    // An account's saved set wins over this browser's stored choice, so a set
+    // saved on another device is the one this device joins with.
+    if (opts.profileEmoteIds?.length) {
+      this.selectedEmoteIds = [...opts.profileEmoteIds];
     }
     this.identityReady = true;
 

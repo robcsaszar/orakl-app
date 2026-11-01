@@ -131,9 +131,9 @@ export const LEDGER: readonly LedgerRow[] = [
   },
   {
     id: "account",
-    element: "Email address, nickname and avatar",
+    element: "Email address, nickname, avatar and emote choice",
     sentence:
-      "Creating an account stores your email address, a nickname and an avatar choice; the email is used to verify the account and reset the password.",
+      "Creating an account stores your email address, a nickname, an avatar choice and, once you choose them, your emotes; the email is used to verify the account and reset the password.",
     routes: ["/signup", "/profile"],
     parser:
       "Typed into the sign-up and profile forms; the email is lower-cased and checked with our own pattern, the nickname passes our own sanitiser.",

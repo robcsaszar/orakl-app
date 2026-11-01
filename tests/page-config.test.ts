@@ -344,3 +344,25 @@ describe("AppHeader renders every LinkEntry.type", () => {
     expect(src).toContain('link.type === "cast"');
   });
 });
+
+describe("back targets for the profile's Tools tab", () => {
+  // Every page the Tools tab links to returns to that tab, not home.
+  for (const path of [
+    "/admin/users",
+    "/admin/settings",
+    "/admin/lobbies",
+    "/admin/emotes",
+    "/admin/feature-flags",
+    "/manage/categories",
+    "/manage/avatars",
+    "/manage/flagged-questions",
+    "/manage/notices",
+    "/manage/question-ratings",
+    "/manage/questions",
+    "/mimic/quiz/play",
+  ]) {
+    it(`${path} → /profile?tab=tools`, () => {
+      expect(getPageConfig(path).header.back).toBe("/profile?tab=tools");
+    });
+  }
+});

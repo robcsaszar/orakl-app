@@ -9,6 +9,7 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
   import { MAX_NICKNAME_LENGTH } from "@/lib/constants/game.constants.js";
 
   import { NICKNAMES, randomNickname } from "@/lib/nicknames.js";
+  import EmotePicker from "$lib/components/quiz-setup/EmotePicker.svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import Input from "$lib/components/ui/Input.svelte";
   import Card from "$lib/components/ui/Card.svelte";
@@ -16,7 +17,6 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
   import RadioGroup from "$lib/components/ui/RadioGroup.svelte";
   import { toast } from "@/lib/toast.js";
   import AvatarPlaque from "./AvatarPlaque.svelte";
-  import EmotePicker from "./EmotePicker.svelte";
 
   const session = getQuizSession();
   const roleOptions = ["player", "observer"] as const;
@@ -31,6 +31,7 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
   // (identityReady) and for a pool to draw from, so the rally never
   // overrides either. A stored id that no longer resolves counts as none.
   let autoRallied = false;
+  let savingEmotes = $state(false);
   $effect(() => {
     if (!session.identityReady || session.dbAvatars.length === 0) return;
     const usableId = session.getAvatarSrc(session.selectedAvatarId)
@@ -194,6 +195,24 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
         selected={session.selectedEmoteIds}
         onToggle={(id) => session.toggleEmote(id)}
       />
+      {#if session.profileEmoteIds !== undefined}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={savingEmotes}
+          onclick={async () => {
+            savingEmotes = true;
+            try {
+              if (await session.saveEmotesToProfile()) toast.success("Emotes saved to your profile.");
+              else toast.error("Could not save emotes.");
+            } finally {
+              savingEmotes = false;
+            }
+          }}
+        >
+          Save to profile
+        </Button>
+      {/if}
     {/if}
 
     {#if page.data.uiFlags?.ROLE_SELECTION === true}

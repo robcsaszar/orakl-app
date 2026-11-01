@@ -60,6 +60,7 @@ const profileData = (uiFlags: Record<string, boolean>) => ({
     claimed: false,
     verified: false,
     tab: "account",
+    emotePacks: [],
     uiFlags,
     analytics: { enabled: false, browserSignal: false },
   },

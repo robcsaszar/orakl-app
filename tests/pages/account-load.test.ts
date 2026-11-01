@@ -85,15 +85,31 @@ describe("/profile load", () => {
       tab: "appearance",
       tools: false,
     };
+    const pack = {
+      id: "p1",
+      title: "Classic",
+      description: "",
+      isDefault: true,
+      emotes: [
+        {
+          id: "heart",
+          title: "Heart",
+          description: "",
+          src: "/a",
+          stillSrc: "/a",
+        },
+      ],
+    };
     const { fetchFn, calls } = apiFetch({
       "/api/pages/profile": { body: payload },
+      "/api/emotes": { body: [pack] },
     });
     const url = new URL(
       "http://localhost/profile?claimed=1&verified=1&tab=appearance",
     );
     await expect(
       profileLoad({ fetch: fetchFn, url } as never),
-    ).resolves.toEqual(payload);
+    ).resolves.toEqual({ ...payload, emotePacks: [pack] });
     const q = calls[0].url.searchParams;
     expect(q.get("claimed")).toBe("1");
     expect(q.get("verified")).toBe("1");
