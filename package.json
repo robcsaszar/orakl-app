@@ -4,7 +4,6 @@
   "version": "0.3.0",
   "private": true,
   "scripts": {
-    "dev": "API_ORIGIN=${API_ORIGIN:-http://localhost:3001} vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && pnpm --filter @orakl/client-core typecheck",
@@ -12,6 +11,7 @@
     "lint": "biome check .",
     "test": "vitest run && pnpm --filter @orakl/client-core test",
     "test:mobile": "pnpm --dir apps/mobile test",
+    "dev": "API_ORIGIN=${API_ORIGIN:-http://localhost:3001} vite dev",
     "prepare": "svelte-kit sync"
   },
   "dependencies": {
@@ -52,6 +52,7 @@
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^5.0.5",
     "autocannon": "^8.0.0",
+    "concurrently": "^10.0.6",
     "date-fns": "^4.4.0",
     "jsdom": "^30.0.1",
     "pino-pretty": "^13.1.3",
