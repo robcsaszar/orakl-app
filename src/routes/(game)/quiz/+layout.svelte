@@ -14,6 +14,7 @@ import { buildAvatarGroups } from "@orakl/shared";
   import Card from "$lib/components/ui/Card.svelte";
   import type { Snippet } from "svelte";
   import { toast } from "@/lib/toast.js";
+  import { showModeratedCloseNotice } from "@/lib/moderated-notice.js";
 
   let {
     data,
@@ -186,9 +187,7 @@ import { buildAvatarGroups } from "@orakl/shared";
   // with a toast saying why.
   $effect(() => {
     if (session.lobbyClosed && isCurator && session.lobbyEndedReason === "moderated") {
-      toast.info("Orakl closed your lobby. Nothing from this session was saved.", {
-        duration: 8000,
-      });
+      showModeratedCloseNotice();
     }
   });
 

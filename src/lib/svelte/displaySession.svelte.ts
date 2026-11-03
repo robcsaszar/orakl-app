@@ -184,6 +184,8 @@ export function createDisplaySession(
   function showFinalScores(msg: GameFinalScoresMessage) {
     state.players = msg.players;
     updateSortedPlayers();
+    // A stop from intermission sends no game:resume; final scores end the pause.
+    state.isIntermission = false;
     state.currentView = "final";
   }
 
