@@ -158,3 +158,20 @@ describe("ImportPage zip", () => {
     vi.useRealTimers();
   });
 });
+
+describe("ImportPage JSON (#1601)", () => {
+  it("enables Import for clean rows that carry no fingerprints", async () => {
+    render(ImportPage);
+    await pick(
+      new File([JSON.stringify([row()])], "set.json", {
+        type: "application/json",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /^Import 1 questions/ }),
+      ).toBeEnabled(),
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
