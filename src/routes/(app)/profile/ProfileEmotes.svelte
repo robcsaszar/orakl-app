@@ -2,6 +2,7 @@
   import { type EmotePack, MAX_EMOTE_SET } from "@orakl/protocol";
   import EmotePicker from "$lib/components/quiz-setup/EmotePicker.svelte";
   import Button from "$lib/components/ui/Button.svelte";
+  import { invalidateAll } from "$app/navigation";
   import { toast } from "@/lib/toast.js";
 
   let { packs, savedIds }: { packs: EmotePack[]; savedIds: string[] } = $props();
@@ -32,6 +33,8 @@
         body: JSON.stringify({ emotes: selected }),
       });
       if (res.ok) {
+        // Re-read the saved set so the picker shows the server's truth.
+        await invalidateAll();
         toast.success("Emotes saved.");
       } else {
         const body = await res.json().catch(() => ({}));

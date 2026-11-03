@@ -59,7 +59,7 @@
 <div
   class="pointer-events-auto absolute"
   data-stagger-ms={staggerMs}
-  style="left:{-size / 2}px;top:{-size / 2}px;transform:translate({spring.current.x}px, {spring.current.y}px) scale({spring.current.scale})"
+  style="left:{-size / 2}px;top:{-size / 2}px;width:{size}px;height:{size}px;transform:translate({spring.current.x}px, {spring.current.y}px) scale({spring.current.scale})"
 >
   {@render children()}
 </div>
