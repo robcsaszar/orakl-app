@@ -188,13 +188,26 @@ import { CREDIT_LICENCE_LABEL, percent as calcPercent } from "@orakl/shared";
     void checkDbDupes();
   }
 
+  /** Clean preview and no bank duplicates: the JSON import may run. */
+  function settleClear(): boolean {
+    return (
+      dbDupes === 0 &&
+      (preview?.duplicates ?? 1) === 0 &&
+      (preview?.errors.length ?? 1) === 0 &&
+      (preview?.valid ?? 0) > 0
+    );
+  }
+
   async function checkDbDupes() {
     const fingerprints = (questions as Record<string, unknown>[])
       .map((q) => q.question_fingerprint)
       .filter((fp): fp is string => typeof fp === "string" && fp.length > 0);
 
     if (fingerprints.length === 0) {
+      // Nothing to check against the bank; the server fingerprints each row.
+      // A pack's problems land after this, so it keeps its own gate.
       dbDupes = 0;
+      allClear = !isPack && settleClear();
       return;
     }
 
@@ -210,11 +223,7 @@ import { CREDIT_LICENCE_LABEL, percent as calcPercent } from "@orakl/shared";
       if (res.ok) {
         const data = await res.json();
         dbDupes = data.existingCount ?? 0;
-        allClear =
-          dbDupes === 0 &&
-          (preview?.duplicates ?? 1) === 0 &&
-          (preview?.errors.length ?? 1) === 0 &&
-          (preview?.valid ?? 0) > 0;
+        allClear = settleClear();
       } else {
         // Swallowing this left dbDupes null, which renders as neither badge —
         // so the duplicate check silently did not run and the import stayed
