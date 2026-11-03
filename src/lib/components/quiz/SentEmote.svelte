@@ -56,5 +56,13 @@
 <div
   style="transform-origin:50% 97%;transform: scale({scaleSpring.current}) rotate({rotationSpring.current}deg);opacity:{opacity};transition:opacity 300ms cubic-bezier(0.23, 1, 0.32, 1)"
 >
-  <img {src} alt="" width={size} height={size} draggable="false" />
+  <img
+    {src}
+    alt=""
+    width={size}
+    height={size}
+    class="max-w-none"
+    style="width:{size}px;height:{size}px"
+    draggable="false"
+  />
 </div>

@@ -71,7 +71,7 @@ describe("EmoteReactionLayer — mobile hold-to-react dismiss", () => {
     ).toBeTruthy();
   });
 
-  it("a right-click suppresses the native menu and does not open the fan", async () => {
+  it("a right-click suppresses the native menu and opens the fan", async () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: ["emote_heart"],
@@ -98,7 +98,7 @@ describe("EmoteReactionLayer — mobile hold-to-react dismiss", () => {
     expect(event.defaultPrevented).toBe(true);
     expect(
       container.querySelector('[aria-label="Dismiss emote menu"]'),
-    ).toBeNull();
+    ).toBeTruthy();
   });
 
   it("closes the fan on release even when the per-element pointerup never fires (window fallback)", async () => {
@@ -288,7 +288,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const petalWrapper = container.querySelector(
       ".pointer-events-auto.absolute",
     ) as HTMLElement;
-    expect(petalWrapper.style.transform).toBe("translate(0px, -64px) scale(1)");
+    expect(petalWrapper.style.transform).toBe("translate(0px, -88px) scale(1)");
 
     const sentWrapper = container.querySelector(
       '[style*="transform-origin"]',
@@ -331,38 +331,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     },
   );
 
-  it("desktop: 32 px petals and a 48 px sent emote", async () => {
-    const { container } = render(EmoteReactionLayer, {
-      props: {
-        pickedEmotes: [EMOTE],
-        emoteSrc,
-        activeEmotes: [
-          {
-            uid: "u1",
-            playerId: "p1",
-            emoteId: EMOTE,
-            offsetX: 0.5,
-            offsetY: 0.5,
-          },
-        ],
-        canEmote: true,
-        onSend: vi.fn(),
-        children: makeChildren(),
-      },
-    });
-    await openFan(container);
-    const petal = container.querySelector(
-      `[aria-label="Send ${EMOTE}"] img`,
-    ) as HTMLElement;
-    expect(petal.getAttribute("width")).toBe("32");
-    const sent = container.querySelector(
-      '[style*="transform-origin"] img',
-    ) as HTMLElement;
-    expect(sent.getAttribute("width")).toBe("48");
-  });
-
-  it("coarse pointer: petals and the sent emote are half again as large", async () => {
-    stubMatchMedia((q) => q === "(pointer: coarse)");
+  it("desktop: 48 px petals and a 56 px sent emote", async () => {
     const { container } = render(EmoteReactionLayer, {
       props: {
         pickedEmotes: [EMOTE],
@@ -386,14 +355,45 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
       `[aria-label="Send ${EMOTE}"] img`,
     ) as HTMLElement;
     expect(petal.getAttribute("width")).toBe("48");
-    const wrapper = container.querySelector(
-      ".pointer-events-auto.absolute",
-    ) as HTMLElement;
-    expect(wrapper.style.left).toBe("-24px");
     const sent = container.querySelector(
       '[style*="transform-origin"] img',
     ) as HTMLElement;
-    expect(sent.getAttribute("width")).toBe("72");
+    expect(sent.getAttribute("width")).toBe("56");
+  });
+
+  it("coarse pointer: petals and the sent emote are larger", async () => {
+    stubMatchMedia((q) => q === "(pointer: coarse)");
+    const { container } = render(EmoteReactionLayer, {
+      props: {
+        pickedEmotes: [EMOTE],
+        emoteSrc,
+        activeEmotes: [
+          {
+            uid: "u1",
+            playerId: "p1",
+            emoteId: EMOTE,
+            offsetX: 0.5,
+            offsetY: 0.5,
+          },
+        ],
+        canEmote: true,
+        onSend: vi.fn(),
+        children: makeChildren(),
+      },
+    });
+    await openFan(container);
+    const petal = container.querySelector(
+      `[aria-label="Send ${EMOTE}"] img`,
+    ) as HTMLElement;
+    expect(petal.getAttribute("width")).toBe("64");
+    const wrapper = container.querySelector(
+      ".pointer-events-auto.absolute",
+    ) as HTMLElement;
+    expect(wrapper.style.left).toBe("-32px");
+    const sent = container.querySelector(
+      '[style*="transform-origin"] img',
+    ) as HTMLElement;
+    expect(sent.getAttribute("width")).toBe("80");
   });
 
   it("the petal under a held pointer lifts and grows", async () => {
@@ -412,7 +412,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     area.dispatchEvent(
       new PointerEvent("pointermove", {
         clientX: 50,
-        clientY: 50 - 64,
+        clientY: 50 - 88,
         bubbles: true,
       }),
     );
@@ -536,13 +536,13 @@ describe("EmoteReactionLayer — wrapper mode (results page)", () => {
     await tick();
     at(txt, "pointerup", 50, 50); // bubbles to window, as in a browser
     await tick();
-    // One petal: straight up from the press point, 64 px on a fine pointer.
+    // One petal: straight up from the press point, 88 px on a fine pointer.
     const petal = container.querySelector(
       '[aria-label="Send heart"]',
     ) as HTMLElement;
     expect(petal).toBeTruthy();
-    at(petal, "pointerdown", 50, -14);
-    at(petal, "pointerup", 50, -14);
+    at(petal, "pointerdown", 50, -38);
+    at(petal, "pointerup", 50, -38);
     expect(onSend).toHaveBeenCalledWith(EMOTE, 50 / 300, 0.5);
   });
 

@@ -70,13 +70,13 @@
   const srcOf = (emoteId: string) =>
     reducedMotion.current ? emoteStillSrc(emoteId) : emoteSrc(emoteId);
   // A finger hides what it touches: on coarse pointers the petals, the sent
-  // emote, the fan radius and the hit target are all half again as large.
+  // emote, the fan radius and the hit target are all larger.
   const coarsePointer = new MediaQuery("(pointer: coarse)");
-  const petalSize = $derived(coarsePointer.current ? 48 : 32);
-  const emoteSize = $derived(coarsePointer.current ? 72 : 48);
-  const fanRadiusPx = $derived(coarsePointer.current ? 96 : 64);
+  const petalSize = $derived(coarsePointer.current ? 64 : 48);
+  const emoteSize = $derived(coarsePointer.current ? 80 : 56);
+  const fanRadiusPx = $derived(coarsePointer.current ? 112 : 88);
   // Generous touch target — bigger than the icon itself.
-  const hitRadiusPx = $derived(coarsePointer.current ? 42 : 28);
+  const hitRadiusPx = $derived(coarsePointer.current ? 50 : 38);
 
   $effect(() => {
     // Close the fan whenever it's no longer valid to react (answered reset,
@@ -283,10 +283,15 @@
     hoverIndex = null;
   }
 
-  // Suppress the native menu over this area: a touch long-press fires
-  // contextmenu on Android, and a right-click must not open anything either.
+  // Overlay mode: a right-click opens the fan at the pointer, as a long press
+  // does. A touch long-press fires contextmenu on Android after the press
+  // timer already opened the fan, so an open fan is left as it is.
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
+    if (!canEmote || emoteMenu) return;
+    cancelLongPress();
+    openEmoteMenu(e.clientX, e.clientY);
+    keepOnRelease = !!emoteMenu;
   }
 
   // Always send from the initial long-press point, regardless of
@@ -367,7 +372,15 @@
             data-tooltip={emoteTitle(emoteId)}
             aria-label={`Send ${emoteTitle(emoteId)}`}
           >
-            <img src={srcOf(emoteId)} alt="" width={petalSize} height={petalSize} draggable="false" />
+            <img
+              src={srcOf(emoteId)}
+              alt=""
+              width={petalSize}
+              height={petalSize}
+              class="max-w-none"
+              style="width:{petalSize}px;height:{petalSize}px"
+              draggable="false"
+            />
           </Button>
         </EmotePetal>
       {/each}
