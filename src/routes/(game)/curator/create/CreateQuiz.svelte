@@ -24,6 +24,7 @@
   import Button from "$lib/components/ui/Button.svelte";
   import ConfirmButton from "$lib/components/ui/ConfirmButton.svelte";
   import { toast } from "@/lib/toast.js";
+  import { showModeratedCloseNotice } from "@/lib/moderated-notice.js";
   import { generateRandomPreset } from "@/lib/quiz-name-presets.js";
   import Card from "$lib/components/ui/Card.svelte";
   import Icon from "@/lib/components/ui/Icon.svelte";
@@ -372,6 +373,15 @@
 
   onMount(() => {
     _isEditing = !!storage.getQuizConfig();
+
+    // A Curator off the quiz socket when an Admin closed their Lobby learns
+    // it here; the server answers the reason once.
+    fetch("/api/lobby")
+      .then((r) => r.json())
+      .then((d: { reason?: string }) => {
+        if (d.reason === "moderated") showModeratedCloseNotice();
+      })
+      .catch(() => {});
 
     try {
       const raw = storage.getQuizConfig();

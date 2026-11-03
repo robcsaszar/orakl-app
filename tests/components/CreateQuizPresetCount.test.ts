@@ -80,7 +80,10 @@ describe("saved-preset count on the create page", () => {
     );
 
     expect(screen.getByText("Delete preset?")).toBeTruthy();
-    expect(fetchMock).not.toHaveBeenCalled();
+    // The mount's lobby probe aside, nothing is sent.
+    expect(fetchMock.mock.calls.map((c) => String(c[0]))).toEqual([
+      "/api/lobby",
+    ]);
     expect(screen.getByText("2/10 saved")).toBeTruthy();
   });
 });
