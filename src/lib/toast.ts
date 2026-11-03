@@ -3,14 +3,18 @@ import { tv } from "tailwind-variants";
 import Spinner from "./components/ui/Spinner.svelte";
 
 export const toastVariants = tv({
+  // Tints mix into the page background, not transparency: a toast over a sticky CTA stays readable.
   base: "rounded-2xl corner-shape-squircle p-3 text-sm font-medium font-sans flex items-center gap-2 backdrop-blur-sm backdrop-saturate-150 border",
   variants: {
     variant: {
-      success: "bg-success/20 text-success-light border-success/30",
-      error: "bg-danger/20 text-danger-light border-danger/30",
+      success:
+        "bg-[color-mix(in_oklab,var(--color-success)_20%,var(--color-background))] text-success-light border-success/30",
+      error:
+        "bg-[color-mix(in_oklab,var(--color-danger)_20%,var(--color-background))] text-danger-light border-danger/30",
       warning: "bg-yellow-950 text-yellow-300 border-yellow-800/30",
-      info: "bg-secondary-800/20 text-violet-400 border-secondary/30",
-      loading: "bg-secondary-800/20 text-violet-400 border-secondary/30",
+      info: "bg-[color-mix(in_oklab,var(--color-secondary-800)_20%,var(--color-background))] text-violet-400 border-secondary/30",
+      loading:
+        "bg-[color-mix(in_oklab,var(--color-secondary-800)_20%,var(--color-background))] text-violet-400 border-secondary/30",
     },
   },
 });

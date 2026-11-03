@@ -83,8 +83,11 @@ import type { UserPower, UserRole } from "@orakl/shared";
     allPowers,
     pendingRequests,
     leaderboards = false,
+    initialSearch = "",
   }: {
     initial: ListResult;
+    /** Search the page opens with (`?search=`); non-empty loads the filtered page on mount. */
+    initialSearch?: string;
     currentUserId: string;
     roles: string[];
     allPowers: UserPower[];
@@ -120,7 +123,8 @@ import type { UserPower, UserRole } from "@orakl/shared";
   let loading = $state(false);
   let localPendingRequests = $derived<CurationRequestWithUser[]>(pendingRequests);
 
-  let search = $state("");
+  // svelte-ignore state_referenced_locally
+  let search = $state(initialSearch);
   let roleFilter = $state("");
   let pendingOnly = $state(false);
 
@@ -192,7 +196,8 @@ import type { UserPower, UserRole } from "@orakl/shared";
     loadPage(p);
   }
 
-  // Reload page 1 when filters change (debounced; skips initial mount).
+  // Reload page 1 when filters change (debounced). The initial mount loads
+  // only when a seeded search narrows the unfiltered server page.
   let firstRun = true;
   $effect(() => {
     void search;
@@ -200,6 +205,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
     void pendingOnly;
     if (firstRun) {
       firstRun = false;
+      if (search.trim()) loadPage(1);
       return;
     }
     clearTimeout(filterTimer);

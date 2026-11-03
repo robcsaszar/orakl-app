@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from "$app/state";
   import type { PageData } from "./$types";
   import Metatags from "$lib/components/seo/Metatags.svelte";
   import AdminUsers from "./AdminUsers.svelte";
@@ -15,4 +16,5 @@
   allPowers={data.allPowers}
   pendingRequests={data.pendingRequests}
   leaderboards={data.uiFlags.SOLO_LEADERBOARDS === true}
+  initialSearch={page.url.searchParams.get("search") ?? ""}
 />

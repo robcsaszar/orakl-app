@@ -24,7 +24,7 @@
     "@sveltejs/kit": "^2.70.3",
     "@svgrid/grid": "^3.0.3",
     "effect": "^3.22.1",
-    "fflate": "0.8.2",
+    "fflate": "0.8.3",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4",
     "svelte": "^5.57.0",

@@ -252,7 +252,9 @@
                 <span class="font-mono text-lg font-semibold">{lobby.code}</span>
                 <span class="flex flex-wrap items-baseline gap-x-2 text-sm">
                   {#if lobby.curator.accountId}
-                    <Link href="/admin/users">
+                    <Link
+                      href={`/admin/users?search=${encodeURIComponent(lobby.curator.accountId)}`}
+                    >
                       {lobby.curator.nickname ?? "No nickname"}
                     </Link>
                     <span class="font-mono text-xs text-foreground-darker break-all">

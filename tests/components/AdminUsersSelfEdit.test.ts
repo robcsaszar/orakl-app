@@ -252,3 +252,32 @@ describe("AdminUsers — the powers section opens on request", () => {
     expect(powersPanel()).not.toBeVisible();
   });
 });
+
+describe("AdminUsers — deep link", () => {
+  it("seeds the search box and loads the matching page on open", async () => {
+    render(AdminUsers, {
+      props: {
+        initial: {
+          users: [listItem(OTHER, "member", [])],
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        },
+        initialSearch: SELF,
+        currentUserId: SELF,
+        roles: ["member", "curator", "admin"],
+        allPowers: [HELD],
+        pendingRequests: [],
+      },
+    });
+    expect(
+      document.querySelector<HTMLInputElement>("#user-search")?.value,
+    ).toBe(SELF);
+    await vi.waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/admin/users?page=1&limit=20&search=${SELF}`,
+      ),
+    );
+  });
+});

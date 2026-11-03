@@ -494,3 +494,13 @@ describe("admin lobbies — game controls", () => {
     expect(invalidate).toHaveBeenCalledWith("app:admin-lobbies");
   });
 });
+
+describe("admin lobbies — Curator link", () => {
+  it("opens the users page filtered to the Curator's account", () => {
+    renderPage();
+    expect(screen.getByRole("link", { name: "Pythia" })).toHaveAttribute(
+      "href",
+      "/admin/users?search=cur-1",
+    );
+  });
+});
