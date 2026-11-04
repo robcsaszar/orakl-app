@@ -12,7 +12,8 @@ vi.mock("../../src/lib/toast.js", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-import { replaceState } from "$app/navigation";
+import { invalidateAll, replaceState } from "$app/navigation";
+import { toast } from "../../src/lib/toast.js";
 
 beforeEach(() => {
   // jsdom lacks the Web Animations API — stub so any transition is inert.
@@ -445,11 +446,11 @@ describe("/profile page — tabs", () => {
     );
     expect(screen.getByText("1 of 5 chosen")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Save emotes" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Save emotes" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("Save emotes stays disabled until a toggle changes the set", async () => {
+  it("a toggle saves the set at once, in pick order", async () => {
     const emote = (id: string) => ({
       id,
       title: id,
@@ -476,17 +477,59 @@ describe("/profile page — tabs", () => {
         },
       ],
     });
-    const save = screen.getByRole("button", { name: "Save emotes" });
-    expect(save).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "heart" }));
-    expect(save).toBeEnabled();
+    await vi.waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emotes: ["laugh", "heart"] }),
+      }),
+    );
+    expect(invalidateAll).not.toHaveBeenCalled();
+  });
+
+  it("a refused save toasts and re-reads the saved set", async () => {
+    global.fetch = vi.fn(async () =>
+      Promise.resolve({
+        ok: false,
+        json: async () => ({ error: "Unknown emote." }),
+      } as Response),
+    );
+    renderPage({
+      user: {
+        nickname: "Rob",
+        role: "member",
+        powers: [],
+        avatar: "",
+        emoteIds: [],
+        emailVerified: true,
+      },
+      emotePacks: [
+        {
+          id: "classic",
+          title: "Classic",
+          description: "",
+          isDefault: true,
+          emotes: [
+            {
+              id: "heart",
+              title: "heart",
+              description: "",
+              src: "/emotes/heart.webp",
+              stillSrc: "/emotes/heart.webp",
+            },
+          ],
+        },
+      ],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "heart" }));
+    await vi.waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+    expect(toast.error).toHaveBeenCalledWith("Unknown emote.");
   });
 
   it("Account panel hides the emote picker when the gallery is empty", () => {
     renderPage({ emotePacks: [] });
-    expect(
-      screen.queryByRole("button", { name: "Save emotes" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/of 5 chosen/)).not.toBeInTheDocument();
   });
 });
 

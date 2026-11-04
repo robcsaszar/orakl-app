@@ -6,7 +6,9 @@ import { MockQuizSession } from "../../src/lib/svelte/mockQuizSession.svelte.js"
 import type { PlayerData } from "../../src/lib/svelte/player-session-view.js";
 import CuratorToolboxDrawer from "../../src/routes/(game)/quiz/CuratorToolboxDrawer.svelte";
 import { CURATOR_TOOLBOX_DRAWER_ID } from "../../src/routes/(game)/quiz/CuratorToolboxFab.svelte";
-import CuratorToolboxPanel from "../../src/routes/(game)/quiz/CuratorToolboxPanel.svelte";
+import CuratorToolboxPanel, {
+  CONFIRM_REVEAL_DELAY_MS,
+} from "../../src/routes/(game)/quiz/CuratorToolboxPanel.svelte";
 
 function makeSession(phase: ServerPhase, players: PlayerData[] = []) {
   const session = new MockQuizSession();
@@ -52,7 +54,7 @@ describe("CuratorToolboxPanel", () => {
       expect(btn.querySelector(".border-2")).toBeNull();
 
       await fireEvent.click(btn);
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(CONFIRM_REVEAL_DELAY_MS);
 
       expect(btn.querySelector(`.${ring}`)).toBeInTheDocument();
       expect(btn.querySelector(".border-danger")).toBe(

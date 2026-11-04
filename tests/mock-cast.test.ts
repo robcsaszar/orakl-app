@@ -18,8 +18,8 @@ describe("parseCast / serializeCast", () => {
     expect(parseCast(serializeCast(rows))).toEqual(rows);
   });
 
-  it("truncates to 20 rows", () => {
-    const rows: CastRow[] = Array.from({ length: 25 }, (_, i) => ({
+  it("truncates to CAST_MAX rows", () => {
+    const rows: CastRow[] = Array.from({ length: CAST_MAX + 5 }, (_, i) => ({
       nickname: `P${i}`,
       role: "player" as const,
     }));

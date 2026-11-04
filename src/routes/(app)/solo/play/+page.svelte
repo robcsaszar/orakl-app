@@ -176,7 +176,6 @@
           intent="icon"
           iconBefore="chevron-right-angle"
           aria-label={isLastQuestion ? "See results" : "Continue"}
-          data-tooltip={isLastQuestion ? "See results" : "Continue"}
           onclick={() => s.advance()}
         ></Button>
       </div>

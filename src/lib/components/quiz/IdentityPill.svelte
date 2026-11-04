@@ -1,3 +1,10 @@
+<script module lang="ts">
+  /** How long the "+N" delta cue stays visible after points are earned. */
+  export const DELTA_CUE_MS = 1800;
+  /** Duration of the step-up count from the previous to the new score. */
+  export const SCORE_COUNT_MS = 600;
+</script>
+
 <script lang="ts">
   import Card from '@/lib/components/ui/Card.svelte';
   import Icon from "@/lib/components/ui/Icon.svelte";
@@ -53,10 +60,10 @@
     activeDelta = earned;
     deltaTimer = setTimeout(() => {
       activeDelta = null;
-    }, 1800);
+    }, DELTA_CUE_MS);
 
     const steps = Math.min(earned, 20);
-    const stepMs = 600 / steps;
+    const stepMs = SCORE_COUNT_MS / steps;
     let step = 0;
     stepTimer = setInterval(() => {
       step++;

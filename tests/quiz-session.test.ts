@@ -3,12 +3,16 @@
  * seam; no real socket, no network.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GAME } from "../data/game.settings.js";
 import type {
   PlayerSession,
   PlayerSessionCallbacks,
 } from "../src/lib/player-session.js";
 import { storage } from "../src/lib/storage.js";
 import { QuizSession } from "../src/lib/svelte/quizSession.svelte.js";
+
+const AUTO_5_S = GAME.roundConfig.autoAdvanceMsMap.auto_5 / 1000;
+const AUTO_10_S = GAME.roundConfig.autoAdvanceMsMap.auto_10 / 1000;
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -492,7 +496,7 @@ describe("QuizSession (injectable factory)", () => {
       );
     });
 
-    it("counts the configured delay: auto_10 starts at 10, auto_5 at 5", () => {
+    it("counts the configured delay: auto_10 and auto_5 start at their delays", () => {
       send({
         type: "game:start",
         timerDuration: 30,
@@ -500,8 +504,8 @@ describe("QuizSession (injectable factory)", () => {
         advanceMode: "auto_10",
       });
       reveal();
-      expect(session.nextQuestionCountdownTotal).toBe(10);
-      expect(session.nextQuestionCountdown).toBe(10);
+      expect(session.nextQuestionCountdownTotal).toBe(AUTO_10_S);
+      expect(session.nextQuestionCountdown).toBe(AUTO_10_S);
       send({
         type: "game:start",
         timerDuration: 30,
@@ -509,7 +513,7 @@ describe("QuizSession (injectable factory)", () => {
         advanceMode: "auto_5",
       });
       reveal();
-      expect(session.nextQuestionCountdown).toBe(5);
+      expect(session.nextQuestionCountdown).toBe(AUTO_5_S);
     });
 
     it("a replayed reveal starts the ring at the server's remaining seconds", () => {
@@ -526,7 +530,7 @@ describe("QuizSession (injectable factory)", () => {
         playerAnswers: {},
         countdownRemaining: 2,
       });
-      expect(session.nextQuestionCountdownTotal).toBe(10);
+      expect(session.nextQuestionCountdownTotal).toBe(AUTO_10_S);
       expect(session.nextQuestionCountdown).toBe(2);
     });
 
@@ -576,7 +580,7 @@ describe("QuizSession (injectable factory)", () => {
       session.nextQuestionCountdown = 3;
       send({ type: "game:intermission" });
       send({ type: "game:resume" });
-      expect(session.nextQuestionCountdown).toBe(10);
+      expect(session.nextQuestionCountdown).toBe(AUTO_10_S);
     });
 
     it("a resume mid-question leaves the countdown alone", () => {

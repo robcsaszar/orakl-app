@@ -1,3 +1,8 @@
+<script module lang="ts">
+  /** Delay before a confirm button's border progress reveals its confirm question. */
+  export const CONFIRM_REVEAL_DELAY_MS = 400;
+</script>
+
 <script lang="ts">
   /**
    * Curator toolbox controls (ADR 0019 route unification) — the curator's
@@ -184,7 +189,7 @@
         confirmLabel="Stop the game?"
         confirmVariant="neutral"
         progressStyle="border"
-        revealDelay={400}
+        revealDelay={CONFIRM_REVEAL_DELAY_MS}
         onConfirm={() => session.stopGame()}
         variant="outline"
         class="w-full"
@@ -199,7 +204,7 @@
         confirmLabel="Reset to setup?"
         confirmVariant="neutral"
         progressStyle="border"
-        revealDelay={400}
+        revealDelay={CONFIRM_REVEAL_DELAY_MS}
         onConfirm={() => session.resetToSetup()}
         variant="outline"
         class="w-full"
@@ -213,7 +218,7 @@
       confirmLabel="Close the lobby?"
       confirmVariant="danger"
       progressStyle="border"
-      revealDelay={400}
+      revealDelay={CONFIRM_REVEAL_DELAY_MS}
       onConfirm={() => session.closeLobby()}
       variant="danger"
       class="w-full"

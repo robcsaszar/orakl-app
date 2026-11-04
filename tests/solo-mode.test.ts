@@ -1,6 +1,11 @@
 import type { SoloServerMessage } from "@orakl/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSoloModeStore as soloMode } from "../src/lib/soloMode.store";
+import { GAME } from "../data/game.settings";
+import {
+  MAX_RESUME_ATTEMPTS,
+  RESUME_DELAYS_MS,
+  createSoloModeStore as soloMode,
+} from "../src/lib/soloMode.store";
 
 const topicData = JSON.stringify([
   { id: "science", name: "Science", icon: "🔬", count: 20 },
@@ -101,8 +106,8 @@ describe("soloMode (WS store)", () => {
     it("starts in setup phase with defaults", () => {
       const q = create();
       expect(q.phase).toBe("setup");
-      expect(q.timer).toBe(30);
-      expect(q.questionCount).toBe(10);
+      expect(q.timer).toBe(GAME.roundConfig.defaultTimer);
+      expect(q.questionCount).toBe(GAME.roundConfig.defaultQuestions);
       expect(q.selectedCategories).toEqual([]);
     });
 
@@ -806,7 +811,7 @@ describe("soloMode (WS store)", () => {
       });
     }
 
-    it("a second drop after a resume reopens after 1000 ms with solo:resume", async () => {
+    it("a second drop after a resume reopens after the first backoff with solo:resume", async () => {
       const q = await playing();
       FakeWS.lastInstance!.drop();
       vi.advanceTimersByTime(0);
@@ -814,7 +819,7 @@ describe("soloMode (WS store)", () => {
       expect(q.reconnecting).toBe(false);
       FakeWS.lastInstance!.drop();
       expect(q.reconnecting).toBe(true);
-      vi.advanceTimersByTime(999);
+      vi.advanceTimersByTime(RESUME_DELAYS_MS[0] - 1);
       expect(FakeWS.instances).toHaveLength(2);
       vi.advanceTimersByTime(1);
       expect(FakeWS.instances).toHaveLength(3);
@@ -822,29 +827,34 @@ describe("soloMode (WS store)", () => {
       expect(sentTypes(FakeWS.instances[2])).toEqual(["solo:resume"]);
     });
 
-    it("failed reopens back off 1 s, 2 s, then 4 s", async () => {
+    it("failed reopens follow the backoff schedule", async () => {
       await playing();
       FakeWS.failOpen = true;
       FakeWS.lastInstance!.drop();
       vi.advanceTimersByTime(10_000);
       const ws = FakeWS.instances;
       const gaps = [2, 3, 4].map((i) => ws[i].createdAt - ws[i - 1].closedAt!);
-      expect(gaps).toEqual([1000, 2000, 4000]);
+      expect(gaps).toEqual(RESUME_DELAYS_MS.slice(0, 3));
     });
 
-    it("seven failed opens end the run", async () => {
+    it("exhausting the resume attempts ends the run", async () => {
       const q = await playing();
       expect(window.sessionStorage.getItem("solo:state")).not.toBeNull();
       FakeWS.failOpen = true;
       FakeWS.lastInstance!.drop();
-      vi.advanceTimersByTime(32_000);
-      expect(FakeWS.instances).toHaveLength(8); // start socket + 7 opens
+      const backoffTotal = Array.from(
+        { length: MAX_RESUME_ATTEMPTS },
+        (_, i) => RESUME_DELAYS_MS[Math.min(i, RESUME_DELAYS_MS.length - 1)],
+      ).reduce((a, b) => a + b, 0);
+      vi.advanceTimersByTime(backoffTotal + 1000);
+      // start socket + the first reopen + one per failed attempt
+      expect(FakeWS.instances).toHaveLength(MAX_RESUME_ATTEMPTS + 2);
       expect(q.phase).toBe("setup");
       expect(q.reconnecting).toBe(false);
       expect(q.errors).toEqual(["Connection lost. Your trial has ended."]);
       expect(window.sessionStorage.getItem("solo:state")).toBeNull();
       vi.advanceTimersByTime(60_000);
-      expect(FakeWS.instances).toHaveLength(8);
+      expect(FakeWS.instances).toHaveLength(MAX_RESUME_ATTEMPTS + 2);
     });
 
     it("a 1011 close on the resume socket ends the run at once", async () => {

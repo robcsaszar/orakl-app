@@ -23,6 +23,7 @@ import type {
   QuestionsPerRound,
   TimerDuration,
 } from "../../data/game.settings.js";
+import { GAME } from "../../data/game.settings.js";
 import { isFalseAnswerText } from "./answer-variants.js";
 import { drawMatchLines as drawMatchLinesHelper } from "./question-helpers.js";
 import {
@@ -67,10 +68,10 @@ function buildWsUrl(): string {
 }
 
 /** Backoff between resume attempts after a drop (ms); the last entry repeats. */
-const RESUME_DELAYS_MS = [1000, 2000, 4000, 8000];
+export const RESUME_DELAYS_MS = [1000, 2000, 4000, 8000];
 /** Failed reopens before the run is given up: 1+2+4+8+8+8 = 31 s, past the
  *  server's 30 s abandon window (ABANDON_WINDOW_MS in solo-ws-server.ts). */
-const MAX_RESUME_ATTEMPTS = 6;
+export const MAX_RESUME_ATTEMPTS = 6;
 const CONNECTION_LOST = "Connection lost. Your trial has ended.";
 
 // Survives a full page refresh so an in-flight game resumes seamlessly (review
@@ -148,8 +149,8 @@ export function createSoloModeStore(
     seasons: JSON.parse(seasonDataJson) as SeasonOption[],
     selectedCategories: [] as string[],
     selectedSeasons: [] as string[],
-    timer: 30 as TimerDuration,
-    questionCount: 10 as QuestionsPerRound,
+    timer: GAME.roundConfig.defaultTimer as TimerDuration,
+    questionCount: GAME.roundConfig.defaultQuestions as QuestionsPerRound,
     mode: "normal" as "normal" | "endless",
     difficulty: "all" as DifficultyFilter,
     errors: [] as string[],

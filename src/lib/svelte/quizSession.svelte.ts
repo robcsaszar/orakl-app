@@ -86,6 +86,9 @@ const GAME_ERROR_COPY: Partial<Record<GameErrorMessage["code"], string>> = {
   internal: "Something went wrong. Try again in a moment.",
 };
 
+/** Interval between pre-join lobby status polls. */
+export const STATUS_POLL_MS = 4000;
+
 /** Copy for the join page's error states — shared with the mimic join route
  *  (ADR 0010) so the preview shows production text. */
 export const JOIN_ERROR_COPY = {
@@ -310,7 +313,6 @@ export class QuizSession implements PlayerSessionView {
   private _countdownTimer: CountdownTimer | null = null;
   /** Pre-join lobby poll. */
   private _statusPollTimer: ReturnType<typeof setInterval> | null = null;
-  private static readonly _STATUS_POLL_MS = 4000;
   /** Self emotes rendered optimistically whose server echo we still expect and
    * must swallow to avoid a duplicate (one send → one `player:emote` echo). */
   private _pendingSelfEmotes = 0;
@@ -516,10 +518,7 @@ export class QuizSession implements PlayerSessionView {
       }
     };
     void poll();
-    this._statusPollTimer = setInterval(
-      () => void poll(),
-      QuizSession._STATUS_POLL_MS,
-    );
+    this._statusPollTimer = setInterval(() => void poll(), STATUS_POLL_MS);
   }
 
   private stopStatusPolling() {
