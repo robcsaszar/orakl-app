@@ -45,3 +45,6 @@ docs/research/**/img/
 
 # Image Quiz pack build output
 scripts/image-quiz-pack/out/
+
+# macOS
+.DS_Store
