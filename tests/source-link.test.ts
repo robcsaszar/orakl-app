@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toSourceLink } from "../src/lib/source-link.js";
+import { MAX_LABEL_LENGTH, toSourceLink } from "../src/lib/source-link.js";
 
 describe("toSourceLink", () => {
   it("falls back to hostname for empty label", () => {
@@ -36,9 +36,9 @@ describe("toSourceLink", () => {
   });
 
   it("clamps a very long label but keeps the full value", () => {
-    const longLabel = "a".repeat(120);
+    const longLabel = "a".repeat(MAX_LABEL_LENGTH + 40);
     const link = toSourceLink({ url: "https://example.com", label: longLabel });
-    expect(link?.label.length).toBe(81); // 80 chars + ellipsis
+    expect(link?.label.length).toBe(MAX_LABEL_LENGTH + 1); // clamp + ellipsis
     expect(link?.label.endsWith("…")).toBe(true);
     expect(link?.fullLabel).toBe(longLabel);
   });

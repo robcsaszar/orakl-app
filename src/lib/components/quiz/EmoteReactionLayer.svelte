@@ -1,3 +1,8 @@
+<script module lang="ts">
+  /** Hold time before a press opens the emote fan. */
+  export const LONG_PRESS_MS = 500;
+</script>
+
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Button from "$lib/components/ui/Button.svelte";
@@ -62,7 +67,6 @@
   /** Wrapper mode: the release that ends the opening press keeps the fan open for a tap. */
   let keepOnRelease = false;
   let swallowClick: ((e: MouseEvent) => void) | null = null;
-  const LONG_PRESS_MS = 500;
   const MOVE_CANCEL_PX = 10;
   // Fan opens upward from the tap point, spanning this many degrees.
   const FAN_ARC_DEG = 140;
@@ -92,7 +96,9 @@
   // fan still closes even when that per-element event never arrives.
   $effect(() => {
     if (!emoteMenu) return;
-    const dismissIfNoPick = () => {
+    const dismissIfNoPick = (e: PointerEvent) => {
+      // A release on a petal: its click, which comes next, picks it.
+      if ((e.target as Element | null)?.closest?.("[data-emote-fan]")) return;
       if (keepOnRelease) {
         keepOnRelease = false;
         return;
@@ -269,6 +275,8 @@
   // no second tap needed.
   function handlePointerUp() {
     cancelLongPress();
+    // A right-click's release keeps the fan open; the window listener clears the flag.
+    if (keepOnRelease) return;
     if (emoteMenu) {
       const emoteId = hoverIndex !== null ? pickedEmotes[hoverIndex] : undefined;
       if (emoteId) pickEmote(emoteId);
@@ -300,6 +308,7 @@
     if (!emoteMenu) return;
     onSend(emoteId, emoteMenu.x, emoteMenu.y);
     emoteMenu = null;
+    keepOnRelease = false;
   }
 </script>
 
@@ -357,7 +366,7 @@
       aria-label="Dismiss emote menu"
       onclick={() => (emoteMenu = null)}
     ></button>
-    <div class="pointer-events-none absolute z-40" style="left:{emoteMenu.x * 100}%;top:{emoteMenu.y * 100}%">
+    <div data-emote-fan class="pointer-events-none absolute z-40" style="left:{emoteMenu.x * 100}%;top:{emoteMenu.y * 100}%">
       {#each pickedEmotes as emoteId, i (emoteId)}
         {@const { dx, dy } = fanOffset(i, pickedEmotes.length)}
         <EmotePetal {dx} {dy} index={i} size={petalSize} reducedMotion={reducedMotion.current}>
@@ -369,7 +378,6 @@
               "p-1 transition-transform hover:-translate-y-1.5 hover:scale-125 active:scale-90",
               hoverIndex === i ? "-translate-y-1.5 scale-125" : "",
             )}
-            data-tooltip={emoteTitle(emoteId)}
             aria-label={`Send ${emoteTitle(emoteId)}`}
           >
             <img

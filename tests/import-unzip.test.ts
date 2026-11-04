@@ -1,6 +1,10 @@
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { unzipPack } from "../src/lib/import-unzip";
+import {
+  MAX_ENTRIES,
+  MAX_TOTAL_BYTES,
+  unzipPack,
+} from "../src/lib/import-unzip";
 
 const zip = (files: Record<string, Uint8Array>) =>
   zipSync(files).buffer as ArrayBuffer;
@@ -20,16 +24,17 @@ describe("unzipPack", () => {
     expect(entries.get("images/a.png")).toEqual(new Uint8Array([1, 2, 3]));
   });
 
-  it("refuses more than 500 entries", () => {
+  it("refuses more than the entry cap", () => {
     const files: Record<string, Uint8Array> = {};
-    for (let i = 0; i < 501; i++) files[`images/${i}.png`] = new Uint8Array(1);
-    expect(() => unzipPack(zip(files))).toThrow("more than 500 files");
+    for (let i = 0; i < MAX_ENTRIES + 1; i++)
+      files[`images/${i}.png`] = new Uint8Array(1);
+    expect(() => unzipPack(zip(files))).toThrow(/more than \d+ files/);
   });
 
-  it("refuses an archive that inflates past 60 MB", () => {
-    const big = new Uint8Array(31 * 1024 * 1024);
+  it("refuses an archive that inflates past the byte cap", () => {
+    const big = new Uint8Array(Math.ceil(MAX_TOTAL_BYTES / 2) + 1);
     expect(() => unzipPack(zip({ "a.bin": big, "b.bin": big }))).toThrow(
-      "larger than 60 MB",
+      /larger than \d+ MB/,
     );
   });
 

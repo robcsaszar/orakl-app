@@ -41,9 +41,10 @@ export function calculateMaxGameTime(
   advanceMode?: AdvanceMode,
 ): string {
   if (advanceMode === "manual") return "∞";
-  const advanceSeconds =
-    advanceMode === "auto_10" ? 10 : advanceMode === "auto_5" ? 5 : 0;
-  const overhead = advanceMode ? 5 : 0;
+  const advanceSeconds = advanceMode
+    ? GAME.roundConfig.autoAdvanceMsMap[advanceMode] / 1000
+    : 0;
+  const overhead = advanceMode ? GAME.roundConfig.autoAdvanceMs / 1000 : 0;
   const totalSeconds = questionsPerRound * (timer + advanceSeconds) + overhead;
   return formatDuration(totalSeconds);
 }

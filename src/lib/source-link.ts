@@ -1,4 +1,5 @@
-const MAX_LABEL_LENGTH = 80;
+/** Longest source-link label in characters before it is clamped. */
+export const MAX_LABEL_LENGTH = 80;
 
 export interface SourceLink {
   url: string;

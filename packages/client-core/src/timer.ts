@@ -19,6 +19,9 @@ export interface TimerCallbacks {
   onExpire: () => void;
 }
 
+/** Interval between countdown ticks; each tick lowers the remaining time by one. */
+export const COUNTDOWN_TICK_MS = 1000;
+
 /**
  * Create a countdown timer that decrements every second.
  *
@@ -53,7 +56,7 @@ export function createCountdown(callbacks: TimerCallbacks): CountdownTimer {
         stop();
         callbacks.onExpire();
       }
-    }, 1000);
+    }, COUNTDOWN_TICK_MS);
   }
 
   return {

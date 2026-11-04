@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import IdentityPill from "$lib/components/quiz/IdentityPill.svelte";
+import IdentityPill, {
+  DELTA_CUE_MS,
+  SCORE_COUNT_MS,
+} from "$lib/components/quiz/IdentityPill.svelte";
 
 describe("IdentityPill", () => {
   beforeEach(() => {
@@ -27,7 +30,7 @@ describe("IdentityPill", () => {
     render(IdentityPill, { props: { score: 100, lastPointsEarned: 100 } });
     // Immediately after mount the step hasn't run yet — starts at 0.
     expect(screen.getByText("0")).toBeInTheDocument();
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(SCORE_COUNT_MS);
     await tick();
     expect(screen.getByText("100")).toBeInTheDocument();
   });
@@ -40,7 +43,7 @@ describe("IdentityPill", () => {
   it("clears the delta cue once it has settled", async () => {
     render(IdentityPill, { props: { score: 100, lastPointsEarned: 100 } });
     expect(screen.getByText("+100")).toBeInTheDocument();
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(DELTA_CUE_MS);
     await tick();
     expect(screen.queryByText("+100")).not.toBeInTheDocument();
   });
@@ -49,7 +52,7 @@ describe("IdentityPill", () => {
     render(IdentityPill, {
       props: { score: 250, lastPointsEarned: 50, variant: 2 },
     });
-    vi.advanceTimersByTime(700);
+    vi.advanceTimersByTime(SCORE_COUNT_MS);
     await tick();
     expect(screen.getByText("200")).toBeInTheDocument(); // previous total
     expect(screen.getByText("+50")).toBeInTheDocument(); // round gain
@@ -60,7 +63,7 @@ describe("IdentityPill", () => {
     render(IdentityPill, {
       props: { score: 250, lastPointsEarned: 50, variant: 3 },
     });
-    vi.advanceTimersByTime(700);
+    vi.advanceTimersByTime(SCORE_COUNT_MS);
     await tick();
     expect(screen.getByText("total")).toBeInTheDocument();
     expect(screen.getByText("round")).toBeInTheDocument();
@@ -73,7 +76,7 @@ describe("IdentityPill", () => {
       props: { score: 200, lastPointsEarned: 100 },
     });
     unmount();
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(DELTA_CUE_MS);
     await tick();
   });
 
@@ -81,13 +84,13 @@ describe("IdentityPill", () => {
     const { rerender } = render(IdentityPill, {
       props: { score: 50, lastPointsEarned: 100 },
     });
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(SCORE_COUNT_MS);
     await tick();
     expect(screen.getByText("50")).toBeInTheDocument();
 
     await rerender({ score: 80, lastPointsEarned: 100 });
     await tick();
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(SCORE_COUNT_MS);
     await tick();
     expect(screen.getByText("80")).toBeInTheDocument();
   });

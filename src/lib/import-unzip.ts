@@ -1,7 +1,9 @@
 import { unzipSync } from "fflate";
 
-const MAX_ENTRIES = 500;
-const MAX_TOTAL_BYTES = 60 * 1024 * 1024;
+/** Most files an import archive may hold. */
+export const MAX_ENTRIES = 500;
+/** Most bytes an import archive may inflate to. */
+export const MAX_TOTAL_BYTES = 60 * 1024 * 1024;
 
 /**
  * Unzips an import pack in the browser into path → bytes. The entry count and

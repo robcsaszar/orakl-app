@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   ackRating,
   clearRating,
-  RATING_ERROR_MS,
   ratingFor,
   tapRating,
 } from "../src/lib/question-rating-state";
@@ -15,7 +14,6 @@ describe("question rating state", () => {
       queued: null,
       result: null,
     });
-    expect(RATING_ERROR_MS).toBe(2000);
   });
 
   it("idle tap sends and goes pending", () => {

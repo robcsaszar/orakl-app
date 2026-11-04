@@ -2,7 +2,10 @@
  * Pre-join lobby watch — connectStatusStream polls /api/lobby on an interval.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { QuizSession } from "../src/lib/svelte/quizSession.svelte.js";
+import {
+  QuizSession,
+  STATUS_POLL_MS,
+} from "../src/lib/svelte/quizSession.svelte.js";
 
 vi.mock("../src/lib/storage.js", () => ({
   storage: {
@@ -113,7 +116,7 @@ describe("connectStatusStream (pre-join poll)", () => {
     await vi.advanceTimersByTimeAsync(0);
     const first = fetchMock.mock.calls.length;
 
-    await vi.advanceTimersByTimeAsync(4000);
+    await vi.advanceTimersByTimeAsync(STATUS_POLL_MS);
     expect(fetchMock.mock.calls.length).toBeGreaterThan(first);
     session.destroy();
   });
@@ -141,7 +144,7 @@ describe("connectStatusStream (pre-join poll)", () => {
     const count = fetchMock.mock.calls.length;
 
     session.destroy();
-    await vi.advanceTimersByTimeAsync(20000);
+    await vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 5);
     expect(fetchMock.mock.calls.length).toBe(count); // no further polls
   });
   it("resumes polling after a failed first join (409 nickname_taken)", async () => {
@@ -173,7 +176,7 @@ describe("connectStatusStream (pre-join poll)", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     session.error = "Not connected";
-    await vi.advanceTimersByTimeAsync(4000);
+    await vi.advanceTimersByTimeAsync(STATUS_POLL_MS);
 
     expect(session.error).toBe("Not connected");
     session.destroy();
@@ -196,7 +199,7 @@ describe("connectStatusStream (pre-join poll)", () => {
 
     await session.connect("Ada");
     fetchMock.mockClear();
-    await vi.advanceTimersByTimeAsync(8000);
+    await vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 2);
 
     expect(fetchMock).not.toHaveBeenCalled();
     session.destroy();

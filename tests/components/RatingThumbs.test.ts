@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { createRawSnippet } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RatingThumbs from "$lib/components/quiz/RatingThumbs.svelte";
-import { type RatingState, ratingFor } from "$lib/question-rating-state";
+import {
+  RATING_ERROR_MS,
+  type RatingState,
+  ratingFor,
+} from "$lib/question-rating-state";
 
 function props(rating: RatingState = ratingFor("q-1"), onrate = vi.fn()) {
   return { rating, onrate };
@@ -69,7 +73,7 @@ describe("RatingThumbs", () => {
     ).toBeInTheDocument();
   });
 
-  it("error result shows Failed, then the thumb returns after 2000 ms", async () => {
+  it("error result shows Failed, then the thumb returns after RATING_ERROR_MS", async () => {
     render(RatingThumbs, {
       props: props({
         ...ratingFor("q-1"),
@@ -77,7 +81,7 @@ describe("RatingThumbs", () => {
       }),
     });
     expect(screen.getByText("Failed")).toBeInTheDocument();
-    vi.advanceTimersByTime(1999);
+    vi.advanceTimersByTime(RATING_ERROR_MS - 1);
     expect(screen.getByText("Failed")).toBeInTheDocument();
     vi.advanceTimersByTime(1);
     await vi.waitFor(() => expect(screen.queryByText("Failed")).toBeNull());

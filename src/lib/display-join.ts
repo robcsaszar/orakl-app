@@ -10,10 +10,16 @@ export interface JoinRoster {
   joined: number;
 }
 
-/** Filters out pending players, then caps the roster for the join view at `cap` (max 10). */
-export function joinRoster(players: Player[], cap = 10): JoinRoster {
+/** Most players the join view ever shows. */
+export const JOIN_ROSTER_MAX = 10;
+
+/** Filters out pending players, then caps the roster for the join view at `cap` (max `JOIN_ROSTER_MAX`). */
+export function joinRoster(
+  players: Player[],
+  cap = JOIN_ROSTER_MAX,
+): JoinRoster {
   const approved = players.filter((p) => p.status !== "pending");
-  const shownCap = Math.max(0, Math.min(10, cap));
+  const shownCap = Math.max(0, Math.min(JOIN_ROSTER_MAX, cap));
   return {
     shown: approved.slice(0, shownCap),
     overflow: Math.max(0, approved.length - shownCap),

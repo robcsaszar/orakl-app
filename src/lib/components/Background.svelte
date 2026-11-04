@@ -2,6 +2,8 @@
 import { PHASE_CONFIG } from "@orakl/shared";
 import type { SkyPhase } from "@orakl/shared";
   import { onMount } from "svelte";
+  import { cubicOut } from "svelte/easing";
+  import { Tween } from "svelte/motion";
   import { PHASE_STOPS } from "@/lib/constants/phase-stops.constants";
 
   import { subscribeSkyPhase } from "@/lib/sky-phase";
@@ -28,6 +30,9 @@ import type { SkyPhase } from "@orakl/shared";
   }: Props = $props();
 
   const initialStops = $derived(PHASE_STOPS[timeOfDay] ?? PHASE_STOPS.noon);
+  // `offset` is an SVG attribute CSS cannot transition, so it tweens over the
+  // same 2 s as the stop colours. Empty until mount; the template falls back.
+  const offsets = new Tween<number[]>([], { duration: 2000, easing: cubicOut });
 
   const durations = $derived([90, 120, 105, 140].map((d) => d / windSpeed));
   const clouds = $derived([
@@ -45,10 +50,11 @@ import type { SkyPhase } from "@orakl/shared";
   }
 
   function updateGradient(phase: keyof typeof PHASE_STOPS) {
-    const stops = PHASE_STOPS[phase];
+    const { offsets: phaseOffsets, colors } = PHASE_STOPS[phase];
     document.querySelectorAll("#grad-sky stop").forEach((el, i) => {
-      (el as SVGStopElement).style.stopColor = stops[i] ?? "";
+      (el as SVGStopElement).style.stopColor = colors[i] ?? "";
     });
+    offsets.target = [...phaseOffsets];
   }
 
   onMount(() => {
@@ -348,6 +354,8 @@ import type { SkyPhase } from "@orakl/shared";
 
     startAnim();
 
+    offsets.set([...initialStops.offsets], { duration: 0 });
+
     // Set initial star opacity from config.
     canvas.style.opacity = String(PHASE_CONFIG[timeOfDay].starOpacity);
 
@@ -396,12 +404,9 @@ import type { SkyPhase } from "@orakl/shared";
   >
     <defs>
       <linearGradient id="grad-sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style={`stop-color: ${initialStops[0]}`}></stop>
-        <stop offset="22%" style={`stop-color: ${initialStops[1]}`}></stop>
-        <stop offset="50%" style={`stop-color: ${initialStops[2]}`}></stop>
-        <stop offset="79%" style={`stop-color: ${initialStops[3]}`}></stop>
-        <stop offset="88%" style={`stop-color: ${initialStops[4]}`}></stop>
-        <stop offset="100%" style={`stop-color: ${initialStops[5]}`}></stop>
+        {#each initialStops.colors as color, i}
+          <stop offset="{offsets.current[i] ?? initialStops.offsets[i]}%" style={`stop-color: ${color}`}></stop>
+        {/each}
       </linearGradient>
     </defs>
     <rect width="100%" height="100%" fill="url(#grad-sky)"></rect>

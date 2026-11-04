@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GAME } from "../data/game.settings";
 import {
   calculateMaxGameTime,
   calculateTotalQuestionPool,
@@ -61,17 +62,17 @@ describe("calculateMaxGameTime", () => {
     expect(calculateMaxGameTime(10, 30)).toBe("5 minutes 0 seconds");
   });
 
-  it("includes advance time for auto_5", () => {
-    // 10 * (30 + 5) + 5 = 355s = 5 minutes 55 seconds
-    expect(calculateMaxGameTime(10, 30, "auto_5")).toBe("5 minutes 55 seconds");
-  });
-
-  it("includes advance time for auto_10", () => {
-    // 10 * (30 + 10) + 5 = 405s = 6 minutes 45 seconds
-    expect(calculateMaxGameTime(10, 30, "auto_10")).toBe(
-      "6 minutes 45 seconds",
-    );
-  });
+  it.each(["auto_5", "auto_10"] as const)(
+    "includes advance time for %s",
+    (mode) => {
+      const advance = GAME.roundConfig.autoAdvanceMsMap[mode] / 1000;
+      const overhead = GAME.roundConfig.autoAdvanceMs / 1000;
+      const total = 10 * (30 + advance) + overhead;
+      expect(calculateMaxGameTime(10, 30, mode)).toBe(
+        `${Math.floor(total / 60)} minutes ${total % 60} seconds`,
+      );
+    },
+  );
 
   it("computes hours + minutes for long games", () => {
     // 100 * 60 = 6000s = 1 hour 40 minutes

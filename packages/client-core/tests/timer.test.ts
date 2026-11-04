@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCountdown } from "../src/index.js";
+import { COUNTDOWN_TICK_MS } from "../src/timer.ts";
 
 describe("createCountdown", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -13,7 +14,7 @@ describe("createCountdown", () => {
     });
 
     timer.start(3);
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(3 * COUNTDOWN_TICK_MS);
 
     expect(ticks).toEqual([2, 1, 0]);
   });
@@ -23,7 +24,7 @@ describe("createCountdown", () => {
     const timer = createCountdown({ onTick: () => {}, onExpire });
 
     timer.start(2);
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2 * COUNTDOWN_TICK_MS);
 
     expect(onExpire).toHaveBeenCalledOnce();
   });
@@ -36,7 +37,7 @@ describe("createCountdown", () => {
     });
 
     timer.start(2);
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(5 * COUNTDOWN_TICK_MS);
 
     expect(ticks).toEqual([1, 0]);
     expect(timer.running).toBe(false);
@@ -51,9 +52,9 @@ describe("createCountdown", () => {
     });
 
     timer.start(5);
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2 * COUNTDOWN_TICK_MS);
     timer.stop();
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(5 * COUNTDOWN_TICK_MS);
 
     expect(ticks).toEqual([4, 3]);
     expect(onExpire).not.toHaveBeenCalled();
@@ -68,9 +69,9 @@ describe("createCountdown", () => {
     });
 
     timer.start(3);
-    vi.advanceTimersByTime(1000); // tick: 2
+    vi.advanceTimersByTime(COUNTDOWN_TICK_MS); // tick: 2
     timer.start(5); // restart
-    vi.advanceTimersByTime(1000); // tick: 4
+    vi.advanceTimersByTime(COUNTDOWN_TICK_MS); // tick: 4
 
     expect(ticks).toEqual([2, 4]);
     expect(timer.running).toBe(true);
@@ -95,7 +96,7 @@ describe("createCountdown", () => {
     });
 
     timer.start(1);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(COUNTDOWN_TICK_MS);
 
     expect(ticks).toEqual([0]);
     expect(onExpire).toHaveBeenCalledOnce();
