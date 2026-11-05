@@ -26,32 +26,35 @@ describe("two-canvas layering", () => {
       phase: "night",
       seed: 2,
     });
-    e.spawn(
-      {
-        kind: "skein",
-        weight: 1,
-        count: [15, 15],
-        depth: [140, 140],
-        exact: true,
-      },
-      [],
-    );
-    e.spawn(
-      {
-        kind: "skein",
-        weight: 1,
-        count: [15, 15],
-        depth: [30, 30],
-        exact: true,
-      },
-      [],
-    );
-    for (let i = 0; i < 600; i++) e.step(1 / 60);
-    const near = counting();
-    const far = counting();
-    new BirdRenderer().draw(near.ctx, e.view, 1, e.events, e.palette, far.ctx);
-    expect(far.n.image + far.n.stroke + far.n.fill).toBeGreaterThan(0);
-    expect(near.n.image + near.n.fill).toBeGreaterThan(0);
+    const drawAt = (depth: number) => {
+      e.spawn(
+        {
+          kind: "skein",
+          weight: 1,
+          count: [15, 15],
+          depth: [depth, depth],
+          exact: true,
+        },
+        [],
+      );
+      for (let i = 0; i < 600; i++) e.step(1 / 60);
+      const near = counting();
+      const far = counting();
+      new BirdRenderer().draw(
+        near.ctx,
+        e.view,
+        1,
+        e.events,
+        e.palette,
+        far.ctx,
+      );
+      return { near, far };
+    };
+    const a = drawAt(140);
+    expect(a.far.n.image + a.far.n.stroke + a.far.n.fill).toBeGreaterThan(0);
+    expect(a.near.n.image + a.near.n.fill).toBe(0);
+    const b = drawAt(30);
+    expect(b.near.n.image + b.near.n.fill).toBeGreaterThan(0);
     expect(LAYER_DEPTH).toBeGreaterThan(30);
     expect(LAYER_DEPTH).toBeLessThan(140);
   });

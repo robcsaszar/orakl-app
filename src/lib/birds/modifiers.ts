@@ -6,7 +6,6 @@ import { modSeason } from "./season";
 export type ModifierId =
   | "echelon"
   | "low-pass"
-  | "twin"
   | "landing"
   | "pulse"
   | "ribbon"
@@ -61,13 +60,6 @@ export const MODIFIERS: Modifier[] = [
     label: "low pass",
     phrase: "passing low",
     weights: { dawn: 2, morning: 1, evening: 1, dusk: 2 },
-  },
-  {
-    id: "twin",
-    kind: "skein",
-    label: "twin",
-    phrase: "with a second line behind",
-    weights: { morning: 1, evening: 2, sunset: 1 },
   },
   {
     id: "landing",
