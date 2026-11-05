@@ -1,6 +1,7 @@
 <script lang="ts">
 import { findPlayer } from "@orakl/shared";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
+  import { skyCue } from "@/lib/birds/cues";
   import {
     headerActionState,
     registerHeaderActions,
@@ -33,6 +34,10 @@ import { findPlayer } from "@orakl/shared";
   );
 
   const me = $derived(findPlayer(session.players, session.playerId));
+  // The sky's gulls, if any are up, gather as the lobby fills.
+  $effect(() => {
+    skyCue({ type: "lobby", players: Math.max(1, seatCount + 1) });
+  });
   const soloNpc = $derived(getNpcForLobby(session.lobbyCode || session.playerId || ""));
   // A non-participating curator ("NPC") isn't a peer the way a regular
   // observer is — hidden from everyone else's roster, not just absent from

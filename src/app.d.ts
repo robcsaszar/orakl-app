@@ -15,6 +15,7 @@ declare global {
   // its guarded branch from the bundle. Not runtime flags — never in
   // FLAG_REGISTRY, the feature_flags table, or FEATURE_FLAG_* env.
   const __FEATURE_SKY__: boolean;
+  const __FEATURE_BIRDS__: boolean;
   const __FEATURE_PLAYER_EMOTES__: boolean;
   const __FEATURE_SIGNUP_ROLE_SELECTION__: boolean;
   const __FEATURE_WIP_QUESTION_TYPES__: boolean;

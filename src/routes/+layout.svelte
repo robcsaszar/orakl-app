@@ -4,6 +4,7 @@ import type { SkyPhase } from "@orakl/shared";
   import type { Snippet } from "svelte";
   import { onMount } from "svelte";
   import { afterNavigate } from "$app/navigation";
+  import { page } from "$app/state";
   import type { LayoutData } from "./$types";
   import "@/styles/global.css";
   import "$lib/styles/fonts.css";
@@ -46,14 +47,22 @@ import type { SkyPhase } from "@orakl/shared";
   const faviconHref = import.meta.env.DEV ? "/favicon-dev.svg" : "/favicon.svg";
 
   // Build-level flag (map #859, decision 5). The import() sits inside the
-  // guard, so with __FEATURE_SKY__ false the sky chunk — Background, Birds,
-  // DynamicBackground and the bundled clouds.png — never enters the bundle.
+  // guard, so with __FEATURE_SKY__ false the sky chunk — Background,
+  // DynamicBackground and the bundled clouds.png — never enters the bundle
+  // (Birds has its own flag inside SkyLayer).
   // (static/clouds.png is a separate copied-verbatim asset, unaffected.) The
   // cost of the dynamic boundary is that the decorative, aria-hidden sky
   // paints after hydration rather than during SSR.
   const skyLayer = __FEATURE_SKY__
     ? import("$lib/components/SkyLayer.svelte")
     : null;
+
+  // `?birds` on any URL opens the flock control panel (lazy, same chunk rule).
+  const birdControls = $derived(
+    __FEATURE_SKY__ && __FEATURE_BIRDS__ && page.url.searchParams.has("birds")
+      ? import("./BirdControls.svelte")
+      : null,
+  );
 </script>
 
 <svelte:head>
@@ -74,6 +83,13 @@ import type { SkyPhase } from "@orakl/shared";
 <div class="relative z-10">
   {@render children()}
 </div>
+{#if birdControls}
+  {#await birdControls then { default: BirdControls }}
+    <BirdControls />
+  {:catch}
+    <!-- Dev panel; a failed chunk load just means no panel. -->
+  {/await}
+{/if}
 <Toaster position="bottom-right" theme="dark" />
 <Tooltip />
 {#if data.feedbackWidgetEnabled}

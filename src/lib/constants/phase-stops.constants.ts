@@ -14,28 +14,28 @@ export const PHASE_STOPS: Record<
     colors: ["#07080f", "#07080f", "#07080f", "#07080f", "#07080f", "#07080f"],
   },
   dawn: {
-    offsets: [0, 22, 50, 79, 88, 100],
-    colors: ["#0d1b2a", "#1c2b4a", "#554366", "#ac6f62", "#cb8569", "#f4b393"],
+    offsets: [0, 4, 33, 79, 92, 100],
+    colors: ["#26415e", "#2e3f60", "#637697", "#aa7164", "#c28770", "#dcc1ac"],
   },
   morning: {
-    offsets: [0, 22, 50, 79, 88, 100],
-    colors: ["#c9d6e3", "#d1dde8", "#dbe6ef", "#ebd5c5", "#f0ceb5", "#f7c59f"],
+    offsets: [0, 22, 50, 79, 92, 100],
+    colors: ["#c9d6e3", "#d1dde8", "#dbe6ef", "#ebd5c5", "#f0ceb5", "#e6c798"],
   },
   noon: {
     offsets: [0, 22, 50, 79, 88, 100],
     colors: ["#1a80c4", "#2f90cc", "#4aa4d6", "#6dbce2", "#78c4e6", "#87ceeb"],
   },
   evening: {
-    offsets: [0, 22, 50, 79, 88, 100],
-    colors: ["#4a7fa5", "#5d92b3", "#76abc5", "#beb896", "#d7bc83", "#f9c06a"],
+    offsets: [0, 34, 50, 79, 92, 100],
+    colors: ["#73c1e7", "#67abd5", "#6ab0d2", "#beb896", "#d7bc83", "#ee9268"],
   },
   sunset: {
-    offsets: [0, 22, 50, 79, 88, 100],
-    colors: ["#6b2d2d", "#a1352c", "#d35e22", "#f4a632", "#f7bd79", "#fadbd8"],
+    offsets: [0, 23, 67, 79, 92, 100],
+    colors: ["#c74848", "#ca5d44", "#d87a4b", "#e5a443", "#f2bc7d", "#fadbd8"],
   },
   dusk: {
-    offsets: [0, 22, 50, 79, 88, 100],
-    colors: ["#1a2240", "#1f2a4d", "#2c3e6b", "#8e5a7e", "#936081", "#c9a0a0"],
+    offsets: [0, 38, 67, 84, 93, 100],
+    colors: ["#12172b", "#1a2856", "#283e77", "#664e79", "#825b8b", "#ba5a5a"],
   },
 };
 

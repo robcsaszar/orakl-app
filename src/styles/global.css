@@ -422,13 +422,15 @@ html:not([data-sky-phase="night"]) body {
 }
 
 #stars,
-#birds {
+#birds,
+#birds-far {
   transition: opacity 3s ease;
 }
 
 /* Star and bird opacity driven by PHASE_CONFIG in Background.svelte / Birds.svelte */
 #stars { opacity: 0; }
 #birds { opacity: 0; }
+#birds-far { opacity: 0; }
 
 /* Body background fades with the sky */
 body { transition: background-color 3s ease; }
@@ -484,13 +486,13 @@ html[data-sky-phase="morning"] {
 /* ── dawn — dark navy-purple, warm peach undertone ──────────────────────── */
 /* [data-theme="dawn"],
 html[data-sky-phase="dawn"] {
-  --color-background:         oklch(11%  0.042 295.00);
-  --color-background-lighter: color-mix(in oklch, var(--color-background) 80%, white 20%);
-  --color-foreground:         oklch(91%  0.022 52.00);
-  --color-foreground-darker:  color-mix(in oklch, var(--color-foreground) 60%, var(--color-background) 40%);
-  --color-border:             color-mix(in oklch, var(--color-background) 60%, var(--color-foreground) 40%);
-  --color-surface:            color-mix(in oklch, var(--color-background) 85%, white 15%);
-  --color-surface-raised:     color-mix(in oklch, var(--color-background) 70%, white 30%);
+  --color-background: var(--color-primary-900);
+  --color-background-lighter: var(--color-primary-800);
+  --color-foreground: var(--color-primary-900);
+  --color-foreground-darker: var(--color-primary-900);
+  --color-border: var(--color-primary-900);
+  --color-surface: var(--color-primary-900);
+  --color-surface-raised: var(--color-primary-800);
 } */
 
 /* ── noon — bright clear blue, high contrast ────────────────────────────── */

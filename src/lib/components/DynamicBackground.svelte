@@ -1,5 +1,5 @@
 <script lang="ts">
-import { PHASE_CONFIG, SKY_SCHEDULE } from "@orakl/shared";
+import { SKY_SCHEDULE, effectiveThemeForPhase } from "@orakl/shared";
 import type { SkyPhase } from "@orakl/shared";
   import { onMount } from "svelte";
 
@@ -18,7 +18,7 @@ import type { SkyPhase } from "@orakl/shared";
 
     function applyPhase(newPhase: SkyPhase) {
       document.documentElement.dataset.skyPhase = newPhase;
-      document.documentElement.dataset.effectiveTheme = PHASE_CONFIG[newPhase].starOpacity > 0 ? "dark" : "light";
+      document.documentElement.dataset.effectiveTheme = effectiveThemeForPhase(newPhase);
     }
 
     // Apply client phase immediately to override SSR value

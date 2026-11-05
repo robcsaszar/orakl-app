@@ -38,16 +38,17 @@ export const format = (
     node.value = formatFunction(node.value);
   }
 
-  node.addEventListener("input", updateValue);
-  node.addEventListener("paste", updateValue);
+  const listeners = new AbortController();
+  const { signal } = listeners;
+  node.addEventListener("input", updateValue, { signal });
+  node.addEventListener("paste", updateValue, { signal });
 
   // Format on intial hydration
   node.value = formatFunction(node.value);
 
   return {
     destroy() {
-      node.removeEventListener("input", updateValue);
-      node.removeEventListener("paste", updateValue);
+      listeners.abort();
     },
   };
 };

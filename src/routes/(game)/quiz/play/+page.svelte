@@ -4,6 +4,7 @@ import { percent } from "@orakl/shared";
   import { onMount, tick } from "svelte";
   import { page } from "$app/state";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
+  import { skyCue } from "@/lib/birds/cues";
   import {
     headerActionState,
     registerHeaderActions,
@@ -73,6 +74,13 @@ import { percent } from "@orakl/shared";
         ? "low"
         : "counting",
   );
+  // The sky hears the reveal: a murmuration, if one is up, lifts or jinks.
+  $effect(() => {
+    if (timerState === "correct") skyCue({ type: "reveal", correct: true });
+    else if (timerState === "incorrect" || timerState === "timeout") {
+      skyCue({ type: "reveal", correct: false });
+    }
+  });
   const questionCounter = $derived(
     currentQuestion
       ? `Question ${currentQuestion.questionIndex + 1} of ${currentQuestion.totalQuestions}`

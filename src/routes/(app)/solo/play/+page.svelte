@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { getSoloSession } from "@/lib/svelte/soloSession.svelte.js";
+  import { skyCue } from "@/lib/birds/cues";
   import QuestionHeader from "$lib/components/quiz/QuestionHeader.svelte";
   import StreakIndicator from "$lib/components/quiz/StreakIndicator.svelte";
   import QuestionBlock from "$lib/components/quiz/QuestionBlock.svelte";
@@ -19,6 +20,14 @@
   import { tick } from "svelte";
 
   const s = getSoloSession();
+  // The sky hears the reveal: a murmuration, if one is up, lifts or jinks.
+  $effect(() => {
+    const t = s.timerState();
+    if (t === "correct") skyCue({ type: "reveal", correct: true });
+    else if (t === "incorrect" || t === "timeout") {
+      skyCue({ type: "reveal", correct: false });
+    }
+  });
   const nickname = $derived(
     (page.data as { nickname?: string }).nickname ?? "",
   );

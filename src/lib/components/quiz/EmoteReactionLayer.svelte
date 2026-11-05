@@ -66,7 +66,7 @@
   let pressStart: { x: number; y: number } | null = null;
   /** Wrapper mode: the release that ends the opening press keeps the fan open for a tap. */
   let keepOnRelease = false;
-  let swallowClick: ((e: MouseEvent) => void) | null = null;
+  let swallowClick: AbortController | null = null;
   const MOVE_CANCEL_PX = 10;
   // Fan opens upward from the tap point, spanning this many degrees.
   const FAN_ARC_DEG = 140;
@@ -106,11 +106,12 @@
       if (hoverIndex === null) emoteMenu = null;
       hoverIndex = null;
     };
-    window.addEventListener("pointerup", dismissIfNoPick);
-    window.addEventListener("pointercancel", dismissIfNoPick);
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    window.addEventListener("pointerup", dismissIfNoPick, { signal });
+    window.addEventListener("pointercancel", dismissIfNoPick, { signal });
     return () => {
-      window.removeEventListener("pointerup", dismissIfNoPick);
-      window.removeEventListener("pointercancel", dismissIfNoPick);
+      listeners.abort();
     };
   });
 
@@ -175,8 +176,8 @@
       ev.preventDefault();
       ev.stopPropagation();
     };
-    swallowClick = stop;
-    areaEl.addEventListener("click", stop, { capture: true, once: true });
+    swallowClick = new AbortController();
+    areaEl.addEventListener("click", stop, { capture: true, once: true, signal: swallowClick.signal });
   }
 
   // A touch tap has no hover, so the release point picks the petal.
@@ -195,9 +196,9 @@
 
   /** Removes the ending-click swallow; the click, if any, is dispatched before this timer runs. */
   function dropSwallow() {
-    const stop = swallowClick;
+    const swallow = swallowClick;
     swallowClick = null;
-    if (stop) setTimeout(() => areaEl?.removeEventListener("click", stop, { capture: true }), 0);
+    if (swallow) setTimeout(() => swallow.abort(), 0);
   }
 
   // A touch that turns into a scroll: nothing was released, so nothing to keep.

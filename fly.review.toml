@@ -13,6 +13,7 @@ primary_region = "lhr"
     # plus WIP_QUESTION_TYPES, so an unshipped feature gets looked at here
     # before it ships. SIGNUP_ROLE_SELECTION stays off everywhere deployed.
     BUILD_FEATURE_SKY = "true"
+    BUILD_FEATURE_BIRDS = "true"
     BUILD_FEATURE_PLAYER_EMOTES = "true"
     BUILD_FEATURE_WIP_QUESTION_TYPES = "true"
 

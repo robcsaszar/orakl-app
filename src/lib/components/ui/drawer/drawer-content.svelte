@@ -22,23 +22,15 @@
 	let translateY = $state(0);
 	let panelHeight = $state(0);
 	let restoreFocusEl: HTMLElement | null = null;
-	let pointerMoveHandler: ((e: PointerEvent) => void) | null = null;
-	let pointerUpHandler: (() => void) | null = null;
+	let dragListeners: AbortController | null = null;
 
 	const panelStyle = $derived(
 		`transform: translateY(${translateY}px); transition: transform ${isDragging ? 0 : 220}ms cubic-bezier(0.23, 1, 0.32, 1);`,
 	);
 
 	function releaseDragListeners() {
-		if (pointerMoveHandler) {
-			window.removeEventListener("pointermove", pointerMoveHandler);
-			pointerMoveHandler = null;
-		}
-		if (pointerUpHandler) {
-			window.removeEventListener("pointerup", pointerUpHandler);
-			window.removeEventListener("pointercancel", pointerUpHandler);
-			pointerUpHandler = null;
-		}
+		dragListeners?.abort();
+		dragListeners = null;
 	}
 
 	function onDragStart(event: PointerEvent) {
@@ -47,11 +39,11 @@
 		panelHeight = panel?.offsetHeight ?? 0;
 		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 
-		pointerMoveHandler = (e: PointerEvent) => {
+		const pointerMoveHandler = (e: PointerEvent) => {
 			if (!isDragging) return;
 			translateY = Math.max(0, e.clientY - dragStartY);
 		};
-		pointerUpHandler = () => {
+		const pointerUpHandler = () => {
 			if (!isDragging) return;
 			isDragging = false;
 			releaseDragListeners();
@@ -61,9 +53,12 @@
 			}
 			translateY = 0;
 		};
-		window.addEventListener("pointermove", pointerMoveHandler);
-		window.addEventListener("pointerup", pointerUpHandler);
-		window.addEventListener("pointercancel", pointerUpHandler);
+		releaseDragListeners();
+		dragListeners = new AbortController();
+		const { signal } = dragListeners;
+		window.addEventListener("pointermove", pointerMoveHandler, { signal });
+		window.addEventListener("pointerup", pointerUpHandler, { signal });
+		window.addEventListener("pointercancel", pointerUpHandler, { signal });
 	}
 
 	setDrawerContentCtx({ onDragStart });
@@ -106,8 +101,9 @@
 		const onKeydown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") ctx.close();
 		};
-		window.addEventListener("keydown", onKeydown);
-		return () => window.removeEventListener("keydown", onKeydown);
+		const listeners = new AbortController();
+		window.addEventListener("keydown", onKeydown, { signal: listeners.signal });
+		return () => listeners.abort();
 	});
 
 	onDestroy(() => {

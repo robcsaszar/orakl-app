@@ -13,6 +13,7 @@
 // that build runs with configFile:false so it inherits no defines of its own.
 export const BUILD_FLAGS = [
   "SKY",
+  "BIRDS",
   "PLAYER_EMOTES",
   "SIGNUP_ROLE_SELECTION",
   "WIP_QUESTION_TYPES",

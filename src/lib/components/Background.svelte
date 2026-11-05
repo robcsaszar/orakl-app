@@ -13,7 +13,8 @@ import type { SkyPhase } from "@orakl/shared";
 
   interface Props {
     timeOfDay?: TimeOfDay;
-    windSpeed?: number;
+    /** The sky's wind along x, metres per second; sets cloud direction and pace. */
+    wind?: number;
     cloudOpacity?: number;
     driftX?: number;
     driftY?: number;
@@ -22,7 +23,7 @@ import type { SkyPhase } from "@orakl/shared";
 
   let {
     timeOfDay = "noon",
-    windSpeed = 1,
+    wind = 1,
     cloudOpacity = 0.55,
     driftX = -0.04,
     driftY = 0.02,
@@ -34,7 +35,11 @@ import type { SkyPhase } from "@orakl/shared";
   // same 2 s as the stop colours. Empty until mount; the template falls back.
   const offsets = new Tween<number[]>([], { duration: 2000, easing: cubicOut });
 
-  const durations = $derived([90, 120, 105, 140].map((d) => d / windSpeed));
+  // Clouds cross on the wind: the faster it blows the shorter the crossing,
+  // and they go the way it goes.
+  const cloudPace = $derived(0.35 + Math.abs(wind) * 0.4);
+  const cloudDir = $derived(wind < 0 ? -1 : 1);
+  const durations = $derived([90, 120, 105, 140].map((d) => d / cloudPace));
   const clouds = $derived([
     { top: "6.8%", rot: 1.3, width: "52%", opacity: cloudOpacity * 1.1, flip: 1, dur: durations[0], delay: -28.0 },
     { top: "20.1%", rot: -2.3, width: "38%", opacity: cloudOpacity * 0.8, flip: -1, dur: durations[1], delay: -71.5 },
@@ -215,8 +220,10 @@ import type { SkyPhase } from "@orakl/shared";
       _bgResizeTimer = setTimeout(resize, 100);
     };
     const onOrientationChange = () => resize();
-    globalThis.addEventListener("resize", onResize);
-    globalThis.addEventListener("orientationchange", onOrientationChange);
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    globalThis.addEventListener("resize", onResize, { signal });
+    globalThis.addEventListener("orientationchange", onOrientationChange, { signal });
 
     let animFrameId: number;
     let running = false;
@@ -379,15 +386,13 @@ import type { SkyPhase } from "@orakl/shared";
         startAnim();
       }
     };
-    document.addEventListener("visibilitychange", onVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibilityChange, { signal });
 
     return () => {
       cancelAnimationFrame(animFrameId);
       clearTimeout(shootingStarTimer);
       clearTimeout(_bgResizeTimer);
-      globalThis.removeEventListener("resize", onResize);
-      globalThis.removeEventListener("orientationchange", onOrientationChange);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
+      listeners.abort();
       unsubscribePhase();
     };
   });
@@ -411,13 +416,20 @@ import type { SkyPhase } from "@orakl/shared";
     </defs>
     <rect width="100%" height="100%" fill="url(#grad-sky)"></rect>
   </svg>
+</div>
+
+<!-- Clouds sit above the far birds and below the near ones. -->
+<div
+  class="absolute inset-0 z-[15] h-full w-full overflow-hidden pointer-events-none"
+  aria-hidden="true"
+>
   {#each clouds as c}
     <img
       src={cloudsImgUrl}
       width={400}
       height={300}
       class="sky-cloud absolute select-none pointer-events-none"
-      style={`top: ${c.top}; width: ${c.width}; opacity: ${c.opacity.toFixed(3)}; rotate: ${c.rot.toFixed(2)}deg; --flip: ${c.flip}; --dur: ${c.dur?.toFixed(1)}s; --delay: ${c.delay.toFixed(1)}s;`}
+      style={`top: ${c.top}; width: ${c.width}; opacity: ${c.opacity.toFixed(3)}; rotate: ${c.rot.toFixed(2)}deg; --flip: ${c.flip}; --dur: ${c.dur?.toFixed(1)}s; --delay: ${c.delay.toFixed(1)}s; --from: ${cloudDir > 0 ? "-110%" : "110vw"}; --to: ${cloudDir > 0 ? "110vw" : "-110%"};`}
       alt=""
       draggable="false"
       loading="eager"
@@ -446,10 +458,10 @@ import type { SkyPhase } from "@orakl/shared";
 
   @keyframes sky-drift {
     from {
-      transform: translateX(110vw) scaleX(var(--flip, 1));
+      transform: translateX(var(--from, 110vw)) scaleX(var(--flip, 1));
     }
     to {
-      transform: translateX(-110%) scaleX(var(--flip, 1));
+      transform: translateX(var(--to, -110%)) scaleX(var(--flip, 1));
     }
   }
 

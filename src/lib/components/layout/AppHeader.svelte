@@ -20,8 +20,8 @@ import type { UserPower, UserRole } from "@orakl/shared";
     config,
     user,
     uiFlags = {},
-    // Above `main` (z-20 in the app layout), so the sticky blur band is not
-    // painted over by the content it exists to mask.
+    // Above `main` (z-20 in the app layout), so the sticky sky curtain is not
+    // painted over by the content it exists to cover.
     class: className = "z-30",
     leftAction,
     rightAction,

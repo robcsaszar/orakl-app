@@ -44,8 +44,8 @@ import { LOGO_SCHEDULE } from "@orakl/shared";
   const gR = $derived((Math.sqrt(vbW ** 2 + vbH ** 2) / 2) * 1.5 * effectiveGradientScale);
 
   const paused = $derived(speed === 0);
-  const cxDur = $derived(speed > 0 ? `${(60 / speed).toFixed(1)}s` : "0s");
-  const cyDur = $derived(speed > 0 ? `${(78 / speed).toFixed(1)}s` : "0s");
+  const cxDur = $derived(speed > 0 ? `${(120 / speed).toFixed(1)}s` : "0s");
+  const cyDur = $derived(speed > 0 ? `${(156 / speed).toFixed(1)}s` : "0s");
   const maxOut = $derived(Math.round(gR * 0.5));
   const cxValues = $derived(`${gCx};${-maxOut};${vbW + maxOut};${gCx};${vbW + maxOut};${-maxOut};${gCx}`);
   const cyValues = $derived(`${gCy};${vbH + maxOut};${-maxOut};${gCy};${-maxOut};${vbH + maxOut};${gCy}`);
