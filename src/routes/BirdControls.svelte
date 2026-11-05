@@ -6,7 +6,7 @@
   top-left says what is in the sky, one short sentence per event.
 -->
 <script lang="ts">
-import { SKY_PHASES } from "@orakl/shared";
+import { effectiveThemeForPhase, SKY_PHASES } from "@orakl/shared";
 import type { SkyPhase } from "@orakl/shared";
   import { onMount } from "svelte";
   import { current } from "@/lib/birds/current.svelte";
@@ -54,9 +54,12 @@ import type { SkyPhase } from "@orakl/shared";
     };
   });
 
-  // The theme and the sky both follow this attribute (see lib/sky-phase.ts).
+  // The sky follows this attribute (see lib/sky-phase.ts); the tokens follow
+  // the phase's theme. In dynamic theme mode the clock takes both back within
+  // 30 s (DynamicBackground).
   function setPhase(p: SkyPhase) {
     document.documentElement.dataset.skyPhase = p;
+    document.documentElement.dataset.effectiveTheme = effectiveThemeForPhase(p);
   }
 
   let copied = $state(false);

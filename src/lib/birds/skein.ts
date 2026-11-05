@@ -21,7 +21,7 @@ const SLACK = 4;
  * gliding crossing, a headwind a slow low one with the wings always working.
  *
  * Modifiers: `echelon` (one arm), `low-pass` (near), `landing` (descends out
- * of the bottom); `twin` is the engine's: a second line follows.
+ * of the bottom).
  */
 export class Skein implements SkyEvent {
   readonly kind = "skein";

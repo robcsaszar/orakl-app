@@ -2,14 +2,12 @@ import type { SkyPhase } from "@orakl/shared";
 import type { EventSpec } from "./event";
 import type { Palette } from "./render";
 
-/** What a sky phase lets happen: how often, how many at once, and what kinds. */
+/** What a sky phase lets happen: how often, and what kinds. */
 export interface Scenario {
   /** Seconds between one event starting and the next, [min, max]. */
   interval: [number, number];
   /** Seconds before the first event after the phase begins, [min, max]. */
   first: [number, number];
-  /** Events allowed in the sky at the same time. */
-  maxConcurrent: number;
   events: EventSpec[];
   tune: PhaseTune;
 }
@@ -97,14 +95,12 @@ export const SCENARIOS: Record<SkyPhase, Scenario> = {
   night: {
     interval: [0, 0],
     first: [0, 0],
-    maxConcurrent: 0,
     events: [],
     tune: TUNE_DEFAULT,
   },
   dawn: {
     interval: [25, 60],
     first: [3, 10],
-    maxConcurrent: 1,
     events: [
       { kind: "skein", weight: 3, count: [15, 25], depth: [60, 200] },
       { kind: "raptor", weight: 1, depth: [40, 90] },
@@ -114,7 +110,6 @@ export const SCENARIOS: Record<SkyPhase, Scenario> = {
   morning: {
     interval: [8, 20],
     first: [2, 6],
-    maxConcurrent: 2,
     events: [
       { kind: "skein", weight: 4, count: [15, 35], depth: [18, 160] },
       { kind: "soar", weight: 3, count: [4, 9], depth: [20, 90] },
@@ -126,7 +121,6 @@ export const SCENARIOS: Record<SkyPhase, Scenario> = {
   noon: {
     interval: [20, 45],
     first: [3, 8],
-    maxConcurrent: 1,
     events: [
       { kind: "raptor", weight: 3, depth: [40, 120] },
       { kind: "soar", weight: 2, count: [3, 6], depth: [60, 160] },
@@ -137,7 +131,6 @@ export const SCENARIOS: Record<SkyPhase, Scenario> = {
   evening: {
     interval: [10, 25],
     first: [2, 6],
-    maxConcurrent: 2,
     events: [
       { kind: "skein", weight: 4, count: [18, 45], depth: [16, 140] },
       { kind: "murmuration", weight: 2, count: [400, 900], depth: [40, 100] },
@@ -148,7 +141,6 @@ export const SCENARIOS: Record<SkyPhase, Scenario> = {
   sunset: {
     interval: [15, 35],
     first: [3, 8],
-    maxConcurrent: 1,
     events: [
       { kind: "murmuration", weight: 3, count: [600, 1400], depth: [35, 90] },
       { kind: "skein", weight: 2, count: [15, 40], depth: [25, 160] },
@@ -158,7 +150,6 @@ export const SCENARIOS: Record<SkyPhase, Scenario> = {
   dusk: {
     interval: [35, 70],
     first: [5, 15],
-    maxConcurrent: 1,
     events: [
       { kind: "skein", weight: 2, count: [15, 22], depth: [30, 120] },
       { kind: "raptor", weight: 1, depth: [30, 70] },

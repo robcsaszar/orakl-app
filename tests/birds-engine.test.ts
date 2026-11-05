@@ -70,7 +70,7 @@ describe("BirdEngine scheduling", () => {
     }
   });
 
-  it("never exceeds the phase's concurrency cap", () => {
+  it("one event at a time: the schedule never overlaps, a manual spawn replaces", () => {
     const e = new BirdEngine({
       width: 1280,
       height: 800,
@@ -78,11 +78,16 @@ describe("BirdEngine scheduling", () => {
       seed: 3,
       clock: () => 1_800_000_000,
     });
-    const cap = SCENARIOS.morning.maxConcurrent;
     for (let i = 0; i < 60 * 240; i++) {
       e.step(STEP);
-      expect(e.events.length).toBeLessThanOrEqual(cap);
+      expect(e.events.length).toBeLessThanOrEqual(1);
     }
+    e.spawn({ kind: "soar", weight: 1, count: [5, 5], exact: true }, []);
+    const second = e.spawn(
+      { kind: "skein", weight: 1, count: [15, 15], exact: true },
+      [],
+    );
+    expect(e.events).toEqual([second]);
   });
 
   it("the sky empties again: events exit and the engine reports a sleep time", () => {
@@ -542,7 +547,7 @@ describe("sky hand-over", () => {
 describe("modifiers", () => {
   const view = { width: 1280, height: 800 };
   const kinds: Record<EventKind, ModifierId[]> = {
-    skein: ["echelon", "low-pass", "twin", "landing"],
+    skein: ["echelon", "low-pass", "landing"],
     murmuration: ["pulse", "ribbon", "funnel", "giant", "probing"],
     soar: ["frenzy", "loafing", "squabble", "commute"],
     raptor: ["pair", "mobbed", "failed-stoop", "kettle", "ambush"],
@@ -575,25 +580,6 @@ describe("modifiers", () => {
     }
   }
 
-  it("a twin skein brings a second line a few seconds later, same way", () => {
-    const e = new BirdEngine({ ...view, phase: "night", seed: 3 });
-    const first = e.spawn(
-      {
-        kind: "skein",
-        weight: 1,
-        count: [15, 15],
-        depth: [60, 60],
-        exact: true,
-      },
-      ["twin"],
-    );
-    run(e, 9);
-    expect(e.events.length).toBe(2);
-    const second = e.events.find((ev) => ev !== first) as SkyEvent;
-    expect(second.mods).toEqual([]);
-    expect(Math.sign(second.flock.vx[0])).toBe(Math.sign(first.flock.vx[0]));
-  });
-
   it("extra birds: giant doubles a murmuration, a kettle is five or six raptors, mobbing adds crows", () => {
     const e = new BirdEngine({ ...view, phase: "night", seed: 5 });
     expect(
@@ -621,7 +607,6 @@ describe("modifiers", () => {
     expect(withMods / 2000).toBeGreaterThan(0.15);
     expect(withMods / 2000).toBeLessThan(0.3);
     expect(seen.has("landing")).toBe(true);
-    expect(seen.has("twin")).toBe(false);
     expect(rollModifiers("raptor", "night", rng)).toEqual([]);
   });
 });
@@ -696,36 +681,36 @@ describe("the day's sky", () => {
     const base = 1_800_000_000;
     const a = new BirdEngine({
       ...view,
-      phase: "evening",
+      phase: "dawn",
       seed: 77,
       clock: () => base + 12,
       month: 10,
     });
     const b = new BirdEngine({
       ...view,
-      phase: "evening",
+      phase: "dawn",
       seed: 77,
       clock: () => base + 40,
       month: 10,
     });
-    // Step both to the same wall-clock moment past the local first event.
-    const stepTo = (e: BirdEngine, from: number, to: number) => {
-      let t = from;
-      while (t < to) {
-        e.step(STEP);
-        t += STEP;
+    // (Dawn: small, cheap events.) Step both through the same wall-clock window, noting each event's
+    // kind, modifiers and start second as it appears.
+    const seen = (e: BirdEngine, from: number, to: number) => {
+      const out = new Set<string>();
+      for (let t = from; t < to; t += 1) {
+        for (let i = 0; i < 60; i++) e.step(STEP);
+        for (const ev of e.snapshot().events) {
+          out.add(`${ev.kind}:${ev.mods.join("+")}:${Math.round(t - ev.age)}`);
+        }
       }
+      return out;
     };
-    stepTo(a, base + 12, base + 400);
-    stepTo(b, base + 40, base + 400);
-    const sa = a.snapshot();
-    const sb = b.snapshot();
-    const onTimeline = (s: ReturnType<BirdEngine["snapshot"]>) =>
-      s.events.map((e) => `${e.kind}:${e.mods.join("+")}:${e.age.toFixed(0)}`);
-    // The one local first event aside, what is up matches kind, modifiers and age.
-    const common = onTimeline(sa).filter((x) => onTimeline(sb).includes(x));
+    const sa = seen(a, base + 12, base + 1500);
+    const sb = seen(b, base + 40, base + 1500);
+    // The local first events aside, both viewers share timeline events.
+    const common = [...sa].filter((x) => sb.has(x));
     expect(common.length).toBeGreaterThan(0);
-    expect(sa.seed).toBe(sb.seed);
+    expect(a.snapshot().seed).toBe(b.snapshot().seed);
   });
 
   it("the season shifts what is picked and the snapshot says which month", () => {

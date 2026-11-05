@@ -112,12 +112,6 @@ export class BirdEngine {
   private pending: SkyPhase | null = null;
   /** Direction every skein of the current phase flies. */
   private skeinDir = 1;
-  /** Follow-ups a modifier asked for (a twin skein), with seconds to go. */
-  private readonly queued: {
-    spec: EventSpec;
-    mods: ModifierId[];
-    at: number;
-  }[] = [];
   private readonly rng: Rng;
   private phase: SkyPhase;
   private scenario: Scenario;
@@ -180,7 +174,6 @@ export class BirdEngine {
 
   private applyPhase(phase: SkyPhase): void {
     this.pending = null;
-    this.queued.length = 0;
     this.phase = phase;
     this.scenario = SCENARIOS[phase];
     const phaseRng = mulberry32(mix(this.seed, SKY_PHASES.indexOf(phase), 7));
@@ -288,24 +281,13 @@ export class BirdEngine {
         this.retired.splice(i, 1);
       }
     }
-    for (let i = this.queued.length - 1; i >= 0; i--) {
-      const q = this.queued[i];
-      q.at -= dt;
-      if (q.at <= 0) {
-        this.queued.splice(i, 1);
-        // The cap holds for follow-ups too: a full sky loses the twin. A
-        // phase with no schedule (night) has no cap on manual events.
-        const cap = this.scenario.maxConcurrent || Number.POSITIVE_INFINITY;
-        if (this.events.length < cap) this.spawn(q.spec, q.mods);
-      }
-    }
     if (this.pending !== null) {
       if (this.events.length === 0) this.applyPhase(this.pending);
       return;
     }
     if (!this.auto) return;
     this.plan();
-    const room = this.events.length < this.scenario.maxConcurrent;
+    const room = this.events.length === 0;
     if (Number.isFinite(this.firstIn)) {
       this.firstIn -= dt;
       if (this.firstIn <= 0) {
@@ -313,12 +295,10 @@ export class BirdEngine {
         if (room) this.spawn();
       }
     }
-    // Timeline slots that come due start if there is room; a full sky skips them.
+    // Timeline slots that come due start if the sky is empty; a busy sky skips them.
     while (this.timeline.length > 0 && this.timeline[0].at <= this.time) {
       const e = this.timeline.shift() as Planned;
-      if (this.events.length < this.scenario.maxConcurrent) {
-        this.spawnPlanned(e);
-      }
+      if (this.events.length === 0) this.spawnPlanned(e);
     }
   }
 
@@ -403,14 +383,6 @@ export class BirdEngine {
         e = new Raptor(this.view, rng, o);
         break;
     }
-    // A twin: the same line again, a little later, without the twin itself.
-    if (spec.kind === "skein" && mods.includes("twin")) {
-      this.queued.push({
-        spec,
-        mods: mods.filter((m) => m !== "twin"),
-        at: rng.range(4, 8),
-      });
-    }
     this.events.push(e);
     this.ages.push(0);
     this.retired.push(false);
@@ -424,12 +396,16 @@ export class BirdEngine {
   /**
    * Starts one event now: the given spec, or a weighted pick from the phase
    * table, with its modifiers rolled from the phase and month unless the
-   * spec names them. Local to this viewer, not on the shared timeline.
+   * spec names them. Local to this viewer, not on the shared timeline. One
+   * event at a time: whatever is up is dropped first.
    */
   spawn(
     spec: EventSpec = this.pick(this.rng),
     forced?: ModifierId[],
   ): SkyEvent {
+    this.events.length = 0;
+    this.ages.length = 0;
+    this.retired.length = 0;
     const mods =
       forced ??
       spec.mods ??
