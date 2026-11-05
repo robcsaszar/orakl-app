@@ -34,9 +34,9 @@
     function onOtherOpen(e: Event) {
       if ((e as CustomEvent).detail !== id && open) open = false;
     }
-    window.addEventListener("field-description-open", onOtherOpen);
-    return () =>
-      window.removeEventListener("field-description-open", onOtherOpen);
+    const listeners = new AbortController();
+    window.addEventListener("field-description-open", onOtherOpen, { signal: listeners.signal });
+    return () => listeners.abort();
   });
 
 </script>

@@ -14,6 +14,7 @@ This repository is published from the private Orakl repository by `pnpm sync:cli
 - Simpler approach exists → say so, push back.
 - Multi-step task → state plan w/ verify step per line: `1. [step] → verify: [check]`.
 - Autonomous agents (no user to ask) → note assumptions in PR description instead.
+- DOM listeners → one `AbortController` per setup: pass its `signal` to every `addEventListener`, call `abort()` in cleanup. Never `removeEventListener`. In a component, `<svelte:window>` / `<svelte:document>` handlers need no cleanup — prefer them when they fit.
 - Minimum code for the ask. No speculative abstractions, config, or error handling for cases that can't happen.
 - Touch only what the task requires. Don't refactor/reformat adjacent code. Remove only orphans your own change created — leave pre-existing dead code, flag it instead.
 - Comments and docs state the system as it is, never the change that produced it. No "used to", "no longer", "previously", "moved off X", "replaces the old Y". A removed name → delete the mention; don't leave a tombstone. Covers code comments, `CONTEXT.md`, `UBIQUITOUS_LANGUAGE.md`, `docs/flows/`.

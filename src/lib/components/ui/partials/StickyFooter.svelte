@@ -28,12 +28,14 @@
     };
 
     update();
-    window.addEventListener("scroll", update, { passive: true });
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    window.addEventListener("scroll", update, { passive: true, signal });
     const ro = new ResizeObserver(update);
     ro.observe(document.documentElement);
 
     return () => {
-      window.removeEventListener("scroll", update);
+      listeners.abort();
       if (rafId !== null) cancelAnimationFrame(rafId);
       ro.disconnect();
     };

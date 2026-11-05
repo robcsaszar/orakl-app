@@ -77,11 +77,12 @@
   $effect(() => {
     if (!open) return;
     const handler = () => position(placement);
-    window.addEventListener("scroll", handler, { capture: true, passive: true });
-    window.addEventListener("resize", handler);
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    window.addEventListener("scroll", handler, { capture: true, passive: true, signal });
+    window.addEventListener("resize", handler, { signal });
     return () => {
-      window.removeEventListener("scroll", handler, { capture: true });
-      window.removeEventListener("resize", handler);
+      listeners.abort();
     };
   });
 </script>

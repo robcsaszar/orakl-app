@@ -28,6 +28,7 @@ ARG SVELTE_DEV_META
 # (fly.toml / fly.review.toml `[build.args]`). Unset means excluded from the
 # bundle, which is the shipping default.
 ARG BUILD_FEATURE_SKY
+ARG BUILD_FEATURE_BIRDS
 ARG BUILD_FEATURE_PLAYER_EMOTES
 ARG BUILD_FEATURE_SIGNUP_ROLE_SELECTION
 ARG BUILD_FEATURE_WIP_QUESTION_TYPES

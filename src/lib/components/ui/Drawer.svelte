@@ -23,11 +23,12 @@
     const onClose = (e: Event) => {
       if ((e as CustomEvent).detail?.id === id) open = false;
     };
-    window.addEventListener("drawer:open", onOpen);
-    window.addEventListener("drawer:close", onClose);
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    window.addEventListener("drawer:open", onOpen, { signal });
+    window.addEventListener("drawer:close", onClose, { signal });
     return () => {
-      window.removeEventListener("drawer:open", onOpen);
-      window.removeEventListener("drawer:close", onClose);
+      listeners.abort();
     };
   });
 </script>

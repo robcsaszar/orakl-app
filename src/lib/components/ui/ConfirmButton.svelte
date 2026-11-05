@@ -58,6 +58,8 @@ import { percent } from "@orakl/shared";
   let formEl = $state<HTMLFormElement | undefined>(undefined);
 
   let timeout: ReturnType<typeof setTimeout> | null = null;
+  /** Owns the Escape key listener while the confirm step shows. */
+  let keyListener: AbortController | null = null;
   let delayTimeout: ReturnType<typeof setTimeout> | null = null;
   let hideTimeout: ReturnType<typeof setTimeout> | null = null;
   let widthAnim: Animation | null = null;
@@ -183,10 +185,13 @@ import { percent } from "@orakl/shared";
           stopProgress();
         }, duration);
       }
-      window.addEventListener("keydown", handleKeyDown);
+      keyListener?.abort();
+      keyListener = new AbortController();
+      window.addEventListener("keydown", handleKeyDown, { signal: keyListener.signal });
       return;
     }
-    window.removeEventListener("keydown", handleKeyDown);
+    keyListener?.abort();
+    keyListener = null;
     showConfirm = false;
     stopProgress();
     if (timeout) { clearTimeout(timeout); timeout = null; }
@@ -197,9 +202,7 @@ import { percent } from "@orakl/shared";
   onDestroy(() => {
     if (timeout) clearTimeout(timeout);
     stopProgress();
-    if (typeof window !== "undefined") {
-      window.removeEventListener("keydown", handleKeyDown);
-    }
+    keyListener?.abort();
   });
 
   const confirmColors = {

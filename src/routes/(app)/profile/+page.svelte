@@ -627,28 +627,29 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
         <FontPicker currentFont={data.font} />
       </Card>
     {:else if key === "privacy"}
-      <Card variant="ground">
-        <h2 class="text-lg font-semibold">Analytics</h2>
-        <p class="text-foreground-darker font-sans">
-          We count page views with our own Umami instance. It sets no cookies and
-          keeps no persistent identifier; the
-          <Link href="https://visitors.nhg.app/share/q2DHFPuApVOJjWhX" intent="inline" class="inline"
-            >public dashboard</Link
-          > shows everything it records. Turn it off and no measurement script is
-          sent to your browser.
-        </p>
-        <AnalyticsControl analytics={data.analytics} />
-      </Card>
-
-      <Card variant="ground">
-        <h2 class="text-lg font-semibold">Your data</h2>
-        <p class="text-foreground-darker font-sans">
-          Download everything we hold about your account as one JSON file: account
-          details, signed-in devices, game results, solo runs, flags, question
-          ratings, custom questions and presets.
-        </p>
-        <ExportDataButton />
-      </Card>
+      <div class="flex gap-8 flex-nowrap">
+        <Card variant="ground">
+          <h2 class="text-lg font-semibold">Analytics</h2>
+          <p class="text-foreground-darker font-sans">
+            We count page views with our own Umami instance. It sets no cookies and
+            keeps no persistent identifier; the
+            <Link href="https://visitors.nhg.app/share/q2DHFPuApVOJjWhX" intent="inline" class="inline"
+              >public dashboard</Link
+            > shows everything it records. Turn it off and no measurement script is
+            sent to your browser.
+          </p>
+          <AnalyticsControl analytics={data.analytics} />
+        </Card>
+        <Card variant="ground">
+          <h2 class="text-lg font-semibold">Your data</h2>
+          <p class="text-foreground-darker font-sans">
+            Download everything we hold about your account as one JSON file: account
+            details, signed-in devices, game results, solo runs, flags, question
+            ratings, custom questions and presets.
+          </p>
+          <ExportDataButton />
+        </Card>
+      </div>
 
       <DeleteAccount />
     {/if}

@@ -55,7 +55,9 @@
     // landing) leaves the scroller's own box unchanged.
     void tabs.length;
     measure();
-    el.addEventListener("scroll", measure, { passive: true });
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    el.addEventListener("scroll", measure, { passive: true, signal });
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(measure);
@@ -64,7 +66,7 @@
     }
     document.fonts?.ready.then(measure);
     return () => {
-      el.removeEventListener("scroll", measure);
+      listeners.abort();
       observer?.disconnect();
     };
   });
@@ -105,8 +107,10 @@
 </script>
 
 <!-- Tablist and panel share one root so the row reads as part of the panel it
-     controls. The scroller carries 4px of padding pulled back by margin, so a
-     pill's focus ring (ring + offset) is not clipped by overflow-x. The edge
+     controls. The scroller carries padding pulled back by margin, so a pill's
+     focus ring (ring + offset) is not clipped by overflow-x; the 8px vertical
+     padding matches the pills' `before:-inset-y-2` tap target, so nothing
+     overflows on the y axis. The edge
      fade is a CSS mask on the scroller itself: the page behind the row is a sky
      gradient, so a painted fade would show a seam. -->
 <div class={cn("flex flex-col gap-4", className)}>
@@ -116,7 +120,7 @@
       role="tablist"
       aria-label={label}
       class={cn(
-        "flex flex-nowrap gap-2 overflow-x-auto px-1 -mx-1 py-1 -my-1 scroll-px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "flex flex-nowrap gap-2 overflow-x-auto px-1 -mx-1 py-2 -my-2 scroll-px-1 scrollbar-none",
         bleed,
         canScrollLeft && "mask-l-from-[calc(100%-2.5rem)]",
         canScrollRight && "mask-r-from-[calc(100%-2.5rem)]",
@@ -132,7 +136,7 @@
         aria-controls="{uid}-panel-{t.key}"
         tabindex={isSelected ? 0 : -1}
         class={tabVariants({
-          class: isSelected ? "bg-primary text-background hover:text-background" : "",
+          class: isSelected ? "bg-primary text-secondary-950 hover:text-background" : "",
         })}
         onclick={(e) => {
           onSelect(t.key);

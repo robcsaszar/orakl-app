@@ -12,6 +12,7 @@ primary_region = "lhr"
   # unfinished work, review apps only.
   [build.args]
     BUILD_FEATURE_SKY = "true"
+    BUILD_FEATURE_BIRDS = "true"
     BUILD_FEATURE_PLAYER_EMOTES = "true"
 
 [env]

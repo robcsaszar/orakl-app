@@ -38,8 +38,10 @@ import { BADGES, BADGE_ORDER } from "@orakl/shared";
       isDesktop = media.matches;
     };
     sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    media.addEventListener("change", sync, { signal });
+    return () => listeners.abort();
   });
 
   const qtype = $derived(page.url.searchParams.get("qtype") ?? "text_choice");

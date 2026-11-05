@@ -563,7 +563,7 @@ Hover and focus hints go through one global host (`Tooltip.svelte`, mounted once
 
 ### Utility partials
 
-`ProgressiveBlur` (blur-masked scroll edges, used by the sticky header) and `FieldDescription` (a field hint behind an icon toggle, one open at a time) are shared interaction partials — prefer them over rebuilding the same interaction pattern inline. Destructive confirmations go through `ConfirmButton`, not a dedicated destructive button.
+`ProgressiveBlur` (blur-masked scroll edges) and `FieldDescription` (a field hint behind an icon toggle, one open at a time) are shared interaction partials — prefer them over rebuilding the same interaction pattern inline. Destructive confirmations go through `ConfirmButton`, not a dedicated destructive button.
 
 ### Footer and use-case notices
 
@@ -577,7 +577,7 @@ Both footer popovers use `Popover`, which is JS-positioned by `lib/positioning` 
 
 ### Navigation / header
 
-The sticky header height is 160px. It carries the Orakl logo, navigation links, and contextual back button. The logo is white or primary-coloured depending on context. The header entry in `PAGE_CONFIG` (at `src/lib/page-config.ts`) governs per-route visibility — every new route must have an entry.
+The sticky header height is 160px. It carries the Orakl logo, navigation links, and contextual back button. The logo is white or primary-coloured depending on context. The header entry in `PAGE_CONFIG` (at `src/lib/page-config.ts`) governs per-route visibility — every new route must have an entry. Once the header sticks, its sky curtain lowers over the content beneath it in step with the scroll — fully in after one band height — and lifts the same way on the way back up. The curtain repaints the sky gradient and fades out over its lower 3rem, so the nav always sits on clean sky in every phase — no blur, no tint.
 
 
 ## Do's and Don'ts

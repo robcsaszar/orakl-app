@@ -55,6 +55,8 @@
 		const minY = DRAG_MARGIN - rect.top + translateY;
 		const maxY = window.innerHeight - DRAG_MARGIN - rect.bottom + translateY;
 
+		const drag = new AbortController();
+		const { signal } = drag;
 		const onMove = (e: PointerEvent) => {
 			if (e.pointerId !== _dragPointerId) return;
 			translateX = Math.max(minX, Math.min(maxX, _dragStartX + (e.clientX - _dragStartPx)));
@@ -64,13 +66,11 @@
 			if (e.pointerId !== _dragPointerId) return;
 			_dragPointerId = -1;
 			isDragging = false;
-			window.removeEventListener("pointermove", onMove);
-			window.removeEventListener("pointerup", onUp);
-			window.removeEventListener("pointercancel", onUp);
+			drag.abort();
 		};
-		window.addEventListener("pointermove", onMove);
-		window.addEventListener("pointerup", onUp);
-		window.addEventListener("pointercancel", onUp);
+		window.addEventListener("pointermove", onMove, { signal });
+		window.addEventListener("pointerup", onUp, { signal });
+		window.addEventListener("pointercancel", onUp, { signal });
 	}
 
 	setDialogContentCtx({ onDragStart });
@@ -125,8 +125,9 @@
 		const onKeydown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") ctx.close();
 		};
-		window.addEventListener("keydown", onKeydown);
-		return () => window.removeEventListener("keydown", onKeydown);
+		const listeners = new AbortController();
+		window.addEventListener("keydown", onKeydown, { signal: listeners.signal });
+		return () => listeners.abort();
 	});
 </script>
 

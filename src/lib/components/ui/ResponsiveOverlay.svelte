@@ -52,8 +52,10 @@
 			isDesktop = media.matches;
 		};
 		sync();
-		media.addEventListener("change", sync);
-		return () => media.removeEventListener("change", sync);
+		const listeners = new AbortController();
+		const { signal } = listeners;
+		media.addEventListener("change", sync, { signal });
+		return () => listeners.abort();
 	});
 
 	// Bridge: writable derived the primitives control via bind:open — tracks

@@ -34,7 +34,9 @@ import { calculatePercentageOffset } from "@orakl/shared";
   const shownOnceElements = new WeakSet<HTMLElement>();
   let lastShowTime = 0;
   let isAutoShow = false;
-  let dismissHandler: ((e: Event) => void) | null = null;
+  let dismissListener: AbortController | null = null;
+  /** Owns the window/document listeners added on mount. */
+  let listeners: AbortController | undefined;
   let hiddenByScroll = false;
   let scrollHiddenContext: {
     target: HTMLElement;
@@ -341,20 +343,19 @@ import { calculatePercentageOffset } from "@orakl/shared";
 
   function setupDismissHandler(targetEl: HTMLElement) {
     cleanupDismissHandler();
-    dismissHandler = (_e: Event) => {
+    const dismissHandler = (_e: Event) => {
       hideImmediate();
       isAutoShow = false;
       targetEl.removeAttribute("data-tooltip-show");
       cleanupDismissHandler();
     };
-    document.addEventListener("click", dismissHandler, { capture: true, once: true });
+    dismissListener = new AbortController();
+    document.addEventListener("click", dismissHandler, { capture: true, once: true, signal: dismissListener.signal });
   }
 
   function cleanupDismissHandler() {
-    if (dismissHandler) {
-      document.removeEventListener("click", dismissHandler, { capture: true });
-      dismissHandler = null;
-    }
+    dismissListener?.abort();
+    dismissListener = null;
   }
 
   function setupAutoShowObserver(
@@ -462,10 +463,12 @@ import { calculatePercentageOffset } from "@orakl/shared";
 
   onMount(() => {
     updateViewport();
-    window.addEventListener("resize", updateViewport);
-    window.addEventListener("scroll", handleScroll, { capture: true });
-    document.addEventListener("tooltip:show", handleCustomShow);
-    document.addEventListener("tooltip:hide", () => hide());
+    listeners = new AbortController();
+    const { signal } = listeners;
+    window.addEventListener("resize", updateViewport, { signal });
+    window.addEventListener("scroll", handleScroll, { capture: true, signal });
+    document.addEventListener("tooltip:show", handleCustomShow, { signal });
+    document.addEventListener("tooltip:hide", () => hide(), { signal });
 
     requestAnimationFrame(() => {
       document.querySelectorAll<HTMLElement>("[data-tooltip]").forEach((el) => {
@@ -510,9 +513,7 @@ import { calculatePercentageOffset } from "@orakl/shared";
 
   onDestroy(() => {
     if (typeof window === "undefined") return;
-    window.removeEventListener("resize", updateViewport);
-    window.removeEventListener("scroll", handleScroll, { capture: true });
-    document.removeEventListener("tooltip:show", handleCustomShow);
+    listeners?.abort();
     mutationObserver?.disconnect();
     mutationObserver = null;
     hideImmediate();
