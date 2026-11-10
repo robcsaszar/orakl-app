@@ -170,6 +170,14 @@ export interface PlayerSessionView {
    *  (only ever populated for a curator connection). */
   answeredPlayerIds: Set<string>;
   lastPointsEarned: number;
+  /** Undos each player may use this game, from `game:start`; 0 = undo is off. */
+  undoBudget: number;
+  /** This player's undos left this game. */
+  undoRemaining: number;
+  /** An answered hero may withdraw their answer while the question is open. */
+  canUndo: boolean;
+  /** Seconds left in the last call before the round closes; 0 when none runs. */
+  lastCallSeconds: number;
   currentQuestion: GameQuestion | null;
   timeRemaining: number;
   correctAnswerId: string;
@@ -209,6 +217,8 @@ export interface PlayerSessionView {
   /** Lightweight init for the standalone /join (code-entry) page. */
   initCodeEntry(): Promise<void>;
   destroy(): void;
+  /** Page woke or came back online: reopen a dropped socket at once. */
+  reconnectNow(): void;
   seedLobbyRoster(data: {
     playerId?: string | null;
     players?: PlayerData[];
@@ -227,6 +237,8 @@ export interface PlayerSessionView {
   leaveLobby(): Promise<void>;
   connect(nicknameArg: string): Promise<void>;
   selectAnswer(answerId: string): void;
+  /** Asks to withdraw this player's answer; the state flips on the server's ack. */
+  undoAnswer(): void;
   selectMatchItem(column: "left" | "right", item: string): void;
   sendEmote(emoteId: string, offsetX: number, offsetY: number): void;
   submitRoleChoice(): void;

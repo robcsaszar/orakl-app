@@ -69,9 +69,10 @@ function buildWsUrl(): string {
 
 /** Backoff between resume attempts after a drop (ms); the last entry repeats. */
 export const RESUME_DELAYS_MS = [1000, 2000, 4000, 8000];
-/** Failed reopens before the run is given up: 1+2+4+8+8+8 = 31 s, past the
- *  server's 30 s abandon window (ABANDON_WINDOW_MS in solo-ws-server.ts). */
-export const MAX_RESUME_ATTEMPTS = 6;
+/** Hard cap on failed reopens before the run is given up. A tab returning to
+ *  view or the network coming back retries at once without waiting out the
+ *  backoff; the server holds the run for SOLO_PLAYING_ABANDON_MS or more. */
+export const MAX_RESUME_ATTEMPTS = 40;
 const CONNECTION_LOST = "Connection lost. Your trial has ended.";
 
 // Survives a full page refresh so an in-flight game resumes seamlessly (review
@@ -132,6 +133,8 @@ export function createSoloModeStore(
   let _ws: WsClient<SoloClientMessage> | null = null;
   let _pingTimeout: ReturnType<typeof setTimeout> | null = null;
   let _authToken: string | null = null;
+  // Wake/online listeners for the resume socket; aborted with the socket.
+  let _resumeWake: AbortController | null = null;
   // Current question's anti-replay nonce, echoed on solo:answer (CHEAT-7).
   let _questionNonce: string | undefined;
   // Secret from solo:ready; echoed on solo:resume to reclaim the session (CHEAT-1).
@@ -349,6 +352,8 @@ export function createSoloModeStore(
     },
 
     _wsDisconnect() {
+      _resumeWake?.abort();
+      _resumeWake = null;
       if (_pingTimeout) clearTimeout(_pingTimeout);
       _pingTimeout = null;
       _ws?.disconnect();
@@ -368,6 +373,17 @@ export function createSoloModeStore(
       if (!buildWsUrl()) return; // SSR guard before flipping reconnecting
       if (_ws && (_ws.isConnected() || _ws.status === "connecting")) return;
       this.reconnecting = true;
+      _resumeWake?.abort();
+      _resumeWake = new AbortController();
+      const { signal } = _resumeWake;
+      document.addEventListener(
+        "visibilitychange",
+        () => {
+          if (!document.hidden) _ws?.reconnectNow();
+        },
+        { signal },
+      );
+      window.addEventListener("online", () => _ws?.reconnectNow(), { signal });
       this._createWs({
         onOpen: () => this._sendResume(),
         // Each drop re-enters the resume handshake, so a session_expired

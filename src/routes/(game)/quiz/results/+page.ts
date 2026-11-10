@@ -2,6 +2,7 @@ import { QuizResultsPageSchema } from "@orakl/protocol";
 import type { JourneyState } from "@orakl/shared";
 import { error, redirect } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
+import { failLoad } from "@/lib/page-data";
 import type { PageLoad } from "./$types";
 
 /** Declarative phase gate (ADR 0004). */
@@ -16,7 +17,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
     const body = (await res.json()) as { route: string };
     redirect(303, body.route);
   }
-  if (!res.ok) throw error(res.status, "Failed to load");
+  if (!res.ok) failLoad(res.status);
   const decoded = Schema.decodeUnknownEither(QuizResultsPageSchema)(
     await res.json(),
   );

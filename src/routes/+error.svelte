@@ -22,6 +22,9 @@
       : "This page needs a permission your account doesn't hold.",
   );
 
+  // The API is down, not the page: say so, offer a retry, nothing to report.
+  const is503 = $derived(page.status === 503);
+
   let retrying = $state(false);
 
   // The eyes SVG is pure SMIL (no CSS animation), so `prefers-reduced-motion`
@@ -116,16 +119,23 @@
 {:else}
   <div class="error-enter flex min-h-[70dvh] flex-col items-center justify-center gap-6 px-4 py-16 text-center">
     <div class="flex flex-col gap-2">
-      <h1 class="text-2xl font-semibold text-balance">Server error</h1>
-      <p class="text-foreground/70 max-w-sm text-pretty">
-        Something went wrong on our end. Sorry for the inconvenience: reach us at
-        <a class="underline" href={`mailto:${meta.supportEmail}`}>{meta.supportEmail}</a> if it persists.
-      </p>
+      {#if is503}
+        <h1 class="text-2xl font-semibold text-balance">The oracle is resting</h1>
+        <p class="text-foreground/70 max-w-sm text-pretty">{page.error?.message}</p>
+      {:else}
+        <h1 class="text-2xl font-semibold text-balance">Server error</h1>
+        <p class="text-foreground/70 max-w-sm text-pretty">
+          Something went wrong on our end. Sorry for the inconvenience: reach us at
+          <a class="underline" href={`mailto:${meta.supportEmail}`}>{meta.supportEmail}</a> if it persists.
+        </p>
+      {/if}
     </div>
     <div class="flex flex-wrap justify-center gap-3">
-      <Button variant="secondary" iconBefore="scroll" onclick={reportError}>
-        Report error
-      </Button>
+      {#if !is503}
+        <Button variant="secondary" iconBefore="scroll" onclick={reportError}>
+          Report error
+        </Button>
+      {/if}
       <Button variant="secondary" iconBefore="shuffle" loading={retrying} onclick={tryAgain}>
         Try again
       </Button>

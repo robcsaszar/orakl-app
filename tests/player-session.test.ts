@@ -3,6 +3,7 @@ import type { ClientMessage } from "@orakl/protocol";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPlayerSession,
+  GAME_SOCKET_MAX_REOPEN,
   type PlayerSessionCallbacks,
 } from "../src/lib/player-session.js";
 
@@ -12,6 +13,7 @@ function makeFakeClient() {
   const connect = vi.fn();
   const send = vi.fn();
   const disconnect = vi.fn();
+  const reconnectNow = vi.fn();
   let captured: Opts | undefined;
   const createClient = vi.fn((_url: string, opts: Opts) => {
     captured = opts;
@@ -19,10 +21,18 @@ function makeFakeClient() {
       connect,
       send,
       disconnect,
+      reconnectNow,
       isConnected: () => true,
     } as unknown as WsClient<ClientMessage>;
   });
-  return { createClient, connect, send, disconnect, opts: () => captured };
+  return {
+    createClient,
+    connect,
+    send,
+    disconnect,
+    reconnectNow,
+    opts: () => captured,
+  };
 }
 
 let callbacks: PlayerSessionCallbacks;
@@ -76,6 +86,29 @@ describe("connect()", () => {
     });
     session.connect();
     expect(c.opts()?.idleTimeoutMs).toBe(65_000);
+  });
+
+  it("gives up after GAME_SOCKET_MAX_REOPEN reopens", () => {
+    const c = makeFakeClient();
+    createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      url: "ws://x",
+    }).connect();
+    expect(c.opts()?.maxReopenAttempts).toBeTypeOf("number");
+    expect(c.opts()?.maxReopenAttempts).toBe(GAME_SOCKET_MAX_REOPEN);
+  });
+
+  it("reconnectNow() skips the client's backoff wait", () => {
+    const c = makeFakeClient();
+    const session = createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      url: "ws://x",
+    });
+    session.reconnectNow();
+    expect(c.reconnectNow).not.toHaveBeenCalled();
+    session.connect();
+    session.reconnectNow();
+    expect(c.reconnectNow).toHaveBeenCalledTimes(1);
   });
 
   it("reuses the same client on a second connect()", () => {

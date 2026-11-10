@@ -54,7 +54,7 @@
 </script>
 
 {#if compact}
-  {#if isPlaying && isManualMode && isRevealed}
+  {#if isPlaying && isManualMode && isRevealed && !session.isIntermission}
     <Button
       onclick={() => session.advanceToNextQuestion()}
       variant="primary"
@@ -69,7 +69,7 @@
 <div class="flex flex-col gap-4">
   <CastButton size="sm" />
 
-  {#if isPlaying && isManualMode && isRevealed}
+  {#if isPlaying && isManualMode && isRevealed && !session.isIntermission}
     <Button
       onclick={() => session.advanceToNextQuestion()}
       variant="primary"

@@ -2,6 +2,7 @@ import { LayoutPageSchema } from "@orakl/protocol";
 import { error } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
 import { UI_FLAGS } from "@/lib/page-config";
+import { failLoad } from "@/lib/page-data";
 import type { LayoutLoad } from "./$types";
 
 // Universal load (#1286): user, theme, and feature-flag reads for every
@@ -11,7 +12,7 @@ import type { LayoutLoad } from "./$types";
 export const load: LayoutLoad = async ({ fetch }) => {
   const flags = new URLSearchParams({ flags: UI_FLAGS.join(",") });
   const res = await fetch(`/api/layout?${flags}`);
-  if (!res.ok) throw error(res.status, "Failed to load");
+  if (!res.ok) failLoad(res.status);
   const decoded = Schema.decodeUnknownEither(LayoutPageSchema)(
     await res.json(),
   );

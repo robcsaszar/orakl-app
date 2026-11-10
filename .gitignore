@@ -48,3 +48,7 @@ scripts/image-quiz-pack/out/
 
 # macOS
 .DS_Store
+
+# Stryker mutation-testing sandbox and report
+.stryker-tmp/
+reports/mutation/

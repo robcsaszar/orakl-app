@@ -223,6 +223,21 @@ export class WsClient<Out extends { type: string } = WsMessage> {
     };
   }
 
+  /**
+   * Skip the backoff wait: while reconnecting or dropped (not by
+   * {@link WsClient.disconnect}), drop the pending reopen and connect at once.
+   * The reopen count is kept. For a page that wakes or comes back online.
+   */
+  reconnectNow(): void {
+    if (this.intentionallyClosed) return;
+    if (this._status !== "reconnecting" && this._status !== "closed") return;
+    if (this.reopenTimer) {
+      clearTimeout(this.reopenTimer);
+      this.reopenTimer = null;
+    }
+    this.connect();
+  }
+
   /** Close the socket and suppress auto-reconnect. */
   disconnect(): void {
     this.intentionallyClosed = true;

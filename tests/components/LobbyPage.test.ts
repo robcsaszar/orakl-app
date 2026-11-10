@@ -106,6 +106,35 @@ describe("lobby page — start game with unreadable quiz config", () => {
     expect(startGameSpy).toHaveBeenCalledOnce();
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  it("the change-answer choice rides into startGame; absent reads as off", async () => {
+    for (const [stored, expected] of [
+      [{ undoEnabled: true }, true],
+      [{}, false],
+    ] as const) {
+      vi.mocked(storage.getQuizConfig).mockReturnValue(
+        JSON.stringify({
+          categoryIds: ["science"],
+          timer: 20,
+          questionsPerRound: 10,
+          advanceMode: "auto_5",
+          ...stored,
+        }),
+      );
+      const session = makeSession();
+      const startGameSpy = vi.spyOn(session, "startGame");
+      const view = render(
+        LobbyPage as never,
+        {},
+        { wrapper: LobbySessionHarness, wrapperProps: { session } },
+      );
+      await fireEvent.click(screen.getByRole("button", { name: "Start quiz" }));
+      expect(startGameSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ undoEnabled: expected }),
+      );
+      view.unmount();
+    }
+  });
 });
 
 function makeRosterSession(isCurator: boolean) {

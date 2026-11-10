@@ -24,8 +24,10 @@ import { percent } from "@orakl/shared";
   import QuestionMedia from "$lib/components/quiz/QuestionMedia.svelte";
   import PostAnswerNote from "$lib/components/quiz/PostAnswerNote.svelte";
   import RatingThumbs from "$lib/components/quiz/RatingThumbs.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
   import { cn } from "tailwind-variants";
   import { fly, scale, slide } from "svelte/transition";
+  import { MediaQuery } from "svelte/reactivity";
   import Icon from '@/lib/components/ui/Icon.svelte';
 
   // Build-level PLAYER_EMOTES flag (map #859, decision 5): the import() sits
@@ -40,6 +42,8 @@ import { percent } from "@orakl/shared";
   let { data }: { data?: import("./$types").PageData } = $props();
 
   const session = getQuizSession();
+  /** Touch screens: the emote hint names the touch gestures. */
+  const coarsePointer = new MediaQuery("(pointer: coarse)");
   const uiFlags = $derived(
     (page.data as { uiFlags?: { QUESTION_RATING?: boolean } }).uiFlags ?? {},
   );
@@ -148,8 +152,10 @@ import { percent } from "@orakl/shared";
     Math.min(3, Math.max(1, parseInt(page.url.searchParams.get("pill") ?? "1", 10))) as 1 | 2 | 3,
   );
 
+  // Only an answered player may react: the server refuses a timed-out one,
+  // even at the reveal.
   const canEmote = $derived(
-    (session.answered || !!correctAnswerId) &&
+    session.answered &&
       !session.isObserver &&
       session.pickedEmotes.length > 0,
   );
@@ -295,7 +301,7 @@ import { percent } from "@orakl/shared";
           selectedAnswerId: session.selectedAnswerId,
           answered: session.answered,
         }}
-        disabled={session.answered || session.isObserver}
+        disabled={session.answered || session.isObserver || session.isReconnecting}
         onSelect={(id) => session.selectAnswer(id)}
         overlay={playerOverlay}
       />
@@ -307,7 +313,7 @@ import { percent } from "@orakl/shared";
           selectedAnswerId: session.selectedAnswerId,
           answered: session.answered,
         }}
-        disabled={session.answered || session.isObserver}
+        disabled={session.answered || session.isObserver || session.isReconnecting}
         onSelect={(id) => session.selectAnswer(id)}
         overlay={playerOverlay}
       />
@@ -320,7 +326,7 @@ import { percent } from "@orakl/shared";
           selectedRightItem: session.selectedRightItem,
           answered: session.answered,
         }}
-        disabled={session.answered || session.isObserver}
+        disabled={session.answered || session.isObserver || session.isReconnecting}
         onSelect={(col, item) => session.selectMatchItem(col, item)}
       />
     {/if}
@@ -332,7 +338,9 @@ import { percent } from "@orakl/shared";
         aria-live="polite"
       >
         <Icon name="info" class="size-4" />
-        Long-press or right-click to react
+        {coarsePointer.current
+          ? "Touch and hold, or double-tap, to react"
+          : "Long-press or right-click to react"}
       </p>
     {/if}
   {/snippet}
@@ -359,6 +367,7 @@ import { percent } from "@orakl/shared";
         emoteStillSrc={(id) => session.getEmoteStillSrc(id)}
         emoteTitle={(id) => session.getEmoteTitle(id)}
         activeEmotes={session.activeEmotes}
+        selfPlayerId={session.playerId}
         {canEmote}
         intermission={session.isIntermission}
         onSend={(emoteId, x, y) => session.sendEmote(emoteId, x, y)}
@@ -376,11 +385,24 @@ import { percent } from "@orakl/shared";
     {@render bareAnswers()}
   {/if}
 
+  {#if session.canUndo}
+    <div class="flex justify-center">
+      <Button
+        variant="outline"
+        intent="compact"
+        onclick={() => session.undoAnswer()}
+      >
+        Change answer · {session.undoRemaining} left
+      </Button>
+    </div>
+  {/if}
+
   {#if session.feedbackStatus === "pending"}
     <AnswerStatus
       status={session.feedbackStatus}
       answeredCount={session.answeredCount}
       totalToAnswer={session.totalToAnswer}
+      lastCallSeconds={session.lastCallSeconds}
     />
   {/if}
 

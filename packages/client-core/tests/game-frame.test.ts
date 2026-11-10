@@ -129,6 +129,32 @@ const CASES: {
     callback: "onRateAck",
     msg: { type: "player:rate-ack", questionId: "q1", ok: true },
   },
+  {
+    callback: "onUndoAck",
+    msg: {
+      type: "player:undo-ack",
+      ok: false,
+      remaining: 0,
+      reason: "undo_exhausted",
+    },
+  },
+  {
+    callback: "onPlayerUnanswered",
+    msg: {
+      type: "player:unanswered",
+      playerId: "p1",
+      answeredCount: 0,
+      totalCount: 4,
+    },
+  },
+  {
+    callback: "onLastCall",
+    msg: { type: "game:last-call", seconds: 5 },
+  },
+  {
+    callback: "onLastCallCancelled",
+    msg: { type: "game:last-call-cancelled" },
+  },
 ];
 
 const ALL_CALLBACK_NAMES = CASES.map((c) => c.callback);

@@ -84,10 +84,36 @@ const GAME_ERROR_COPY: Partial<Record<GameErrorMessage["code"], string>> = {
   no_active_game: "No question is open right now.",
   invalid_message: "That action couldn't be processed.",
   internal: "Something went wrong. Try again in a moment.",
+  undo_exhausted: "No changes left this game.",
+  undo_disabled: "The curator turned answer changes off.",
 };
+
+/** Copy for a refused `player:undo`, by the ack's `reason`. */
+const UNDO_REFUSAL_COPY: Partial<Record<GameErrorMessage["code"], string>> = {
+  undo_exhausted: GAME_ERROR_COPY.undo_exhausted,
+  not_answered: "Nothing to change yet.",
+  undo_disabled: GAME_ERROR_COPY.undo_disabled,
+};
+
+/** Toast for an action tapped while the socket is down; nothing changes locally. */
+export const NOT_CONNECTED_COPY = "Not connected — try again in a moment.";
+
+/** Wait between reconnect joins that failed for a passing reason (5xx, 429,
+ *  network); the seat is kept meanwhile. */
+export const RECONNECT_RETRY_MS = 3_000;
+/** Reconnect joins retried before the seat is given up. */
+export const RECONNECT_RETRY_MAX = 5;
+
+/** A join failure the server or network may yet recover from. */
+function isTransientJoinStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
 
 /** Interval between pre-join lobby status polls. */
 export const STATUS_POLL_MS = 4000;
+
+/** Most floating emotes kept at once; the oldest drop first. */
+export const MAX_ACTIVE_EMOTES = 8;
 
 /** Copy for the join page's error states — shared with the mimic join route
  *  (ADR 0010) so the preview shows production text. */
@@ -269,6 +295,25 @@ export class QuizSession implements PlayerSessionView {
   /** Points earned on the last round (server score delta) — drives the "+N" cue. */
   lastPointsEarned = $state(0);
 
+  // ── Undo ──
+  /** Undos each player may use this game, from `game:start`; 0 = undo is off. */
+  undoBudget = $state(0);
+  /** This player's undos left: the budget at `game:start`, then each ack's count. */
+  undoRemaining = $state(0);
+  /** An answered hero may withdraw their answer while the question is open. */
+  canUndo = $derived(
+    this.undoBudget > 0 &&
+      this.undoRemaining > 0 &&
+      this.answered &&
+      !this.correctAnswerId &&
+      !this.isObserver &&
+      !this.isIntermission &&
+      this.timeRemaining > 0,
+  );
+  /** Seconds left before the round closes once every hero has answered with
+   *  undo on; 0 when no last call is running. */
+  lastCallSeconds = $state(0);
+
   // ── Emotes ──
   emotesEnabled = $state(false);
   emotePacks = $state<EmotePack[]>([]);
@@ -311,8 +356,16 @@ export class QuizSession implements PlayerSessionView {
   // ── Non-reactive internals ──
   private _session: PlayerSession | null = null;
   private _countdownTimer: CountdownTimer | null = null;
+  private _lastCallTimer: CountdownTimer | null = null;
   /** Pre-join lobby poll. */
   private _statusPollTimer: ReturnType<typeof setInterval> | null = null;
+  /** Reconnect joins retried so far; reset by a successful join. */
+  private _joinRetries = 0;
+  private _joinRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set by destroy(): any request still in flight (a join, the avatars
+   *  load, a status poll tick) then changes nothing, and no socket or poll
+   *  opens afterwards. */
+  private _destroyed = false;
   /** Self emotes rendered optimistically whose server echo we still expect and
    * must swallow to avoid a duplicate (one send → one `player:emote` echo). */
   private _pendingSelfEmotes = 0;
@@ -451,6 +504,12 @@ export class QuizSession implements PlayerSessionView {
     }
   }
 
+  /** Page woke or came back online: reopen a dropped socket without waiting
+   *  out the backoff. No-op before the socket exists. */
+  reconnectNow() {
+    this._session?.reconnectNow();
+  }
+
   /**
    * Terminal socket failure — the server closed with 1008 (lobby gone, unknown
    * player, expired token, or a failed reconnect). Stop the "Reconnecting…"
@@ -479,7 +538,7 @@ export class QuizSession implements PlayerSessionView {
    * no WS). Stopped on join (connect) and destroy.
    */
   connectStatusStream() {
-    if (this._statusPollTimer !== null) return;
+    if (this._statusPollTimer !== null || this._destroyed) return;
     // Snapshot once — poll by the code the visitor already arrived with (URL
     // deep link), not whatever they're actively typing into the code-entry
     // field. Re-reading `this.lobbyCode` live on every tick effectively
@@ -495,6 +554,8 @@ export class QuizSession implements PlayerSessionView {
           code ? `/api/lobby?code=${encodeURIComponent(code)}` : "/api/lobby",
         );
         const data = await res.json();
+        // A tick still in flight when the page was left changes nothing.
+        if (this._destroyed) return;
         if (res.ok && data.active) {
           if (!this.lobbyCode && data.code) {
             this.lobbyCode = data.code as string;
@@ -553,12 +614,14 @@ export class QuizSession implements PlayerSessionView {
       const code = this.lobbyCode.trim().toLowerCase();
       const res = await fetch(`/api/lobby?code=${encodeURIComponent(code)}`);
       const data = await res.json();
+      if (this._destroyed) return false;
       if (res.ok && data.active) {
         this.applyLobbyMeta(data);
         return true;
       }
       const fallback = await fetch("/api/lobby");
       const fallbackData = await fallback.json();
+      if (this._destroyed) return false;
       if (fallback.ok && fallbackData.active) {
         this.applyLobbyMeta(fallbackData);
         return true;
@@ -567,6 +630,7 @@ export class QuizSession implements PlayerSessionView {
         data.error ?? "No active lobby. Ask the curator to start one.";
       return false;
     } catch {
+      if (this._destroyed) return false;
       this.error = "Could not reach the game server.";
       return false;
     } finally {
@@ -645,6 +709,7 @@ export class QuizSession implements PlayerSessionView {
   }
 
   async connect(nicknameArg: string) {
+    if (this._destroyed) return;
     this.stopStatusPolling();
     this.isJoining = true;
     this.error = "";
@@ -675,9 +740,25 @@ export class QuizSession implements PlayerSessionView {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(joinData),
       });
+      if (this._destroyed) return;
 
       if (!res.ok) {
-        const errorData = await res.json();
+        if (this.isReconnecting && isTransientJoinStatus(res.status)) {
+          this.retryReconnectJoin(nicknameArg);
+          return;
+        }
+        // A body that is not JSON is a dead hop, not a refusal: a reconnect
+        // keeps its seat and tries again.
+        const errorData = await res.json().catch(() => null);
+        if (this._destroyed) return;
+        if (errorData === null) {
+          if (this.isReconnecting) {
+            this.retryReconnectJoin(nicknameArg);
+            return;
+          }
+          this.failJoin("Could not connect to the game server.");
+          return;
+        }
         if (errorData.code === "device_blocked") {
           // A blocked device's seat is gone for good; never retry it.
           storage.removePlayerId();
@@ -694,6 +775,7 @@ export class QuizSession implements PlayerSessionView {
       }
 
       const joinResult = await res.json();
+      if (this._destroyed) return;
       this.playerId = joinResult.playerId;
       if (joinResult.role) {
         this.isObserver = joinResult.role === "observer";
@@ -722,6 +804,7 @@ export class QuizSession implements PlayerSessionView {
       // membership "pending" until the curator approves (server pushes the rest).
       this.connectToStreams();
 
+      this._joinRetries = 0;
       this.isReconnecting = false;
       this.isDisconnected = false;
       if (joinResult.status !== "pending") {
@@ -731,9 +814,32 @@ export class QuizSession implements PlayerSessionView {
       }
       this.isJoining = false;
     } catch (err) {
+      if (this._destroyed) return;
       console.error("[QuizSession] connect error:", err);
+      if (this.isReconnecting) {
+        this.retryReconnectJoin(nicknameArg);
+        return;
+      }
       this.failJoin("Could not connect to the game server.");
     }
+  }
+
+  /** A reconnect join hit a passing failure: keep the seat and try again
+   *  after RECONNECT_RETRY_MS, up to RECONNECT_RETRY_MAX times; then give the
+   *  seat up the way a refused join does. */
+  private retryReconnectJoin(nickname: string) {
+    if (this._destroyed) return;
+    this.isJoining = false;
+    if (this._joinRetries >= RECONNECT_RETRY_MAX) {
+      this._joinRetries = 0;
+      this.failJoin("Could not reach the game server.");
+      return;
+    }
+    this._joinRetries++;
+    this._joinRetryTimer = setTimeout(() => {
+      this._joinRetryTimer = null;
+      void this.connect(nickname);
+    }, RECONNECT_RETRY_MS);
   }
 
   /**
@@ -832,11 +938,14 @@ export class QuizSession implements PlayerSessionView {
       this.streakNonce = 0;
       this.timerDuration = msg.timerDuration;
       if (msg.advanceMode) this.advanceMode = msg.advanceMode;
+      this.undoBudget = msg.undoBudget ?? 0;
+      this.undoRemaining = this.undoBudget;
     },
     onIntermission: () => {
       this.isIntermission = true;
       // The reveal's countdown freezes with the game; resume restarts it.
       this._countdownTimer?.stop();
+      this.stopLastCall();
     },
     onResume: () => {
       this.isIntermission = false;
@@ -861,7 +970,22 @@ export class QuizSession implements PlayerSessionView {
         msg.playerId,
       );
     },
+    onPlayerUnanswered: (msg) => {
+      // A player withdrew their answer (undo); curator connection only.
+      const ids = new Set(this.answeredPlayerIds);
+      ids.delete(msg.playerId);
+      this.answeredPlayerIds = ids;
+      this.answeredCount = msg.answeredCount;
+      this.totalToAnswer = msg.totalCount;
+    },
+    onLastCall: (msg) => {
+      this.startLastCall(msg.seconds);
+    },
+    onLastCallCancelled: () => {
+      this.stopLastCall();
+    },
     onRoundResult: (msg) => {
+      this.stopLastCall();
       this.showRoundResult(msg);
       preloadImage(msg.nextMediaUrl);
     },
@@ -922,6 +1046,21 @@ export class QuizSession implements PlayerSessionView {
       this.rating = r.state;
       if (r.send) this.sendRating(r.send);
     },
+    onUndoAck: (msg) => {
+      if (!msg.ok) {
+        toast.error(
+          (msg.reason && UNDO_REFUSAL_COPY[msg.reason]) ??
+            "Couldn't change the answer.",
+        );
+        return;
+      }
+      this.answered = false;
+      this.selectedAnswerId = null;
+      this.selectedLeftItem = null;
+      this.selectedRightItem = null;
+      this.feedbackStatus = "none";
+      this.undoRemaining = msg.remaining;
+    },
     onGameError: (msg) => {
       // Only ever arrives on the socket whose own action failed.
       this.isStarting = false;
@@ -973,8 +1112,28 @@ export class QuizSession implements PlayerSessionView {
     dispatchGameFrame(msg as unknown as ServerMessage, this._sink);
   }
 
+  /** Count the last call down locally from the server's seconds. */
+  private startLastCall(seconds: number) {
+    this._lastCallTimer?.stop();
+    this.lastCallSeconds = seconds;
+    this._lastCallTimer = createCountdown({
+      onTick: (t) => {
+        this.lastCallSeconds = t;
+      },
+      onExpire: () => {},
+    });
+    this._lastCallTimer.start(seconds);
+  }
+
+  private stopLastCall() {
+    this._lastCallTimer?.stop();
+    this._lastCallTimer = null;
+    this.lastCallSeconds = 0;
+  }
+
   private showQuestion(msg: GameQuestionMessage) {
     this._countdownTimer?.stop();
+    this.stopLastCall();
     this.nextQuestionCountdown = 0;
     this.showingResult = false;
     this.setPhase("playing");
@@ -1000,6 +1159,9 @@ export class QuizSession implements PlayerSessionView {
     this.totalToAnswer = msg.answeredTotal ?? 0;
     this.answeredPlayerIds = new Set();
     this.lastPointsEarned = 0;
+    // Snapshot replay carries this player's undos left and a running last call.
+    if (msg.undoRemaining !== undefined) this.undoRemaining = msg.undoRemaining;
+    if (msg.lastCallSeconds) this.startLastCall(msg.lastCallSeconds);
     // Snapshot replay (mid-question reconnect): restore our own submitted answer
     // so the tiles stay locked/highlighted and we don't re-open a question the
     // server will reject. feedback resolves to correct/incorrect at round end.
@@ -1029,10 +1191,27 @@ export class QuizSession implements PlayerSessionView {
     // still flip `answered`, permanently locking the player out of this question.
     if (!this.playerId) return;
     if (this.timeRemaining <= 0) return;
+    // send() drops the frame on a closed socket; a locked tile would then
+    // wait for a reveal the server never scores.
+    if (!this.canSend()) return;
     this.answered = true;
     this.selectedAnswerId = answerId;
     this.feedbackStatus = "pending";
     this.getSession().send({ type: "player:answer", answerId });
+  }
+
+  /** True when the socket is open; otherwise toasts, so an optimistic action
+   *  changes nothing locally for a frame send() would drop. */
+  private canSend(): boolean {
+    if (this.getSession().isConnected()) return true;
+    toast.error(NOT_CONNECTED_COPY);
+    return false;
+  }
+
+  /** Asks the server to withdraw this player's answer; the state flips only
+   *  on the `player:undo-ack`. */
+  undoAnswer() {
+    this.getSession().send({ type: "player:undo" });
   }
 
   /** Rates the current question at the reveal; one rating in flight, a later tap waits for its ack. */
@@ -1063,7 +1242,13 @@ export class QuizSession implements PlayerSessionView {
     );
     this.selectedLeftItem = result.selectedLeftItem;
     this.selectedRightItem = result.selectedRightItem;
-    if (result.answerId) this.selectAnswer(result.answerId);
+    if (!result.answerId) return;
+    this.selectAnswer(result.answerId);
+    // A pair the socket could not send is cleared, so the next tap starts over.
+    if (!this.answered) {
+      this.selectedLeftItem = null;
+      this.selectedRightItem = null;
+    }
   }
 
   /** Add a floating emote; auto-expires after the float animation. Returns its uid. */
@@ -1077,7 +1262,7 @@ export class QuizSession implements PlayerSessionView {
     this.activeEmotes = [
       ...this.activeEmotes,
       { uid, playerId, emoteId, offsetX, offsetY },
-    ];
+    ].slice(-MAX_ACTIVE_EMOTES);
     setTimeout(() => {
       this.activeEmotes = this.activeEmotes.filter((e) => e.uid !== uid);
     }, 1600);
@@ -1214,6 +1399,7 @@ export class QuizSession implements PlayerSessionView {
    *  draws questions and starts the game; game:start echoes back over the
    *  socket, at which point the phase-effect navigates to /quiz/play. */
   startGame(config: Omit<CuratorStartMessage, "type">) {
+    if (!this.canSend()) return;
     this.isStarting = true;
     this.getSession().send({ type: "curator:start", ...config });
   }
@@ -1223,11 +1409,13 @@ export class QuizSession implements PlayerSessionView {
   }
 
   pauseGame() {
+    if (!this.canSend()) return;
     this.isIntermission = true; // optimistic; game:intermission confirms
     this.getSession().send({ type: "curator:intermission", action: "start" });
   }
 
   resumeGame() {
+    if (!this.canSend()) return;
     this.isIntermission = false; // optimistic; game:resume confirms
     this.getSession().send({ type: "curator:intermission", action: "end" });
   }
@@ -1497,6 +1685,7 @@ export class QuizSession implements PlayerSessionView {
     } catch {
       console.warn("[QuizSession] failed to fetch avatars");
     }
+    if (this._destroyed) return;
 
     // Reconnect path: stored identity → rejoin + open the socket directly.
     if (this.playerId && this.nickname) {
@@ -1544,9 +1733,11 @@ export class QuizSession implements PlayerSessionView {
       console.warn("[QuizSession] failed to fetch avatars");
     }
 
+    if (this._destroyed) return;
     if (codeFromUrl && this.lobbyCode) {
       // Auto-validate code from URL; if found, advance directly to setup
       const found = await this.validateCode();
+      if (this._destroyed) return;
       if (found) {
         storage.setLobbyCode(this.lobbyCode);
         this.setPhase("lobby");
@@ -1557,6 +1748,7 @@ export class QuizSession implements PlayerSessionView {
       try {
         const res = await fetch("/api/lobby");
         const data = await res.json();
+        if (this._destroyed) return;
         if (res.ok && data.active) {
           this.applyLobbyMeta(data);
           this.setPhase("lobby");
@@ -1571,10 +1763,16 @@ export class QuizSession implements PlayerSessionView {
   }
 
   destroy() {
+    this._destroyed = true;
     this.stopStatusPolling();
+    if (this._joinRetryTimer !== null) {
+      clearTimeout(this._joinRetryTimer);
+      this._joinRetryTimer = null;
+    }
     this._session?.destroy();
     this._session = null;
     this._countdownTimer?.stop();
+    this._lastCallTimer?.stop();
     releaseWakeLock();
   }
 }

@@ -38,4 +38,22 @@ describe("(game)/join +page load", () => {
     expect(seen[0].pathname).toBe("/api/quiz/journey");
     expect(seen[0].searchParams.get("code")).toBe("iron-vault");
   });
+
+  it("hands the page the ended flag the quiz guard sent", async () => {
+    const fetchFn = vi.fn(async () =>
+      Response.json({
+        membership: "none",
+        phase: null,
+        state: "code-entry",
+        route: "/join",
+        miss: null,
+        lobbyGone: false,
+      }),
+    ) as unknown as typeof fetch;
+    const parent = async () => ({ user: { role: "anonymous" } });
+    const url = new URL("http://localhost/join?ended=1");
+    await expect(
+      load({ fetch: fetchFn, parent, url } as never),
+    ).resolves.toMatchObject({ lobbyEnded: true });
+  });
 });

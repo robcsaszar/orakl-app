@@ -182,6 +182,23 @@ describe("CuratorToolboxPanel", () => {
     });
   });
 
+  it.each([
+    ["compact", true],
+    ["full", false],
+  ] as const)(
+    "%s layout hides Next question during an intermission",
+    (_layout, compact) => {
+      const session = makeSession("playing");
+      session.advanceMode = "manual";
+      session.correctAnswerId = "a1";
+      session.isIntermission = true;
+      render(CuratorToolboxPanel, { props: { session, compact } });
+      expect(
+        screen.queryByRole("button", { name: "Next question" }),
+      ).toBeNull();
+    },
+  );
+
   it("drawer surface renders the same panel once opened", async () => {
     render(CuratorToolboxDrawer, {
       props: { session: makeSession("playing", [pending, active]) },

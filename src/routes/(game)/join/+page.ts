@@ -19,5 +19,7 @@ export const load: PageLoad = async ({ fetch, parent, url }) => {
   return {
     isLoggedIn,
     profileAvatarId: isLoggedIn ? (user.avatar ?? "") : "",
+    // The quiz guard sends a seat whose lobby is gone here with ?ended=1.
+    lobbyEnded: url.searchParams.has("ended"),
   };
 };

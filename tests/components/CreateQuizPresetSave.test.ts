@@ -112,6 +112,31 @@ describe("Host quiz saves the preset", () => {
     );
   });
 
+  it("stores and saves the change-answer choice", async () => {
+    const fetchMock = stubFetch(
+      { status: 201, body: { code: "ABCD" } },
+      { status: 201, body: { id: "p1" } },
+    );
+    render(CreateQuiz, {
+      props: {
+        categories,
+        categoryColors: {},
+        presets: [],
+        presetLimit: 10,
+        quizPresets: true,
+      } as never,
+    });
+    await fireEvent.click(screen.getByLabelText(/^Save as preset/));
+    await fireEvent.click(
+      screen.getByLabelText("Players may change an answer"),
+    );
+    await fireEvent.submit(document.getElementById("create-quiz-form")!);
+    await waitFor(() => expect(goto).toHaveBeenCalled());
+    const body = JSON.parse(presetCalls(fetchMock)[0][1]?.body as string);
+    expect(body.undoEnabled).toBe(true);
+    expect(JSON.parse(storage.getQuizConfig() ?? "{}").undoEnabled).toBe(true);
+  });
+
   it("does not save with the box unticked", async () => {
     const fetchMock = stubFetch(
       { status: 201, body: { code: "ABCD" } },

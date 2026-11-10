@@ -11,6 +11,8 @@ import { storage } from "../src/lib/storage.js";
 import {
   JOIN_ERROR_COPY,
   QuizSession,
+  RECONNECT_RETRY_MAX,
+  RECONNECT_RETRY_MS,
 } from "../src/lib/svelte/quizSession.svelte.js";
 import { toast } from "../src/lib/toast.js";
 
@@ -83,6 +85,7 @@ function makeSession() {
     connect: vi.fn(),
     send: vi.fn(),
     isConnected: vi.fn().mockReturnValue(true),
+    reconnectNow: vi.fn(),
     destroy: vi.fn(),
   };
   let callbacks: PlayerSessionCallbacks | null = null;
@@ -352,6 +355,216 @@ describe("init reconnect failures", () => {
     });
     expectCodeEntry(session);
     expect(storage.removeLobbyCode).toHaveBeenCalled();
+  });
+
+  it("a 403 forgets the seat", async () => {
+    const session = await reconnectWith({
+      status: 403,
+      body: { error: "Forbidden" },
+    });
+    expectCodeEntry(session);
+    expect(session.playerId).toBeNull();
+    expect(storage.removePlayerId).toHaveBeenCalled();
+    expect(storage.removeLobbyCode).toHaveBeenCalled();
+  });
+});
+
+describe("init reconnect transient failures", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function reconnectWith(reply: Reply) {
+    vi.useFakeTimers();
+    vi.mocked(storage.getNickname).mockReturnValue("Ada");
+    vi.mocked(storage.getPlayerId).mockReturnValue("p1");
+    vi.mocked(storage.getLobbyCode).mockReturnValue("iron-vault");
+    const f = stubFetch({
+      "GET /api/avatars": { body: [] },
+      "POST /api/lobby/join": reply,
+    });
+    const made = makeSession();
+    made.session.membership = "active";
+    await made.session.init({ isLoggedIn: false, profileAvatarId: "" });
+    const joins = () =>
+      f.mock.calls.filter(([, init]) => init?.method === "POST").length;
+    return { ...made, joins };
+  }
+
+  function expectSeatKept(session: QuizSession) {
+    expect(session.isReconnecting).toBe(true);
+    expect(session.playerId).toBe("p1");
+    expect(session.lobbyCode).toBe("iron-vault");
+    expect(session.membership).toBe("active");
+    expect(storage.removePlayerId).not.toHaveBeenCalled();
+    expect(storage.removeLobbyCode).not.toHaveBeenCalled();
+  }
+
+  it("a 503 keeps the seat and retries the join", async () => {
+    const { session, joins } = await reconnectWith({
+      status: 503,
+      body: { error: "Unavailable" },
+    });
+    expectSeatKept(session);
+    expect(joins()).toBe(1);
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS);
+    expect(joins()).toBe(2);
+  });
+
+  it("a network failure keeps the seat and retries the join", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { session, joins } = await reconnectWith({ throws: true });
+    expectSeatKept(session);
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS);
+    expect(joins()).toBe(2);
+  });
+
+  it("after RECONNECT_RETRY_MAX retries, forgets the seat", async () => {
+    const { session, joins } = await reconnectWith({
+      status: 503,
+      body: { error: "Unavailable" },
+    });
+    for (let i = 0; i < RECONNECT_RETRY_MAX; i++) {
+      await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS);
+    }
+    expect(joins()).toBe(1 + RECONNECT_RETRY_MAX);
+    expect(session.isReconnecting).toBe(false);
+    expect(session.membership).toBe("none");
+    expect(session.playerId).toBeNull();
+    expect(storage.removeLobbyCode).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS);
+    expect(joins()).toBe(1 + RECONNECT_RETRY_MAX);
+  });
+
+  it("destroy() cancels a pending retry", async () => {
+    const { session, joins } = await reconnectWith({
+      status: 503,
+      body: { error: "Unavailable" },
+    });
+    session.destroy();
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS);
+    expect(joins()).toBe(1);
+  });
+
+  it("a non-JSON answer (a proxy page) keeps the seat and retries the join", async () => {
+    const { session, joins } = await reconnectWith({ status: 404 });
+    expectSeatKept(session);
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS);
+    expect(joins()).toBe(2);
+  });
+
+  it("destroy() during an in-flight join stops the retry chain", async () => {
+    vi.useFakeTimers();
+    vi.mocked(storage.getNickname).mockReturnValue("Ada");
+    vi.mocked(storage.getPlayerId).mockReturnValue("p1");
+    vi.mocked(storage.getLobbyCode).mockReturnValue("iron-vault");
+    let release: (() => void) | undefined;
+    const f = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://localhost");
+      if (init?.method === "POST" && url.pathname === "/api/lobby/join") {
+        await new Promise<void>((r) => {
+          release = r;
+        });
+        return {
+          ok: false,
+          status: 503,
+          json: async () => ({ error: "Unavailable" }),
+        } as Response;
+      }
+      return { ok: true, status: 200, json: async () => [] } as Response;
+    });
+    vi.stubGlobal("fetch", f);
+    const { session } = makeSession();
+    session.membership = "active";
+    const pending = session.init({ isLoggedIn: false, profileAvatarId: "" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(release).toBeDefined();
+
+    session.destroy();
+    release?.();
+    await pending;
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS * 3);
+
+    const joins = f.mock.calls.filter(
+      ([, init]) => init?.method === "POST",
+    ).length;
+    expect(joins).toBe(1);
+    expect(storage.removePlayerId).not.toHaveBeenCalled();
+    expect(storage.removeLobbyCode).not.toHaveBeenCalled();
+  });
+
+  it("a join that succeeds after destroy() writes nothing and opens no socket", async () => {
+    vi.useFakeTimers();
+    vi.mocked(storage.getNickname).mockReturnValue("Ada");
+    vi.mocked(storage.getPlayerId).mockReturnValue("p1");
+    vi.mocked(storage.getLobbyCode).mockReturnValue("iron-vault");
+    let release: (() => void) | undefined;
+    const f = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://localhost");
+      if (init?.method === "POST" && url.pathname === "/api/lobby/join") {
+        await new Promise<void>((r) => {
+          release = r;
+        });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ playerId: "p1", status: "active" }),
+        } as Response;
+      }
+      return { ok: true, status: 200, json: async () => [] } as Response;
+    });
+    vi.stubGlobal("fetch", f);
+    const { session, factory } = makeSession();
+    session.membership = "active";
+    const pending = session.init({ isLoggedIn: false, profileAvatarId: "" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(release).toBeDefined();
+
+    session.destroy();
+    release?.();
+    await pending;
+
+    expect(storage.setPlayerId).not.toHaveBeenCalled();
+    expect(storage.setLobbyCode).not.toHaveBeenCalled();
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it("destroy() while the avatars load is pending sends no join at all", async () => {
+    vi.useFakeTimers();
+    vi.mocked(storage.getNickname).mockReturnValue("Ada");
+    vi.mocked(storage.getPlayerId).mockReturnValue("p1");
+    vi.mocked(storage.getLobbyCode).mockReturnValue("iron-vault");
+    let release: (() => void) | undefined;
+    const f = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://localhost");
+      if (url.pathname === "/api/avatars") {
+        await new Promise<void>((r) => {
+          release = r;
+        });
+        return { ok: true, status: 200, json: async () => [] } as Response;
+      }
+      return {
+        ok: false,
+        status: 503,
+        json: async () => ({ error: "Unavailable" }),
+      } as Response;
+    });
+    vi.stubGlobal("fetch", f);
+    const { session } = makeSession();
+    session.membership = "active";
+    const pending = session.init({ isLoggedIn: false, profileAvatarId: "" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(release).toBeDefined();
+
+    session.destroy();
+    release?.();
+    await pending;
+    await vi.advanceTimersByTimeAsync(RECONNECT_RETRY_MS * 2);
+
+    const joins = f.mock.calls.filter(
+      ([, init]) => init?.method === "POST",
+    ).length;
+    expect(joins).toBe(0);
   });
 });
 

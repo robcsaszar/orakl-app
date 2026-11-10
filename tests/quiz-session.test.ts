@@ -2,6 +2,7 @@
  * QuizSession unit tests — drive state via the injectable PlayerSessionFactory
  * seam; no real socket, no network.
  */
+import { createCountdown } from "@orakl/client-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GAME } from "../data/game.settings.js";
 import type {
@@ -9,7 +10,12 @@ import type {
   PlayerSessionCallbacks,
 } from "../src/lib/player-session.js";
 import { storage } from "../src/lib/storage.js";
-import { QuizSession } from "../src/lib/svelte/quizSession.svelte.js";
+import {
+  MAX_ACTIVE_EMOTES,
+  NOT_CONNECTED_COPY,
+  QuizSession,
+} from "../src/lib/svelte/quizSession.svelte.js";
+import { toast } from "../src/lib/toast.js";
 
 const AUTO_5_S = GAME.roundConfig.autoAdvanceMsMap.auto_5 / 1000;
 const AUTO_10_S = GAME.roundConfig.autoAdvanceMsMap.auto_10 / 1000;
@@ -33,6 +39,10 @@ vi.mock("../src/lib/storage.js", () => ({
     setRole: vi.fn(),
     removeQuizConfig: vi.fn(),
   },
+}));
+
+vi.mock("../src/lib/toast.js", () => ({
+  toast: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 const preloadImage = vi.hoisted(() => vi.fn());
@@ -59,6 +69,7 @@ function makeFactory() {
     connect: vi.fn(),
     send: vi.fn(),
     isConnected: vi.fn().mockReturnValue(true),
+    reconnectNow: vi.fn(),
     destroy: vi.fn(),
   };
   const factory = (opts: PlayerSessionCallbacks) => {
@@ -270,6 +281,22 @@ describe("QuizSession (injectable factory)", () => {
     });
   });
 
+  // ── reconnectNow (page wake / back online) ──────────────────────────────────
+
+  describe("reconnectNow", () => {
+    it("asks the open transport to reconnect at once", () => {
+      session.reconnectNow();
+      expect(stub.reconnectNow).toHaveBeenCalledTimes(1);
+    });
+
+    it("builds no transport when none exists", () => {
+      const factory = vi.fn(makeFactory().factory);
+      const fresh = new QuizSession({ sessionFactory: factory });
+      fresh.reconnectNow();
+      expect(factory).not.toHaveBeenCalled();
+    });
+  });
+
   // ── player:removed ──────────────────────────────────────────────────────────
 
   describe("player:removed", () => {
@@ -468,6 +495,84 @@ describe("QuizSession (injectable factory)", () => {
       send({ type: "game:intermission" });
       send({ type: "game:resume" });
       expect(session.isIntermission).toBe(false);
+    });
+  });
+
+  // ── player:unanswered (curator roster after an undo) ───────────────────────
+
+  describe("player:unanswered", () => {
+    it("drops the player from answeredPlayerIds and takes the frame's tally", () => {
+      send({
+        type: "player:answered",
+        playerId: "p1",
+        answeredCount: 1,
+        totalCount: 2,
+      });
+      send({
+        type: "player:answered",
+        playerId: "p2",
+        answeredCount: 2,
+        totalCount: 2,
+      });
+      send({
+        type: "player:unanswered",
+        playerId: "p1",
+        answeredCount: 1,
+        totalCount: 2,
+      });
+      expect([...session.answeredPlayerIds]).toEqual(["p2"]);
+      expect(session.answeredCount).toBe(1);
+      expect(session.totalToAnswer).toBe(2);
+    });
+  });
+
+  // ── curator actions on a closed socket ──────────────────────────────────────
+
+  describe("curator actions", () => {
+    beforeEach(() => {
+      vi.mocked(toast.error).mockClear();
+    });
+
+    it("pauseGame and resumeGame flip intermission and send when connected", () => {
+      session.pauseGame();
+      expect(session.isIntermission).toBe(true);
+      session.resumeGame();
+      expect(session.isIntermission).toBe(false);
+      expect(stub.send).toHaveBeenCalledWith({
+        type: "curator:intermission",
+        action: "end",
+      });
+    });
+
+    it("offline: pauseGame leaves intermission off and toasts", () => {
+      vi.mocked(stub.isConnected).mockReturnValue(false);
+      session.pauseGame();
+      expect(session.isIntermission).toBe(false);
+      expect(stub.send).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(NOT_CONNECTED_COPY);
+    });
+
+    it("offline: resumeGame leaves intermission on and toasts", () => {
+      send({ type: "game:intermission" });
+      vi.mocked(stub.isConnected).mockReturnValue(false);
+      session.resumeGame();
+      expect(session.isIntermission).toBe(true);
+      expect(stub.send).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(NOT_CONNECTED_COPY);
+    });
+
+    it("offline: startGame leaves isStarting false and toasts", () => {
+      vi.mocked(stub.isConnected).mockReturnValue(false);
+      session.startGame({} as never);
+      expect(session.isStarting).toBe(false);
+      expect(stub.send).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(NOT_CONNECTED_COPY);
+    });
+
+    it("startGame sets isStarting and sends when connected", () => {
+      session.startGame({} as never);
+      expect(session.isStarting).toBe(true);
+      expect(stub.send).toHaveBeenCalledWith({ type: "curator:start" });
     });
   });
 
@@ -910,6 +1015,20 @@ describe("QuizSession (injectable factory)", () => {
       expect(session.answered).toBe(false);
       expect(stub.send).not.toHaveBeenCalled();
     });
+
+    it("offline: leaves the tile open and toasts", () => {
+      vi.mocked(stub.isConnected).mockReturnValue(false);
+      session.playerId = "p1";
+      session.answered = false;
+      session.isObserver = false;
+      session.timeRemaining = 30;
+      session.selectAnswer("a1");
+      expect(session.answered).toBe(false);
+      expect(session.selectedAnswerId).toBeNull();
+      expect(session.feedbackStatus).toBe("none");
+      expect(stub.send).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(NOT_CONNECTED_COPY);
+    });
   });
 
   // ── question rating at the reveal ───────────────────────────────────────────
@@ -1117,6 +1236,15 @@ describe("QuizSession (injectable factory)", () => {
       expect(session.activeEmotes).toHaveLength(1); // echo swallowed
     });
 
+    it("keeps at most MAX_ACTIVE_EMOTES, dropping the oldest", () => {
+      for (let i = 0; i < MAX_ACTIVE_EMOTES + 3; i++) emote("p2", `e${i}`);
+      expect(session.activeEmotes).toHaveLength(MAX_ACTIVE_EMOTES);
+      expect(session.activeEmotes[0].emoteId).toBe("e3");
+      expect(session.activeEmotes.at(-1)?.emoteId).toBe(
+        `e${MAX_ACTIVE_EMOTES + 2}`,
+      );
+    });
+
     it("renders another player's emote (never swallowed)", () => {
       emote("p2");
       expect(session.activeEmotes).toHaveLength(1);
@@ -1143,6 +1271,295 @@ describe("QuizSession (injectable factory)", () => {
       // The next self echo must render (counter was reset, not still pending).
       emote("p1", "wave");
       expect(session.activeEmotes).toHaveLength(1);
+    });
+  });
+
+  // ── undo answer ─────────────────────────────────────────────────────────────
+  describe("undo answer", () => {
+    function start(undoBudget?: number) {
+      send({
+        type: "game:start",
+        timerDuration: 30,
+        totalQuestions: 10,
+        ...(undoBudget !== undefined ? { undoBudget } : {}),
+      });
+    }
+
+    it("game:start sets the budget and the remaining count; absent means off", () => {
+      start(2);
+      expect(session.undoBudget).toBe(2);
+      expect(session.undoRemaining).toBe(2);
+      start();
+      expect(session.undoBudget).toBe(0);
+      expect(session.undoRemaining).toBe(0);
+    });
+
+    function answerMatch() {
+      session.playerId = "p1";
+      session.isObserver = false;
+      start(2);
+      send({
+        type: "game:question",
+        questionId: "q-1",
+        questionIndex: 0,
+        totalQuestions: 10,
+        text: "Q",
+        categoryId: "c",
+        questionType: "image_matching",
+        answers: [],
+        matchItems: { left: ["l1"], right: ["r1"] },
+        timeRemaining: 20,
+        serverTs: Date.now(),
+      });
+      session.selectMatchItem("left", "l1");
+      session.selectMatchItem("right", "r1");
+    }
+
+    it("a pair the socket cannot send is cleared, so the next tap starts over", () => {
+      session.playerId = "p1";
+      session.isObserver = false;
+      start(2);
+      send({
+        type: "game:question",
+        questionId: "q-1",
+        questionIndex: 0,
+        totalQuestions: 10,
+        text: "Q",
+        categoryId: "c",
+        questionType: "image_matching",
+        answers: [],
+        matchItems: { left: ["l1"], right: ["r1"] },
+        timeRemaining: 20,
+        serverTs: Date.now(),
+      });
+      vi.mocked(stub.isConnected).mockReturnValue(false);
+      session.selectMatchItem("left", "l1");
+      session.selectMatchItem("right", "r1");
+      expect(session.answered).toBe(false);
+      expect(session.selectedLeftItem).toBeNull();
+      expect(session.selectedRightItem).toBeNull();
+      expect(stub.send).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: "player:answer" }),
+      );
+    });
+
+    it("undoAnswer sends player:undo and flips nothing before the ack", () => {
+      answerMatch();
+      session.undoAnswer();
+      expect(stub.send).toHaveBeenLastCalledWith({ type: "player:undo" });
+      expect(session.answered).toBe(true);
+      expect(session.selectedAnswerId).toBe("l1|r1");
+      expect(session.feedbackStatus).toBe("pending");
+    });
+
+    it("an ok ack returns the player to unanswered for the same question", () => {
+      answerMatch();
+      session.undoAnswer();
+      send({ type: "player:undo-ack", ok: true, remaining: 1 });
+      expect(session.answered).toBe(false);
+      expect(session.selectedAnswerId).toBeNull();
+      expect(session.selectedLeftItem).toBeNull();
+      expect(session.selectedRightItem).toBeNull();
+      expect(session.feedbackStatus).toBe("none");
+      expect(session.undoRemaining).toBe(1);
+      expect(session.currentQuestion?.questionId).toBe("q-1");
+    });
+
+    it.each([
+      ["undo_exhausted", "No changes left this game."],
+      ["not_answered", "Nothing to change yet."],
+      ["undo_disabled", "The curator turned answer changes off."],
+      ["no_active_game", "Couldn't change the answer."],
+    ])("a %s refusal flips nothing and toasts the reason", (reason, copy) => {
+      vi.mocked(toast.error).mockClear();
+      answerMatch();
+      session.undoAnswer();
+      send({ type: "player:undo-ack", ok: false, remaining: 0, reason });
+      expect(session.answered).toBe(true);
+      expect(session.selectedAnswerId).toBe("l1|r1");
+      expect(session.feedbackStatus).toBe("pending");
+      expect(session.undoRemaining).toBe(2);
+      expect(toast.error).toHaveBeenCalledWith(copy);
+    });
+
+    it.each([
+      ["undo_exhausted", "No changes left this game."],
+      ["undo_disabled", "The curator turned answer changes off."],
+    ])("a game:error %s carries its own copy", (code, copy) => {
+      vi.mocked(toast.error).mockClear();
+      send({ type: "game:error", code, message: "server text" });
+      expect(toast.error).toHaveBeenCalledWith(copy);
+    });
+
+    it("canUndo holds for an answered hero mid-question with budget", () => {
+      answerMatch();
+      expect(session.canUndo).toBe(true);
+    });
+
+    it("canUndo is false before an answer", () => {
+      answerMatch();
+      send({ type: "player:undo-ack", ok: true, remaining: 1 });
+      expect(session.canUndo).toBe(false);
+    });
+
+    it("canUndo is false during the reveal", () => {
+      answerMatch();
+      send({
+        type: "game:round-result",
+        correctAnswerId: "l1|r1",
+        players: [],
+        playerAnswers: { p1: "l1|r1" },
+      });
+      expect(session.canUndo).toBe(false);
+    });
+
+    it("canUndo is false during intermission", () => {
+      answerMatch();
+      send({ type: "game:intermission" });
+      expect(session.canUndo).toBe(false);
+    });
+
+    it("canUndo is false for an observer", () => {
+      answerMatch();
+      session.isObserver = true;
+      expect(session.canUndo).toBe(false);
+    });
+
+    it("canUndo is false once the clock reads zero", () => {
+      answerMatch();
+      send({ type: "game:tick", timeRemaining: 0, serverTs: Date.now() });
+      expect(session.canUndo).toBe(false);
+    });
+
+    it("canUndo is false with no undos left, and with undo off", () => {
+      answerMatch();
+      session.undoRemaining = 0;
+      expect(session.canUndo).toBe(false);
+      session.undoRemaining = 2;
+      session.undoBudget = 0;
+      expect(session.canUndo).toBe(false);
+    });
+  });
+
+  // ── last call (undo on, every hero answered) ───────────────────────────────
+  describe("last call", () => {
+    const countdown = vi.mocked(createCountdown);
+    const seconds = GAME.undo.lastCallSeconds;
+
+    function lastCall() {
+      countdown.mockClear();
+      send({ type: "game:last-call", seconds });
+      const timer = countdown.mock.results.at(-1)?.value as {
+        start: ReturnType<typeof vi.fn>;
+        stop: ReturnType<typeof vi.fn>;
+      };
+      const { onTick } = countdown.mock.calls.at(-1)?.[0] ?? {
+        onTick: () => {},
+      };
+      return { timer, onTick };
+    }
+
+    it("game:last-call starts counting down from the frame's seconds", () => {
+      const { timer, onTick } = lastCall();
+      expect(session.lastCallSeconds).toBe(seconds);
+      expect(timer.start).toHaveBeenCalledWith(seconds);
+      onTick(seconds - 1);
+      expect(session.lastCallSeconds).toBe(seconds - 1);
+    });
+
+    it("game:last-call-cancelled resets it to 0 and stops the countdown", () => {
+      const { timer } = lastCall();
+      send({ type: "game:last-call-cancelled" });
+      expect(session.lastCallSeconds).toBe(0);
+      expect(timer.stop).toHaveBeenCalled();
+    });
+
+    it("a round result resets it to 0", () => {
+      lastCall();
+      send({
+        type: "game:round-result",
+        correctAnswerId: "a1",
+        players: [],
+        playerAnswers: {},
+      });
+      expect(session.lastCallSeconds).toBe(0);
+    });
+
+    it("a new question resets it to 0", () => {
+      lastCall();
+      send({
+        type: "game:question",
+        questionId: "q-2",
+        questionIndex: 1,
+        totalQuestions: 10,
+        text: "Q2",
+        categoryId: "c",
+        questionType: "text_choice",
+        answers: [{ id: "a1", text: "A" }],
+        timeRemaining: 20,
+        serverTs: Date.now(),
+      });
+      expect(session.lastCallSeconds).toBe(0);
+    });
+
+    it("an intermission resets it to 0", () => {
+      lastCall();
+      send({ type: "game:intermission" });
+      expect(session.lastCallSeconds).toBe(0);
+    });
+
+    it("a snapshot replay restores the last call and the undos left", () => {
+      send({
+        type: "game:start",
+        timerDuration: 30,
+        totalQuestions: 20,
+        undoBudget: 2,
+      });
+      countdown.mockClear();
+      send({
+        type: "game:question",
+        questionId: "q-3",
+        questionIndex: 2,
+        totalQuestions: 20,
+        text: "Q3",
+        categoryId: "c",
+        questionType: "text_choice",
+        answers: [{ id: "a1", text: "A" }],
+        timeRemaining: 20,
+        serverTs: Date.now(),
+        yourAnswerId: "a1",
+        undoRemaining: 1,
+        lastCallSeconds: 3,
+      });
+      expect(session.undoRemaining).toBe(1);
+      expect(session.lastCallSeconds).toBe(3);
+      const timer = countdown.mock.results.at(-1)?.value as {
+        start: ReturnType<typeof vi.fn>;
+      };
+      expect(timer.start).toHaveBeenCalledWith(3);
+    });
+
+    it("a live question without the snapshot fields keeps the undos left", () => {
+      send({
+        type: "game:start",
+        timerDuration: 30,
+        totalQuestions: 20,
+        undoBudget: 2,
+      });
+      send({
+        type: "game:question",
+        questionId: "q-1",
+        questionIndex: 0,
+        totalQuestions: 20,
+        text: "Q",
+        categoryId: "c",
+        questionType: "text_choice",
+        answers: [{ id: "a1", text: "A" }],
+        timeRemaining: 20,
+        serverTs: Date.now(),
+      });
+      expect(session.undoRemaining).toBe(2);
+      expect(session.lastCallSeconds).toBe(0);
     });
   });
 });

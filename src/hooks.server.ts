@@ -52,6 +52,11 @@ const UPSTREAM_STRIPPED_HEADERS = [
   "upgrade",
 ];
 
+/** Longest wait for the API to start answering a forwarded request; a hung
+ *  API then reads as unreachable instead of holding the page. Overridable
+ *  through `API_FORWARD_TIMEOUT_MS` (tests use a short one). */
+const API_FORWARD_TIMEOUT_MS = 60_000;
+
 const handleApiForward: Handle = async ({ event, resolve }) => {
   const { pathname, search } = event.url;
   if (!isForwardedApiPath(pathname)) return resolve(event);
@@ -70,9 +75,28 @@ const handleApiForward: Handle = async ({ event, resolve }) => {
     headers,
     body: event.request.body,
     redirect: "manual",
+    signal: AbortSignal.timeout(
+      Number(env.API_FORWARD_TIMEOUT_MS) || API_FORWARD_TIMEOUT_MS,
+    ),
   };
   if (event.request.body) init.duplex = "half";
-  const upstream = await fetch(new Request(url, init));
+  let upstream: Response;
+  try {
+    upstream = await fetch(new Request(url, init));
+  } catch (err) {
+    // One line per failed request, no stack: an outage repeats this per hop.
+    logger.warn(
+      {
+        url: pathname,
+        reason: err instanceof Error ? err.message : String(err),
+      },
+      "api unreachable",
+    );
+    return Response.json(
+      { error: "api_unavailable" },
+      { status: 503, headers: { "Retry-After": "5" } },
+    );
+  }
   return maybeGzipJson(upstream, event.request.headers.get("accept-encoding"));
 };
 

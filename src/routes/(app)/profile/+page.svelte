@@ -476,6 +476,9 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
                 <Button href="/manage/questions" variant="secondary"
                   >Authored questions</Button
                 >
+                <Button href="/manage/bank" variant="secondary"
+                  >Question bank</Button
+                >
               {/if}
               {#if canManageFlags}
                 <Button href="/admin/feature-flags" variant="secondary"
