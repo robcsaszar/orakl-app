@@ -46,6 +46,7 @@ import { avatars } from "@orakl/shared";
   let postAnswerNote = $derived(session.state.postAnswerNote);
   let players = $derived(session.state.players);
   let answeredPlayerIds = $derived(session.state.answeredPlayerIds);
+  let answeredCount = $derived(session.state.answeredCount);
   let sortedPlayers = $derived(session.state.sortedPlayers);
   let roleSelectionActive = $derived(session.state.roleSelectionActive);
   let roleSelectionTimeRemaining = $derived(
@@ -56,6 +57,8 @@ import { avatars } from "@orakl/shared";
   let initError = $derived(session.state.initError);
   let isIntermission = $derived(session.state.isIntermission);
   let lobbyEnded = $derived(session.state.lobbyEnded);
+  let endedMessage = $derived(session.state.endedMessage);
+  let connection = $derived(session.state.connection);
   let lobbyCode = $derived(session.state.lobbyCode);
 
   const questionCounter = $derived(`${currentQuestionIndex + 1} / ${totalQuestions}`);
@@ -69,7 +72,7 @@ import { avatars } from "@orakl/shared";
   // Hoisted before answerCountText so the memoized length is reused instead of re-filtering on every player:answered event
   const connectedPlayers = $derived(players.filter((p) => p.role !== "observer"));
   const answerCountText = $derived(
-    `${answeredPlayerIds.size} / ${connectedPlayers.length} answered`,
+    `${answeredCount} / ${connectedPlayers.length} answered`,
   );
   const observerCount = $derived(
     sortedPlayers.filter((player) => player.role === "observer").length,
@@ -138,6 +141,13 @@ import { avatars } from "@orakl/shared";
     </div>
   </header>
 
+  <!-- Socket reopening: the timer and frame below are the last ones received -->
+  {#if connection === "reconnecting" && !initError}
+    <div class="mt-4 self-start rounded-full border border-warning/40 bg-warning-dark/15 px-4 py-1 text-sm text-warning-light" role="status" aria-live="polite">
+      Reconnecting…
+    </div>
+  {/if}
+
   <!-- Intermission banner (curator paused the game) -->
   {#if isIntermission && !lobbyEnded && !initError}
     <div class="mt-4 rounded-2xl border border-warning/40 bg-warning-dark/15 px-6 py-3 text-center" role="status" aria-live="polite">
@@ -153,7 +163,7 @@ import { avatars } from "@orakl/shared";
     </div>
   {:else if lobbyEnded}
     <div class="flex flex-1 items-center justify-center" role="status" aria-live="polite">
-      <p class="text-2xl text-foreground-darker">The quiz has ended.</p>
+      <p class="text-2xl text-foreground-darker">{endedMessage}</p>
     </div>
   {:else if currentView === "waiting"}
     <div class="flex min-h-0 flex-1 flex-col items-center">

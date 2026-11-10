@@ -10,6 +10,7 @@ import { QuizJourneyPageSchema } from "@orakl/protocol";
 import type { JourneyState } from "@orakl/shared";
 import { error, redirect } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
+import { failLoad } from "./page-data";
 
 /**
  * Enforce a page's declared phase gate: if the player's real journey state is
@@ -23,7 +24,7 @@ export async function requireJourney(
   const query = new URLSearchParams(codeHint ? { code: codeHint } : {});
   const qs = query.toString();
   const res = await fetch(`/api/quiz/journey${qs ? `?${qs}` : ""}`);
-  if (!res.ok) throw error(res.status, "Failed to load");
+  if (!res.ok) failLoad(res.status);
   const decoded = Schema.decodeUnknownEither(QuizJourneyPageSchema)(
     await res.json(),
   );
@@ -44,12 +45,12 @@ export async function requireJourney(
     // loads read ?code=, and without it they resolve the cookie's lobby.
     const keepCode =
       codeHint && (journey.state === "setup" || journey.state === "pending");
-    redirect(
-      303,
-      keepCode
-        ? `${journey.route}?code=${encodeURIComponent(codeHint)}`
-        : journey.route,
-    );
+    if (keepCode)
+      redirect(303, `${journey.route}?code=${encodeURIComponent(codeHint)}`);
+    // A seat whose lobby is gone lands on code entry with a word about it.
+    if (journey.lobbyGone && journey.route === "/join")
+      redirect(303, "/join?ended=1");
+    redirect(303, journey.route);
   }
   return journey;
 }

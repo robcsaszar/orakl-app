@@ -61,7 +61,11 @@ describe("/join load", () => {
       parent: anonParent(),
       url: new URL("http://localhost/join"),
     } as never);
-    expect(result).toEqual({ isLoggedIn: false, profileAvatarId: "" });
+    expect(result).toEqual({
+      isLoggedIn: false,
+      profileAvatarId: "",
+      lobbyEnded: false,
+    });
   });
 
   it("redirects a player already in a lobby away from /join", async () => {
@@ -86,7 +90,11 @@ describe("/join load", () => {
       parent: memberParent("av-9"),
       url: new URL("http://localhost/join"),
     } as never);
-    expect(result).toEqual({ isLoggedIn: true, profileAvatarId: "av-9" });
+    expect(result).toEqual({
+      isLoggedIn: true,
+      profileAvatarId: "av-9",
+      lobbyEnded: false,
+    });
   });
 });
 

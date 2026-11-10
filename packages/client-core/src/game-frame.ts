@@ -10,6 +10,8 @@ import type {
   GameErrorMessage,
   GameFinalScoresMessage,
   GameIntermissionMessage,
+  GameLastCallCancelledMessage,
+  GameLastCallMessage,
   GamePingMessage,
   GameQuestionMessage,
   GameResultsReadyMessage,
@@ -27,6 +29,8 @@ import type {
   PlayerNicknameChangedMessage,
   PlayerRateAckMessage,
   PlayerRemovedMessage,
+  PlayerUnansweredMessage,
+  PlayerUndoAckMessage,
   RoleSelectionLockedMessage,
   RoleSelectionStartMessage,
   RoleSelectionUpdateMessage,
@@ -58,6 +62,10 @@ export interface GameFrameSink {
   onGameError?(msg: GameErrorMessage): void;
   onPing?(msg: GamePingMessage): void;
   onRateAck?(msg: PlayerRateAckMessage): void;
+  onUndoAck?(msg: PlayerUndoAckMessage): void;
+  onPlayerUnanswered?(msg: PlayerUnansweredMessage): void;
+  onLastCall?(msg: GameLastCallMessage): void;
+  onLastCallCancelled?(msg: GameLastCallCancelledMessage): void;
 }
 
 /**
@@ -138,6 +146,18 @@ export function dispatchGameFrame(
       break;
     case "player:rate-ack":
       sink.onRateAck?.(msg);
+      break;
+    case "player:undo-ack":
+      sink.onUndoAck?.(msg);
+      break;
+    case "player:unanswered":
+      sink.onPlayerUnanswered?.(msg);
+      break;
+    case "game:last-call":
+      sink.onLastCall?.(msg);
+      break;
+    case "game:last-call-cancelled":
+      sink.onLastCallCancelled?.(msg);
       break;
     default: {
       const _exhaustive: never = msg;

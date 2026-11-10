@@ -163,6 +163,16 @@ import { buildAvatarGroups } from "@orakl/shared";
 
   onDestroy(() => session.destroy());
 
+  // A phone that sleeps or drops offline waits out the socket's backoff; wake
+  // and reconnect skip the wait.
+  function reconnectIfVisible() {
+    if (document.visibilityState === "visible") session.reconnectNow();
+  }
+
+  function reconnectIfRestored(e: PageTransitionEvent) {
+    if (e.persisted) session.reconnectNow();
+  }
+
   // Redirect away after the "removed" notice has been shown.
   $effect(() => {
     if (session.wasRemoved) {
@@ -216,6 +226,9 @@ import { buildAvatarGroups } from "@orakl/shared";
     }
   });
 </script>
+
+<svelte:document onvisibilitychange={reconnectIfVisible} />
+<svelte:window ononline={() => session.reconnectNow()} onpageshow={reconnectIfRestored} />
 
 <QuizAvatarDialog />
 

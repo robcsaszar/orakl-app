@@ -766,7 +766,9 @@ describe("soloMode (WS store)", () => {
   });
 
   describe("in-run reconnect", () => {
+    const stores: Array<ReturnType<typeof create>> = [];
     afterEach(() => {
+      for (const q of stores.splice(0)) q.destroy();
       window.sessionStorage.clear();
     });
 
@@ -776,6 +778,7 @@ describe("soloMode (WS store)", () => {
 
     async function playing() {
       const q = create();
+      stores.push(q);
       q.selectedCategories = ["science"];
       await q.startQuiz();
       vi.advanceTimersByTime(0);
@@ -855,6 +858,21 @@ describe("soloMode (WS store)", () => {
       expect(window.sessionStorage.getItem("solo:state")).toBeNull();
       vi.advanceTimersByTime(60_000);
       expect(FakeWS.instances).toHaveLength(MAX_RESUME_ATTEMPTS + 2);
+    });
+
+    it("a visible tab or an online event retries resume without waiting out the backoff", async () => {
+      await playing();
+      FakeWS.failOpen = true;
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(1); // the failed reopen now waits a backoff
+      const before = FakeWS.instances.length;
+      vi.advanceTimersByTime(RESUME_DELAYS_MS[0] - 10);
+      expect(FakeWS.instances).toHaveLength(before);
+      document.dispatchEvent(new Event("visibilitychange"));
+      expect(FakeWS.instances).toHaveLength(before + 1);
+      vi.advanceTimersByTime(1); // that reopen fails and waits again
+      window.dispatchEvent(new Event("online"));
+      expect(FakeWS.instances).toHaveLength(before + 2);
     });
 
     it("a 1011 close on the resume socket ends the run at once", async () => {

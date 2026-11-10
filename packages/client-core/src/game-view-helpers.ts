@@ -46,18 +46,23 @@ export function sortPlayersByScore<T extends { score: number }>(
   return [...players].sort((a, b) => b.score - a.score);
 }
 
+/** Most seconds lag compensation subtracts; a larger gap is clock skew, not lag. */
+export const MAX_LAG_SECONDS = 5;
+
 /** Server-lag-compensated time remaining: subtracts whole seconds elapsed
- *  since serverTs, clamps at 0. Single source for all three actors' timers. */
+ *  since serverTs, clamped to [0, MAX_LAG_SECONDS]. A live server time never
+ *  compensates below 1. Single source for all three actors' timers. */
 export function compensateForLag(
   timeRemaining: number,
   serverTs: number,
   now: number = Date.now(),
 ): number {
-  const lagSeconds = Math.floor((now - serverTs) / 1000);
-  return Math.max(
-    0,
-    timeRemaining - (Number.isNaN(lagSeconds) ? 0 : lagSeconds),
-  );
+  const elapsed = Math.floor((now - serverTs) / 1000);
+  const lagSeconds = Number.isNaN(elapsed)
+    ? 0
+    : Math.min(MAX_LAG_SECONDS, Math.max(0, elapsed));
+  const floor = timeRemaining > 0 ? 1 : 0;
+  return Math.max(floor, timeRemaining - lagSeconds);
 }
 
 /** Timer ring SVG offset from timerState, fraction, and radius. */

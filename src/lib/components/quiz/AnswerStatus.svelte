@@ -21,9 +21,11 @@
      *  either to leave the count off (e.g. observers, who never wait). */
     answeredCount?: number;
     totalToAnswer?: number;
+    /** Seconds left in the last call; above 0 the pending line names the reveal instead of the wait. */
+    lastCallSeconds?: number;
   }
 
-  let { status, answeredCount, totalToAnswer }: Props = $props();
+  let { status, answeredCount, totalToAnswer, lastCallSeconds = 0 }: Props = $props();
 </script>
 
 <div
@@ -50,7 +52,9 @@
   {:else if status === "pending"}
     {@const remaining = Math.max(0, (totalToAnswer ?? 0) - (answeredCount ?? 0))}
     <span class="is-loading text-sm leading-snug">
-      {#if totalToAnswer && totalToAnswer > 0}
+      {#if lastCallSeconds > 0}
+        Everyone has answered. Revealing in {lastCallSeconds}…
+      {:else if totalToAnswer && totalToAnswer > 0}
         Waiting for <strong class="contents">{remaining}</strong> more {remaining === 1 ? "answer" : "answers"}<span>.</span><span>.</span><span>.</span>
       {:else}
         Answer submitted. Waiting for other players<span>.</span><span>.</span><span>.</span>

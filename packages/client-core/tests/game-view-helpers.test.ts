@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAX_LAG_SECONDS } from "../src/game-view-helpers.ts";
 import {
   applyQuestionDisplay,
   compensateForLag,
@@ -101,10 +102,24 @@ describe("compensateForLag", () => {
     expect(compensateForLag(20, serverTs, now)).toBe(18);
   });
 
-  it("clamps at 0 when lag exceeds timeRemaining", () => {
+  it("stays at 0 when the server already reads 0", () => {
     const now = 10_000;
-    const serverTs = now - 10_000; // 10s ago
-    expect(compensateForLag(5, serverTs, now)).toBe(0);
+    expect(compensateForLag(0, now - 2000, now)).toBe(0);
+  });
+
+  it("returns the raw time when the server clock is ahead of the client", () => {
+    const now = 100_000;
+    expect(compensateForLag(20, now + 10_000, now)).toBe(20);
+  });
+
+  it("subtracts at most MAX_LAG_SECONDS when the client clock is ahead", () => {
+    const now = 100_000;
+    expect(compensateForLag(20, now - 10_000, now)).toBe(20 - MAX_LAG_SECONDS);
+  });
+
+  it("never compensates a live raw time below 1", () => {
+    const now = 100_000;
+    expect(compensateForLag(3, now - 10_000, now)).toBe(1);
   });
 
   it("guards against NaN lag (bad serverTs)", () => {

@@ -226,6 +226,50 @@ describe("WsClient", () => {
     });
   });
 
+  describe("reconnectNow", () => {
+    it("while reconnecting, opens a socket at once and drops the pending timer", () => {
+      vi.useFakeTimers();
+      const client = new WsClient("ws://host/x", {
+        onMessage: vi.fn(),
+        autoReconnect: true,
+        reopenDelays: [30000],
+      });
+      client.connect();
+      FakeWS.last!.onopen?.();
+      FakeWS.last!.onclose?.({ code: 1006 });
+      expect(client.status).toBe("reconnecting");
+
+      client.reconnectNow();
+      expect(FakeWS.instances).toHaveLength(2);
+
+      vi.advanceTimersByTime(30000);
+      expect(FakeWS.instances).toHaveLength(2);
+      vi.useRealTimers();
+    });
+
+    it("while open, does nothing", () => {
+      const client = new WsClient("ws://host/x", { onMessage: vi.fn() });
+      client.connect();
+      FakeWS.last!.onopen?.();
+      client.reconnectNow();
+      expect(FakeWS.instances).toHaveLength(1);
+      expect(client.status).toBe("open");
+    });
+
+    it("after an intentional disconnect, does nothing", () => {
+      const client = new WsClient("ws://host/x", {
+        onMessage: vi.fn(),
+        autoReconnect: true,
+      });
+      client.connect();
+      FakeWS.last!.onopen?.();
+      client.disconnect();
+      client.reconnectNow();
+      expect(FakeWS.instances).toHaveLength(1);
+      expect(client.status).toBe("closed");
+    });
+  });
+
   describe("state", () => {
     it("notifies onStatus on each transition", () => {
       const seen: string[] = [];

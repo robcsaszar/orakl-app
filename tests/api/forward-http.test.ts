@@ -74,6 +74,52 @@ describe("handleApiForward — over HTTP (API_ORIGIN set)", () => {
   });
 });
 
+describe("handleApiForward — upstream unreachable", () => {
+  it("answers 503 api_unavailable with Retry-After instead of throwing", async () => {
+    const closed = createServer();
+    await new Promise<void>((r) => closed.listen(0, "127.0.0.1", r));
+    const { port } = closed.address() as AddressInfo;
+    await new Promise((r) => closed.close(r));
+    const origin = env.API_ORIGIN;
+    env.API_ORIGIN = `http://127.0.0.1:${port}`;
+    try {
+      const res = await viaHandle(
+        new Request("https://orakl.quest/api/quiz/context"),
+      );
+      expect(res.status).toBe(503);
+      expect(res.headers.get("retry-after")).toBe("5");
+      expect(await res.json()).toEqual({ error: "api_unavailable" });
+    } finally {
+      env.API_ORIGIN = origin;
+    }
+  });
+});
+
+describe("handleApiForward — upstream hangs", () => {
+  it("gives up after API_FORWARD_TIMEOUT_MS and answers 503", async () => {
+    const silent = createServer(() => {
+      /* never answers */
+    });
+    await new Promise<void>((r) => silent.listen(0, "127.0.0.1", r));
+    const { port } = silent.address() as AddressInfo;
+    const origin = env.API_ORIGIN;
+    env.API_ORIGIN = `http://127.0.0.1:${port}`;
+    env.API_FORWARD_TIMEOUT_MS = "100";
+    try {
+      const res = await viaHandle(
+        new Request("https://orakl.quest/api/quiz/context"),
+      );
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: "api_unavailable" });
+    } finally {
+      env.API_ORIGIN = origin;
+      delete env.API_FORWARD_TIMEOUT_MS;
+      silent.closeAllConnections();
+      await new Promise((r) => silent.close(r));
+    }
+  });
+});
+
 describe("server init", () => {
   it("refuses to start without an API origin", async () => {
     const origin = env.API_ORIGIN;

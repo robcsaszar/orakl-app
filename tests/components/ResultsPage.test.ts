@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { tick } from "svelte";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockQuizSession } from "../../src/lib/svelte/mockQuizSession.svelte.js";
 import ResultsPage from "../../src/routes/(game)/quiz/results/+page.svelte";
 import LobbySessionHarness from "./LobbySessionHarness.svelte";
 
-vi.mock("$app/navigation", () => ({
-  invalidateAll: vi.fn(),
-}));
+const invalidateAll = vi.hoisted(() => vi.fn());
+vi.mock("$app/navigation", () => ({ invalidateAll }));
 vi.mock("../../src/lib/toast.js", () => ({
   toast: {
     success: vi.fn(),
@@ -139,6 +139,57 @@ describe("results page — host allowance banner (map #1184)", () => {
       { wrapper: LobbySessionHarness, wrapperProps: { session } },
     );
     expect(screen.queryByRole("status")).toBeNull();
+  });
+});
+
+describe("results page — reload after a socket flap", () => {
+  beforeEach(() => invalidateAll.mockClear());
+
+  function renderWith(data = makeData()) {
+    const session = new MockQuizSession();
+    session.phase = "final_scores";
+    session.finalRoster = [];
+    render(
+      ResultsPage as never,
+      { data },
+      { wrapper: LobbySessionHarness, wrapperProps: { session } },
+    );
+    return session;
+  }
+
+  function setVisibility(state: "visible" | "hidden") {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => state,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+
+  it("reloads once when the socket returns after a reconnect", async () => {
+    const session = renderWith();
+    await tick();
+    expect(invalidateAll).not.toHaveBeenCalled();
+    session.isReconnecting = true;
+    await tick();
+    expect(invalidateAll).not.toHaveBeenCalled();
+    session.isReconnecting = false;
+    await tick();
+    expect(invalidateAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads once on becoming visible while the breakdown row is absent", async () => {
+    renderWith();
+    setVisibility("hidden");
+    expect(invalidateAll).not.toHaveBeenCalled();
+    setVisibility("visible");
+    setVisibility("visible");
+    expect(invalidateAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload on becoming visible when the breakdown row is present", async () => {
+    renderWith(makeData({ breakdown: [] }));
+    setVisibility("visible");
+    expect(invalidateAll).not.toHaveBeenCalled();
   });
 });
 

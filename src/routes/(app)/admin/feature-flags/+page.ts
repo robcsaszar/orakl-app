@@ -1,6 +1,7 @@
 import { FeatureFlagsDashboardSchema } from "@orakl/protocol";
 import { error } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
+import { failLoad, isApiUnavailable } from "@/lib/page-data";
 import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ fetch }) => {
@@ -9,7 +10,9 @@ export const load: PageLoad = async ({ fetch }) => {
     const body = (await res.json().catch(() => null)) as {
       error?: string;
     } | null;
-    throw error(res.status, body?.error ?? "Request failed");
+    if (body?.error && !isApiUnavailable(res.status))
+      error(res.status, body.error);
+    failLoad(res.status);
   }
   const decoded = Schema.decodeUnknownEither(FeatureFlagsDashboardSchema)(
     await res.json(),

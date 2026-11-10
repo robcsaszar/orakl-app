@@ -141,6 +141,7 @@ import { findPlayer } from "@orakl/shared";
       advanceMode: config.advanceMode,
       ...(config.scoringMode ? { scoringMode: config.scoringMode } : {}),
       ...(config.difficulty ? { difficulty: config.difficulty } : {}),
+      undoEnabled: !!config.undoEnabled,
     });
     // Safety net: game:start (phase-effect navigation) or game:error should
     // arrive well within this window; if neither does, don't strand the

@@ -150,6 +150,18 @@ export class MockQuizSession implements PlayerSessionView {
   totalToAnswer = $state(0);
   answeredPlayerIds = $state<Set<string>>(new Set());
   lastPointsEarned = $state(0);
+  undoBudget = $state(0);
+  undoRemaining = $state(0);
+  canUndo = $derived(
+    this.undoBudget > 0 &&
+      this.undoRemaining > 0 &&
+      this.answered &&
+      !this.correctAnswerId &&
+      !this.isObserver &&
+      !this.isIntermission &&
+      this.timeRemaining > 0,
+  );
+  lastCallSeconds = $state(0);
 
   // ── Emotes (seeded by the mimic/quiz layout via the `emotes` param) ──
   emotesEnabled = $state(false);
@@ -236,6 +248,17 @@ export class MockQuizSession implements PlayerSessionView {
     this.answered = true;
     this.selectedAnswerId = answerId;
     this.feedbackStatus = "pending";
+  }
+
+  /** Withdraws the answer locally, as QuizSession does on an ok ack. */
+  undoAnswer() {
+    if (!this.canUndo) return;
+    this.answered = false;
+    this.selectedAnswerId = null;
+    this.selectedLeftItem = null;
+    this.selectedRightItem = null;
+    this.feedbackStatus = "none";
+    this.undoRemaining--;
   }
 
   /** Goes pending, then acks ok on the next timeout so the fixture shows ✓. */
@@ -328,6 +351,8 @@ export class MockQuizSession implements PlayerSessionView {
   async initCodeEntry(): Promise<void> {}
 
   destroy(): void {}
+
+  reconnectNow(): void {}
 
   seedLobbyRoster(_data: {
     playerId?: string | null;

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
+import { API_UNAVAILABLE_MESSAGE } from "../src/lib/page-data.js";
 import { requireJourney } from "../src/lib/quiz-guard.js";
 
 type Journey = {
@@ -8,6 +9,7 @@ type Journey = {
   state: string;
   route: string;
   miss: "lobby_lost" | null;
+  lobbyGone?: boolean;
 };
 
 /** A fetch that answers `GET /api/quiz/journey` and records the URL it saw. */
@@ -78,11 +80,22 @@ describe("requireJourney (client helper over GET /api/quiz/journey)", () => {
   });
 
   it("surfaces an API failure as a page error with the same status", async () => {
-    const { fetchFn } = journeyFetch(null, 502);
+    const { fetchFn } = journeyFetch(null, 404);
     await expect(requireJourney(fetchFn, ["lobby"])).rejects.toMatchObject({
-      status: 502,
+      status: 404,
     });
   });
+
+  it.each([502, 503, 504])(
+    "maps an API %i to a 503 page error with the unreachable message",
+    async (status) => {
+      const { fetchFn } = journeyFetch(null, status);
+      await expect(requireJourney(fetchFn, ["lobby"])).rejects.toMatchObject({
+        status: 503,
+        body: { message: API_UNAVAILABLE_MESSAGE },
+      });
+    },
+  );
 
   it("keeps the ?code hint on a redirect to a pre-join target", async () => {
     const { fetchFn } = journeyFetch({
@@ -111,5 +124,59 @@ describe("requireJourney (client helper over GET /api/quiz/journey)", () => {
     await expect(
       requireJourney(fetchFn, ["setup", "pending"], "iron-vault"),
     ).rejects.toMatchObject({ status: 303, location: "/join" });
+  });
+
+  it("a seat whose lobby is gone is sent to /join with the ended flag", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "none",
+      phase: null,
+      state: "code-entry",
+      route: "/join",
+      miss: null,
+      lobbyGone: true,
+    });
+    await expect(requireJourney(fetchFn, ["lobby"])).rejects.toMatchObject({
+      status: 303,
+      location: "/join?ended=1",
+    });
+  });
+
+  it("a gone lobby never changes a redirect elsewhere", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "none",
+      phase: null,
+      state: "code-entry",
+      route: "/curator/create",
+      miss: null,
+      lobbyGone: true,
+    });
+    await expect(requireJourney(fetchFn, ["lobby"])).rejects.toMatchObject({
+      status: 303,
+      location: "/curator/create",
+    });
+  });
+
+  it("keeps the ?code hint on a redirect to the pending target", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "pending",
+      phase: "lobby",
+      state: "pending",
+      route: "/quiz/pending",
+      miss: null,
+    });
+    await expect(
+      requireJourney(fetchFn, ["lobby"], "iron-vault"),
+    ).rejects.toMatchObject({
+      status: 303,
+      location: "/quiz/pending?code=iron-vault",
+    });
+  });
+
+  it("a malformed journey body is a 502 page error", async () => {
+    const { fetchFn } = journeyFetch({ nonsense: true } as never);
+    await expect(requireJourney(fetchFn, ["lobby"])).rejects.toMatchObject({
+      status: 502,
+      body: { message: expect.stringMatching(/\S/) },
+    });
   });
 });

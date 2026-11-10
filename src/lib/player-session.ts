@@ -19,8 +19,9 @@ export interface PlayerSessionCallbacks {
   /** Connection status changes — drives the reconnecting affordance. */
   onStatus?: (status: WsStatus) => void;
   /** Terminal connection failure: the server closed the socket with 1008
-   *  (unknown player, auth failed, lobby gone, or a failed reconnect), so it
-   *  stops retrying and the consumer should surface a dead-end. */
+   *  (unknown player, auth failed, lobby gone, or a failed reconnect), or
+   *  `GAME_SOCKET_MAX_REOPEN` reopens failed, so it stops retrying and the
+   *  consumer should surface a dead-end. */
   onFatal?: (info: { code: number; reason: string }) => void;
 }
 
@@ -50,6 +51,8 @@ export interface PlayerSession {
   /** Send a player/curator action frame. No-op until the socket is open. */
   send(msg: ClientMessage): void;
   isConnected(): boolean;
+  /** Reopen a dropped socket at once instead of waiting out the backoff. */
+  reconnectNow(): void;
   /** Close the socket and stop reconnecting. */
   destroy(): void;
 }
@@ -58,6 +61,10 @@ export interface PlayerSession {
  *  server `game:ping`s (every 30 s, `WS_PING_INTERVAL_MS` in ws-router.ts)
  *  plus 5 s slack. ws-router.ts is server code, so the value is a literal. */
 const IDLE_TIMEOUT_MS = 65_000;
+
+/** Failed reopens before the socket gives up and fires `onFatal`: 40 at the
+ *  backoff's 30 s ceiling is about 20 minutes of attempts. */
+export const GAME_SOCKET_MAX_REOPEN = 40;
 
 /** `auth=token` tells the server to wait for the first-frame token and not
  *  read the cookie, which may belong to another Lobby in the same browser. */
@@ -109,6 +116,7 @@ export function createPlayerSession(
       onFatal: (info: { code: number; reason: string }) =>
         callbacks.onFatal?.(info),
       autoReconnect: true,
+      maxReopenAttempts: GAME_SOCKET_MAX_REOPEN,
       idleTimeoutMs: IDLE_TIMEOUT_MS,
     };
     return deps?.createClient
@@ -126,6 +134,9 @@ export function createPlayerSession(
     },
     isConnected() {
       return client?.isConnected() ?? false;
+    },
+    reconnectNow() {
+      client?.reconnectNow();
     },
     destroy() {
       client?.disconnect();

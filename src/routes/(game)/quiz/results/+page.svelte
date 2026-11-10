@@ -61,6 +61,27 @@ import type { BadgeId, Rarity } from "@orakl/shared";
     }
   });
 
+  // A socket flap can swallow the live results-ready frame: reload when the
+  // socket returns, and once when the tab wakes without the breakdown row.
+  let wasReconnecting = false;
+  $effect(() => {
+    const reconnecting = session.isReconnecting;
+    if (wasReconnecting && !reconnecting) invalidateAll();
+    wasReconnecting = reconnecting;
+  });
+
+  let reloadedOnVisible = false;
+  function onVisibilityChange() {
+    if (
+      document.visibilityState !== "visible" ||
+      reloadedOnVisible ||
+      data.breakdown !== null
+    )
+      return;
+    reloadedOnVisible = true;
+    invalidateAll();
+  }
+
   let waitingToastId: string | number | undefined;
 
   $effect(() => {
@@ -115,6 +136,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
 </script>
 
 <svelte:head><title>Final standings — Orakl</title></svelte:head>
+<svelte:document onvisibilitychange={onVisibilityChange} />
 
 {#snippet content()}
 <div class="flex flex-col gap-5 py-4">
@@ -300,6 +322,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
       emoteStillSrc={(id) => session.getEmoteStillSrc(id)}
       emoteTitle={(id) => session.getEmoteTitle(id)}
       activeEmotes={session.activeEmotes}
+      selfPlayerId={session.playerId}
       {canEmote}
       mode="wrapper"
       onSend={(emoteId, x, y) => session.sendEmote(emoteId, x, y)}

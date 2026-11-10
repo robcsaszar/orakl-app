@@ -2,7 +2,12 @@ import { render } from "@testing-library/svelte";
 import { createRawSnippet, tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import EmoteReactionLayer, {
+  DOUBLE_TAP_MS,
   LONG_PRESS_MS,
+  MAX_RAIL_EMOTES,
+  RAIL_EMOTE_COARSE_PX,
+  RAIL_EMOTE_PX,
+  SELF_POP_MS,
 } from "../../src/lib/components/quiz/EmoteReactionLayer.svelte";
 
 const EMOTE = "heart";
@@ -410,7 +415,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const sent = container.querySelector(
       '[style*="transform-origin"] img',
     ) as HTMLElement;
-    expect(sent.getAttribute("width")).toBe("56");
+    expect(sent.getAttribute("width")).toBe(String(RAIL_EMOTE_PX));
   });
 
   it("coarse pointer: petals and the sent emote are larger", async () => {
@@ -445,7 +450,7 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     const sent = container.querySelector(
       '[style*="transform-origin"] img',
     ) as HTMLElement;
-    expect(sent.getAttribute("width")).toBe("80");
+    expect(sent.getAttribute("width")).toBe(String(RAIL_EMOTE_COARSE_PX));
   });
 
   it("the petal under a held pointer lifts and grows", async () => {
@@ -483,6 +488,225 @@ describe("EmoteReactionLayer — spring-driven fan and sent emote", () => {
     );
     await tick();
     expect(btn.classList.contains("-translate-y-1.5")).toBe(false);
+  });
+});
+
+describe("EmoteReactionLayer — edge rails", () => {
+  const emoteAt = (uid: string, offsetX: number, playerId = "p1") => ({
+    uid,
+    playerId,
+    emoteId: uid,
+    offsetX,
+    offsetY: 0.5,
+  });
+  const renderLayer = (
+    activeEmotes: ReturnType<typeof emoteAt>[],
+    selfPlayerId: string | null = null,
+  ) =>
+    render(EmoteReactionLayer, {
+      props: {
+        pickedEmotes: [EMOTE],
+        emoteSrc,
+        activeEmotes,
+        selfPlayerId,
+        canEmote: false,
+        onSend: vi.fn(),
+        children: makeChildren(),
+      },
+    });
+  const rails = (container: HTMLElement) => ({
+    left: container.querySelector(".left-0.inset-y-0") as HTMLElement,
+    right: container.querySelector(".right-0.inset-y-0") as HTMLElement,
+  });
+  const srcs = (el: HTMLElement) =>
+    [...el.querySelectorAll("img")].map((i) => i.getAttribute("src"));
+
+  it("routes by side of the tap point into rails as wide as an emote", () => {
+    const { container } = renderLayer([emoteAt("a", 0.2), emoteAt("b", 0.8)]);
+    const { left, right } = rails(container);
+    expect(srcs(left)).toEqual(["/emotes/a.webp"]);
+    expect(srcs(right)).toEqual(["/emotes/b.webp"]);
+    expect(left.style.width).toBe(`${RAIL_EMOTE_PX}px`);
+    expect(right.style.width).toBe(`${RAIL_EMOTE_PX}px`);
+  });
+
+  it("rails and emotes are wider on a coarse pointer", () => {
+    stubMatchMedia((q) => q === "(pointer: coarse)");
+    const { container } = renderLayer([emoteAt("a", 0.2)]);
+    const { left } = rails(container);
+    expect(left.style.width).toBe(`${RAIL_EMOTE_COARSE_PX}px`);
+    expect(left.querySelector("img")?.getAttribute("width")).toBe(
+      String(RAIL_EMOTE_COARSE_PX),
+    );
+  });
+
+  it("overlay mode reserves gutters as wide as the rails; wrapper mode does not", () => {
+    const { container } = renderLayer([emoteAt("a", 0.2)]);
+    const area = rails(container).left.parentElement as HTMLElement;
+    expect(area.style.paddingLeft).toBe(`${RAIL_EMOTE_PX}px`);
+    expect(area.style.paddingRight).toBe(`${RAIL_EMOTE_PX}px`);
+    const wrapped = render(EmoteReactionLayer, {
+      props: {
+        pickedEmotes: [EMOTE],
+        emoteSrc,
+        activeEmotes: [emoteAt("a", 0.2)],
+        canEmote: false,
+        mode: "wrapper",
+        onSend: vi.fn(),
+        children: makeChildren(),
+      },
+    });
+    const wrappedArea = rails(wrapped.container).left
+      .parentElement as HTMLElement;
+    expect(wrappedArea.style.paddingLeft).toBe("");
+  });
+
+  it("a tap near the top keeps the emote whole: its top is clamped at the rail's edge", () => {
+    const { container } = renderLayer([
+      { ...emoteAt("t", 0.2), offsetY: 0.02 },
+    ]);
+    const slot = rails(container).left.firstElementChild as HTMLElement;
+    expect(slot.getAttribute("style")).toContain("max(0px");
+    expect(rails(container).left.getAttribute("style")).toContain("clip-path");
+  });
+
+  it("an emote at exactly the midline goes right", () => {
+    const { container } = renderLayer([emoteAt("m", 0.5)]);
+    expect(srcs(rails(container).right)).toEqual(["/emotes/m.webp"]);
+    expect(srcs(rails(container).left)).toEqual([]);
+  });
+
+  it("a rail shows only the newest MAX_RAIL_EMOTES", () => {
+    const all = Array.from({ length: MAX_RAIL_EMOTES + 2 }, (_, i) =>
+      emoteAt(`e${i}`, 0.1),
+    );
+    const { container } = renderLayer(all);
+    expect(srcs(rails(container).left)).toEqual(
+      all.slice(2).map((e) => `/emotes/${e.uid}.webp`),
+    );
+  });
+
+  it("the sender's own emote pops at the tap point for SELF_POP_MS, others do not", async () => {
+    const { container } = renderLayer(
+      [emoteAt("mine", 0.2, "me"), emoteAt("theirs", 0.8, "p2")],
+      "me",
+    );
+    await tick();
+    const imgs = () => [...container.querySelectorAll("img")].length;
+    expect(imgs()).toBe(3);
+    vi.advanceTimersByTime(SELF_POP_MS);
+    await tick();
+    expect(imgs()).toBe(2);
+  });
+
+  it("another player's emote renders once", async () => {
+    const { container } = renderLayer([emoteAt("theirs", 0.2, "p2")], "me");
+    await tick();
+    expect(container.querySelectorAll("img")).toHaveLength(1);
+  });
+});
+
+describe("EmoteReactionLayer — double tap (play page)", () => {
+  function renderOverlay(onSend = vi.fn()) {
+    const { container } = render(EmoteReactionLayer, {
+      props: {
+        pickedEmotes: ["emote_heart"],
+        emoteSrc,
+        activeEmotes: [],
+        canEmote: true,
+        onSend,
+        children: makeChildren(),
+      },
+    });
+    const area = container.querySelector(".emote-area") as HTMLElement;
+    (area.parentElement as HTMLElement).getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 300, height: 100 }) as DOMRect;
+    return { container, area };
+  }
+
+  const touch = (el: HTMLElement, type: string, x = 50, y = 50) =>
+    el.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        clientX: x,
+        clientY: y,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+  function tap(el: HTMLElement, x = 50, y = 50) {
+    touch(el, "pointerdown", x, y);
+    touch(el, "pointerup", x, y);
+  }
+
+  const fanOpen = (container: HTMLElement) =>
+    container.querySelector('[aria-label="Send emote_heart"]') !== null;
+
+  it("one tap opens nothing", async () => {
+    const { container, area } = renderOverlay();
+    tap(area);
+    await tick();
+    expect(fanOpen(container)).toBe(false);
+  });
+
+  it("a second tap close by opens the fan at it, and the fan stays open after the release", async () => {
+    const { container, area } = renderOverlay();
+    tap(area);
+    vi.advanceTimersByTime(DOUBLE_TAP_MS - 1);
+    touch(area, "pointerdown", 60, 40);
+    await tick();
+    touch(area, "pointerup", 60, 40);
+    // The release's own click must not land on the fan's dismiss surface.
+    area.parentElement?.click();
+    await tick();
+    expect(fanOpen(container)).toBe(true);
+  });
+
+  it("a petal tapped after a double tap sends from the double-tap point", async () => {
+    const onSend = vi.fn();
+    const { container, area } = renderOverlay(onSend);
+    tap(area);
+    tap(area, 60, 40);
+    await tick();
+    vi.advanceTimersByTime(1);
+    const petal = container.querySelector(
+      '[aria-label="Send emote_heart"]',
+    ) as HTMLElement;
+    touch(petal, "pointerdown");
+    touch(petal, "pointerup");
+    petal.click();
+    expect(onSend).toHaveBeenCalledWith("emote_heart", 60 / 300, 40 / 100);
+  });
+
+  it("a second tap after the double-tap window opens nothing", async () => {
+    const { container, area } = renderOverlay();
+    tap(area);
+    vi.advanceTimersByTime(DOUBLE_TAP_MS + 1);
+    tap(area);
+    await tick();
+    expect(fanOpen(container)).toBe(false);
+  });
+
+  it("a second tap far from the first opens nothing", async () => {
+    const { container, area } = renderOverlay();
+    tap(area, 20, 20);
+    tap(area, 250, 80);
+    await tick();
+    expect(fanOpen(container)).toBe(false);
+  });
+
+  it("a long press does not count as the first tap", async () => {
+    const { container, area } = renderOverlay();
+    touch(area, "pointerdown");
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    await tick();
+    touch(area, "pointerup");
+    await tick();
+    expect(fanOpen(container)).toBe(false);
+    tap(area);
+    await tick();
+    expect(fanOpen(container)).toBe(false);
   });
 });
 

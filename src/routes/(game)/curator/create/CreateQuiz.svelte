@@ -76,6 +76,9 @@
   let maxPlayersInput = $state("");
   // Playing curator (ADR 0019) — default ON always, no cross-session memory.
   let participate = $state(true);
+  // Undo answer — default OFF; a curator opts in per quiz.
+  let undoEnabled = $state(false);
+  const undoDescription = `Each player may undo up to ${Math.round(GAME.undo.budgetFraction * 100)}% of the questions, at least ${GAME.undo.minBudget === 1 ? "one" : GAME.undo.minBudget}.`;
   let errors = $state<string[]>([]);
   let categoriesError = $state(false);
   let _isEditing = $state(false);
@@ -206,6 +209,7 @@
       maxPlayers: maxPlayersNum,
       saveAsPreset: saveAsPreset && !atPresetLimit,
       participate,
+      undoEnabled,
     };
     // Kept for /quiz/lobby's "Start quiz" step (categoryIds/timer/etc. for the
     // curator:start frame) — lobby creation itself now happens here, not on
@@ -261,6 +265,7 @@
             scoringMode: quizConfig.scoringMode,
             accessMode: quizConfig.accessMode,
             maxPlayers: quizConfig.maxPlayers,
+            undoEnabled: quizConfig.undoEnabled,
           }),
         })
           .then((r) => r.ok)
@@ -315,6 +320,7 @@
     accessMode = preset.access_mode as "open" | "invite-only";
     maxPlayersInput =
       preset.max_players != null ? String(preset.max_players) : "";
+    undoEnabled = preset.undo_enabled === 1;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -425,6 +431,9 @@
         // (playing curator, ADR 0019 — always defaults ON otherwise).
         if (typeof config.participate === "boolean") {
           participate = config.participate;
+        }
+        if (typeof config.undoEnabled === "boolean") {
+          undoEnabled = config.undoEnabled;
         }
       }
     } catch (err) {
@@ -614,6 +623,22 @@
           description={participate && advanceMode === "manual"
             ? "Playing along? Auto-advance keeps the game moving."
             : "Join your own quiz as a player."}
+        />
+      </div>
+      <div
+        class="group flex flex-col gap-2"
+        aria-describedby="undoEnabled-description"
+      >
+        <Checkbox
+          id="undoEnabled"
+          name="undoEnabled"
+          label="Players may change an answer"
+          aria-describedby="undoEnabled-description"
+          bind:checked={undoEnabled}
+        />
+        <FieldDescription
+          id="undoEnabled-description"
+          description={undoDescription}
         />
       </div>
       {#if quizPresets}

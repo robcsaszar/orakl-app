@@ -1,22 +1,35 @@
 <script module lang="ts">
   /** Hold time before a press opens the emote fan. */
   export const LONG_PRESS_MS = 500;
+  /** Longest gap between two taps that opens the emote fan (play page only). */
+  export const DOUBLE_TAP_MS = 300;
+  /** Width and emote size of an edge rail on a fine pointer. */
+  export const RAIL_EMOTE_PX = 44;
+  /** Width and emote size of an edge rail on a coarse pointer. */
+  export const RAIL_EMOTE_COARSE_PX = 52;
+  /** Most incoming emotes one rail shows; older ones are dropped. */
+  export const MAX_RAIL_EMOTES = 4;
+  /** How long the sender's own emote pops at the tap point. */
+  export const SELF_POP_MS = 600;
+  /** Size of the sender's pop at the tap point. */
+  export const SELF_POP_PX = 36;
 </script>
 
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import { cn } from "tailwind-variants";
-  import { MediaQuery } from "svelte/reactivity";
+  import { MediaQuery, SvelteSet } from "svelte/reactivity";
   import EmotePetal from "./EmotePetal.svelte";
   import SentEmote from "./SentEmote.svelte";
 
   /**
    * Wraps a question's answer UI with the emote reaction gesture: long-press
-   * (touch + mouse/trackpad) opens a fan of `pickedEmotes` at the press
-   * point; picking one sends it (one tap, no answer targeting)
-   * and renders every player's incoming emotes as floats positioned by
-   * fraction-of-area coordinates.
+   * (touch + mouse/trackpad), or a double tap in `overlay` mode, opens a fan
+   * of `pickedEmotes` at the press point; picking one sends it (one tap, no
+   * answer targeting). Every player's emotes rise along the left or right edge
+   * rail of the area, by the side of the tap point, so they never cross the
+   * content; the sender also gets a brief pop at the tap point.
    */
   let {
     pickedEmotes,
@@ -24,6 +37,7 @@
     emoteStillSrc = emoteSrc,
     emoteTitle = (id: string) => id,
     activeEmotes,
+    selfPlayerId = null,
     canEmote,
     onSend,
     intermission = false,
@@ -44,6 +58,8 @@
       offsetX: number;
       offsetY: number;
     }[];
+    /** The viewer's player id; their own emotes also pop at the tap point. */
+    selfPlayerId?: string | null;
     canEmote: boolean;
     onSend: (emoteId: string, offsetX: number, offsetY: number) => void;
     intermission?: boolean;
@@ -68,6 +84,10 @@
   let keepOnRelease = false;
   let swallowClick: AbortController | null = null;
   const MOVE_CANCEL_PX = 10;
+  /** How far apart two taps may land and still be one double tap. */
+  const DOUBLE_TAP_SLOP_PX = 30;
+  /** Where and when the last plain tap on the overlay ended. */
+  let lastTap: { x: number; y: number; at: number } | null = null;
   // Fan opens upward from the tap point, spanning this many degrees.
   const FAN_ARC_DEG = 140;
   const reducedMotion = new MediaQuery("(prefers-reduced-motion: reduce)");
@@ -77,10 +97,49 @@
   // emote, the fan radius and the hit target are all larger.
   const coarsePointer = new MediaQuery("(pointer: coarse)");
   const petalSize = $derived(coarsePointer.current ? 64 : 48);
-  const emoteSize = $derived(coarsePointer.current ? 80 : 56);
+  const railPx = $derived(coarsePointer.current ? RAIL_EMOTE_COARSE_PX : RAIL_EMOTE_PX);
+  const leftRail = $derived(
+    activeEmotes.filter((e) => e.offsetX < 0.5).slice(-MAX_RAIL_EMOTES),
+  );
+  const rightRail = $derived(
+    activeEmotes.filter((e) => e.offsetX >= 0.5).slice(-MAX_RAIL_EMOTES),
+  );
+  /** Uids of the sender's own emotes still popping at the tap point. */
+  const selfPops = new SvelteSet<string>();
+  const popSeen = new Set<string>();
+  const popTimers = new Set<ReturnType<typeof setTimeout>>();
   const fanRadiusPx = $derived(coarsePointer.current ? 112 : 88);
+  // Overlay mode (play page) keeps the rails in gutters beside the answers,
+  // so an emote never covers a tile's text; wrapper mode (results) lets the
+  // rails sit over the content's edges, where nothing is left to read.
+  const wrapperStyle = $derived(
+    [
+      mode === "overlay" ? `padding-left:${railPx}px;padding-right:${railPx}px` : "",
+      mode === "wrapper" && canEmote ? "-webkit-touch-callout: none" : "",
+    ]
+      .filter(Boolean)
+      .join(";") || undefined,
+  );
   // Generous touch target — bigger than the icon itself.
   const hitRadiusPx = $derived(coarsePointer.current ? 50 : 38);
+
+  $effect(() => {
+    for (const emote of activeEmotes) {
+      if (emote.playerId !== selfPlayerId || popSeen.has(emote.uid)) continue;
+      popSeen.add(emote.uid);
+      selfPops.add(emote.uid);
+      const timer = setTimeout(() => {
+        popTimers.delete(timer);
+        selfPops.delete(emote.uid);
+      }, SELF_POP_MS);
+      popTimers.add(timer);
+    }
+  });
+
+  $effect(() => () => {
+    for (const timer of popTimers) clearTimeout(timer);
+    popTimers.clear();
+  });
 
   $effect(() => {
     // Close the fan whenever it's no longer valid to react (answered reset,
@@ -145,11 +204,21 @@
 
   function handlePointerDown(e: PointerEvent) {
     if (!canEmote || (e.pointerType === "mouse" && e.button !== 0)) return;
-    pressStart = { x: e.clientX, y: e.clientY };
-    const { clientX, clientY } = e;
     // Capture so the drag-to-select below keeps tracking this pointer even
     // once the fan (a higher stacking layer) is what's visually underneath it.
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const tap = lastTap;
+    lastTap = null;
+    if (
+      tap &&
+      Date.now() - tap.at <= DOUBLE_TAP_MS &&
+      Math.hypot(e.clientX - tap.x, e.clientY - tap.y) <= DOUBLE_TAP_SLOP_PX
+    ) {
+      openForTap(e.clientX, e.clientY);
+      return;
+    }
+    pressStart = { x: e.clientX, y: e.clientY };
+    const { clientX, clientY } = e;
     longPressTimer = setTimeout(() => {
       longPressTimer = null;
       openEmoteMenu(clientX, clientY);
@@ -164,11 +233,12 @@
     const { clientX, clientY } = e;
     longPressTimer = setTimeout(() => {
       longPressTimer = null;
-      openFromWrapper(clientX, clientY);
+      openForTap(clientX, clientY);
     }, LONG_PRESS_MS);
   }
 
-  function openFromWrapper(clientX: number, clientY: number) {
+  /** Opens the fan so it stays open after the release that opened it, and swallows that release's click. */
+  function openForTap(clientX: number, clientY: number) {
     openEmoteMenu(clientX, clientY);
     if (!emoteMenu || !areaEl) return;
     keepOnRelease = true;
@@ -274,9 +344,13 @@
   // Mobile/trackpad: release over an icon (without lifting the finger in
   // between) to pick it, same as WhatsApp/Slack-style reaction pickers —
   // no second tap needed.
-  function handlePointerUp() {
+  function handlePointerUp(e: PointerEvent) {
+    // Released before the hold opened the fan and without moving: a tap.
+    lastTap = longPressTimer ? { x: e.clientX, y: e.clientY, at: Date.now() } : null;
     cancelLongPress();
-    // A right-click's release keeps the fan open; the window listener clears the flag.
+    dropSwallow();
+    // A right-click's or double tap's release keeps the fan open; the window
+    // listener clears the flag.
     if (keepOnRelease) return;
     if (emoteMenu) {
       const emoteId = hoverIndex !== null ? pickedEmotes[hoverIndex] : undefined;
@@ -288,6 +362,8 @@
 
   function handlePointerCancel() {
     cancelLongPress();
+    dropSwallow();
+    lastTap = null;
     emoteMenu = null;
     hoverIndex = null;
   }
@@ -333,15 +409,35 @@
   onpointermove={mode === "wrapper" ? handlePointerMove : undefined}
   onpointerup={mode === "wrapper" ? wrapperPointerUp : undefined}
   onpointercancel={mode === "wrapper" ? wrapperPointerCancel : undefined}
-  style={mode === "wrapper" && canEmote ? "-webkit-touch-callout: none" : undefined}
+  style={wrapperStyle}
 >
-  {#each activeEmotes as emote (emote.uid)}
+  <!-- The rail clips at the area's top and bottom only: the wag and the
+       spring overshoot may spill sideways, a tap near the top is clamped
+       so the emote stays whole. -->
+  {#snippet rail(side: "left" | "right", emotes: typeof activeEmotes)}
     <div
-      class="pointer-events-none absolute z-20"
-      style="top:calc({emote.offsetY * 100}% - {emoteSize}px);left:calc({emote.offsetX * 100}% - {emoteSize / 2}px)"
+      class={cn("pointer-events-none absolute inset-y-0 z-20", side === "left" ? "left-0" : "right-0")}
+      style="width:{railPx}px;clip-path:inset(0 -16px)"
     >
-      <SentEmote src={srcOf(emote.emoteId)} size={emoteSize} reducedMotion={reducedMotion.current} />
+      {#each emotes as emote (emote.uid)}
+        <div class="absolute left-0 opacity-90" style="top:max(0px, calc({emote.offsetY * 100}% - {railPx}px))">
+          <SentEmote src={srcOf(emote.emoteId)} size={railPx} reducedMotion={reducedMotion.current} />
+        </div>
+      {/each}
     </div>
+  {/snippet}
+  {@render rail("left", leftRail)}
+  {@render rail("right", rightRail)}
+
+  {#each activeEmotes as emote (emote.uid)}
+    {#if selfPops.has(emote.uid)}
+      <div
+        class="pointer-events-none absolute z-20"
+        style="top:calc({emote.offsetY * 100}% - {SELF_POP_PX}px);left:calc({emote.offsetX * 100}% - {SELF_POP_PX / 2}px)"
+      >
+        <SentEmote src={srcOf(emote.emoteId)} size={SELF_POP_PX} reducedMotion={reducedMotion.current} />
+      </div>
+    {/if}
   {/each}
 
   {#if canEmote && mode === "overlay"}
