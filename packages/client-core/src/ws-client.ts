@@ -100,6 +100,13 @@ export interface WsClientOptions<Out extends { type: string } = WsMessage> {
    * fires `onclose`. Set it above the server's ping interval. Default: off.
    */
   idleTimeoutMs?: number;
+  /**
+   * {@link WsClient.reconnectNow} on an open socket with no inbound frame for
+   * longer than this many ms drops it and reopens at once: a device that slept
+   * may hold a half-open socket the idle watchdog has not caught yet. Set it
+   * above the server's ping interval. Default: off (an open socket is left alone).
+   */
+  staleAfterMs?: number;
 }
 
 // Faster first retry than svelte-websocket-store's 2s, then a comparable climb.
@@ -115,6 +122,8 @@ export class WsClient<Out extends { type: string } = WsMessage> {
   private _status: WsStatus = "idle";
   private fatalCloseCodes: number[];
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  /** `Date.now()` of the open socket's last inbound frame (or its open). */
+  private lastFrameAt = 0;
 
   private options: WsClientOptions<Out>;
 
@@ -185,12 +194,14 @@ export class WsClient<Out extends { type: string } = WsMessage> {
 
     socket.onopen = () => {
       this.reopenCount = 0;
+      this.lastFrameAt = Date.now();
       this.armIdleTimer(socket);
       this.setStatus("open");
       this.options.onOpen?.((m) => this.send(m));
     };
 
     socket.onmessage = (event: { data: unknown }) => {
+      this.lastFrameAt = Date.now();
       this.armIdleTimer(socket);
       let parsed: WsMessage;
       try {
@@ -226,10 +237,20 @@ export class WsClient<Out extends { type: string } = WsMessage> {
   /**
    * Skip the backoff wait: while reconnecting or dropped (not by
    * {@link WsClient.disconnect}), drop the pending reopen and connect at once.
-   * The reopen count is kept. For a page that wakes or comes back online.
+   * The reopen count is kept. An open socket silent past `staleAfterMs` is
+   * dropped and reopened at once, counted like any reopen. For a page that
+   * wakes or comes back online.
    */
   reconnectNow(): void {
     if (this.intentionallyClosed) return;
+    if (this._status === "open") {
+      const ms = this.options.staleAfterMs;
+      if (ms === undefined || !this.ws) return;
+      if (Date.now() - this.lastFrameAt <= ms) return;
+      this.dropSocket(this.ws);
+      this.scheduleReopen(true);
+      return;
+    }
     if (this._status !== "reconnecting" && this._status !== "closed") return;
     if (this.reopenTimer) {
       clearTimeout(this.reopenTimer);
@@ -252,7 +273,8 @@ export class WsClient<Out extends { type: string } = WsMessage> {
     this.setStatus("closed");
   }
 
-  private scheduleReopen(): void {
+  /** Reopen with backoff, or at once when `immediate`; counts toward `maxReopenAttempts`. */
+  private scheduleReopen(immediate = false): void {
     if (!this.options.autoReconnect) return;
     if (this.intentionallyClosed) return;
     if (
@@ -268,6 +290,10 @@ export class WsClient<Out extends { type: string } = WsMessage> {
       ];
     this.reopenCount++;
     this.setStatus("reconnecting");
+    if (immediate) {
+      this.connect();
+      return;
+    }
     this.reopenTimer = setTimeout(() => {
       this.reopenTimer = null;
       if (!this.intentionallyClosed) this.connect();
@@ -289,17 +315,23 @@ export class WsClient<Out extends { type: string } = WsMessage> {
     this.idleTimer = setTimeout(() => {
       this.idleTimer = null;
       if (this.ws !== socket) return;
-      // A half-open socket may not fire onclose for minutes; detach it so a
-      // late close event cannot schedule a second reopen.
-      socket.onopen = null;
-      socket.onmessage = null;
-      socket.onerror = null;
-      socket.onclose = null;
-      this.ws = null;
-      socket.close();
-      this.setStatus("closed");
-      this.options.onClose?.({ intentional: false });
+      this.dropSocket(socket);
       this.scheduleReopen();
     }, ms);
+  }
+
+  /** Close a socket presumed half-open and report the unintentional close. */
+  private dropSocket(socket: WsSocketLike): void {
+    // A half-open socket may not fire onclose for minutes; detach it so a
+    // late close event cannot schedule a second reopen.
+    this.clearIdleTimer();
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    this.ws = null;
+    socket.close();
+    this.setStatus("closed");
+    this.options.onClose?.({ intentional: false });
   }
 }

@@ -383,6 +383,26 @@ describe("QuizSession (injectable factory)", () => {
     });
   });
 
+  describe("session:token", () => {
+    it("re-slides the cookie over HTTP when the frame carries no token", () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      vi.stubGlobal("fetch", fetchMock);
+      send({ type: "session:token" });
+      expect(fetchMock).toHaveBeenCalledWith("/api/lobby/session/refresh", {
+        method: "POST",
+      });
+      vi.unstubAllGlobals();
+    });
+
+    it("calls nothing when the frame carries the token", () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      vi.stubGlobal("fetch", fetchMock);
+      send({ type: "session:token", token: "fresh-token" });
+      expect(fetchMock).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+  });
+
   // ── lobby:reset ─────────────────────────────────────────────────────────────
 
   describe("lobby:reset", () => {

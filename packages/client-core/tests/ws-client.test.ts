@@ -268,6 +268,77 @@ describe("WsClient", () => {
       expect(FakeWS.instances).toHaveLength(1);
       expect(client.status).toBe("closed");
     });
+
+    describe("on an open socket with staleAfterMs", () => {
+      const STALE_MS = 1000;
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      function openClient(extra: { maxReopenAttempts?: number } = {}) {
+        const onFatal = vi.fn();
+        const client = new WsClient("ws://host/x", {
+          onMessage: vi.fn(),
+          autoReconnect: true,
+          reopenDelays: [30000],
+          staleAfterMs: STALE_MS,
+          onFatal,
+          ...extra,
+        });
+        client.connect();
+        FakeWS.last!.onopen?.();
+        return { client, onFatal };
+      }
+
+      // A sleeping device runs no timers: the clock jumps, nothing fires.
+      function sleepFor(ms: number) {
+        vi.setSystemTime(Date.now() + ms);
+      }
+
+      it("closes a socket silent past the threshold and reopens at once", () => {
+        const { client } = openClient();
+        const stale = FakeWS.last!;
+        sleepFor(STALE_MS + 1);
+        client.reconnectNow();
+        expect(FakeWS.instances).toHaveLength(2);
+        expect(stale.readyState).toBe(FakeWS.CLOSED);
+        expect(stale.onclose).toBeNull();
+        vi.advanceTimersByTime(30000);
+        expect(FakeWS.instances).toHaveLength(2);
+      });
+
+      it("leaves a socket alone when a frame arrived within the threshold", () => {
+        const { client } = openClient();
+        sleepFor(STALE_MS + 1);
+        FakeWS.last!.onmessage?.({ data: JSON.stringify({ type: "x" }) });
+        sleepFor(STALE_MS - 1);
+        client.reconnectNow();
+        expect(FakeWS.instances).toHaveLength(1);
+        expect(client.status).toBe("open");
+      });
+
+      it("two calls in one tick open one socket", () => {
+        const { client } = openClient();
+        sleepFor(STALE_MS + 1);
+        client.reconnectNow();
+        client.reconnectNow();
+        expect(FakeWS.instances).toHaveLength(2);
+      });
+
+      it("counts the reopen toward maxReopenAttempts", () => {
+        const { client, onFatal } = openClient({ maxReopenAttempts: 1 });
+        sleepFor(STALE_MS + 1);
+        client.reconnectNow();
+        FakeWS.last!.onclose?.({ code: 1006 });
+        expect(onFatal).toHaveBeenCalledWith({
+          code: 0,
+          reason: "max reconnect attempts",
+        });
+      });
+    });
   });
 
   describe("state", () => {

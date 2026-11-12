@@ -1066,6 +1066,14 @@ export class QuizSession implements PlayerSessionView {
       this.isStarting = false;
       toast.error(GAME_ERROR_COPY[msg.code] ?? msg.message);
     },
+    onSessionToken: (msg) => {
+      // A token frame is kept by the transport for its next auth; a cookie
+      // session re-slides its HttpOnly cookie, which only the server can write.
+      if (msg.token) return;
+      void fetch("/api/lobby/session/refresh", { method: "POST" }).catch(
+        () => {},
+      );
+    },
   };
 
   /**

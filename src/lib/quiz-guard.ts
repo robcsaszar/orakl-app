@@ -10,7 +10,7 @@ import { QuizJourneyPageSchema } from "@orakl/protocol";
 import type { JourneyState } from "@orakl/shared";
 import { error, redirect } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
-import { failLoad } from "./page-data";
+import { failLoad, fetchWithRetry } from "./page-data";
 
 /**
  * Enforce a page's declared phase gate: if the player's real journey state is
@@ -23,7 +23,10 @@ export async function requireJourney(
 ): Promise<PlayerJourney> {
   const query = new URLSearchParams(codeHint ? { code: codeHint } : {});
   const qs = query.toString();
-  const res = await fetch(`/api/quiz/journey${qs ? `?${qs}` : ""}`);
+  const res = await fetchWithRetry(
+    fetch,
+    `/api/quiz/journey${qs ? `?${qs}` : ""}`,
+  );
   if (!res.ok) failLoad(res.status);
   const decoded = Schema.decodeUnknownEither(QuizJourneyPageSchema)(
     await res.json(),
@@ -47,9 +50,10 @@ export async function requireJourney(
       codeHint && (journey.state === "setup" || journey.state === "pending");
     if (keepCode)
       redirect(303, `${journey.route}?code=${encodeURIComponent(codeHint)}`);
-    // A seat whose lobby is gone lands on code entry with a word about it.
+    // A seat whose lobby is gone reads its saved game when there is one, else
+    // lands on code entry with a word about it.
     if (journey.lobbyGone && journey.route === "/join")
-      redirect(303, "/join?ended=1");
+      redirect(303, journey.savedResults ? "/quiz/results" : "/join?ended=1");
     redirect(303, journey.route);
   }
   return journey;

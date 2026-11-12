@@ -1,6 +1,7 @@
 import type { SoloServerMessage } from "@orakl/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GAME } from "../data/game.settings";
+import { STALE_SOCKET_MS } from "../src/lib/player-session.js";
 import {
   MAX_RESUME_ATTEMPTS,
   RESUME_DELAYS_MS,
@@ -873,6 +874,27 @@ describe("soloMode (WS store)", () => {
       vi.advanceTimersByTime(1); // that reopen fails and waits again
       window.dispatchEvent(new Event("online"));
       expect(FakeWS.instances).toHaveLength(before + 2);
+    });
+
+    it("a visible tab reopens a resume socket silent past STALE_SOCKET_MS", async () => {
+      await playing();
+      FakeWS.lastInstance!.drop();
+      vi.advanceTimersByTime(0); // the resume socket opens
+      const stale = FakeWS.lastInstance!;
+      const before = FakeWS.instances.length;
+      // A sleeping device runs no timers: the clock jumps, nothing fires.
+      vi.setSystemTime(Date.now() + STALE_SOCKET_MS + 1);
+      document.dispatchEvent(new Event("visibilitychange"));
+      expect(stale.readyState).toBe(3);
+      vi.advanceTimersByTime(0);
+      // Earlier tests' undestroyed stores also hear the event; count this run's.
+      const reopened = FakeWS.instances
+        .slice(before)
+        .filter((ws) =>
+          ws.sent.some((f) => JSON.parse(f).sessionId === "sess-r"),
+        );
+      expect(reopened).toHaveLength(1);
+      expect(sentTypes(reopened[0])).toEqual(["solo:resume"]);
     });
 
     it("a 1011 close on the resume socket ends the run at once", async () => {

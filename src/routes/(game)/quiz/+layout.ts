@@ -1,7 +1,7 @@
 import { QuizContextPageSchema } from "@orakl/protocol";
 import { error } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
-import { failLoad } from "@/lib/page-data";
+import { failLoad, fetchWithRetry } from "@/lib/page-data";
 import type { LayoutLoad } from "./$types";
 
 export const load: LayoutLoad = async ({ fetch, url, untrack }) => {
@@ -17,7 +17,10 @@ export const load: LayoutLoad = async ({ fetch, url, untrack }) => {
       .toLowerCase() || undefined;
   const query = new URLSearchParams(code ? { code } : {});
   const qs = query.toString();
-  const res = await fetch(`/api/quiz/context${qs ? `?${qs}` : ""}`);
+  const res = await fetchWithRetry(
+    fetch,
+    `/api/quiz/context${qs ? `?${qs}` : ""}`,
+  );
   if (!res.ok) failLoad(res.status);
   const decoded = Schema.decodeUnknownEither(QuizContextPageSchema)(
     await res.json(),

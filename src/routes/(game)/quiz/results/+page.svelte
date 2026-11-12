@@ -1,5 +1,7 @@
 <script lang="ts">
+import { QuizResultsPageSchema } from "@orakl/protocol";
 import { computeBadgeRarity } from "@orakl/shared";
+import { Either, Schema } from "effect";
 import type { BadgeId, Rarity } from "@orakl/shared";
   import { invalidateAll } from "$app/navigation";
   import { getQuizSession } from "@/lib/svelte/quizSession.svelte.js";
@@ -30,7 +32,12 @@ import type { BadgeId, Rarity } from "@orakl/shared";
     : null;
 
   const session = getQuizSession();
-  let { data }: { data: PageData } = $props();
+  let { data: loaded }: { data: PageData } = $props();
+  /** A refreshed copy of the load, tied to the load it refreshed so a newer load wins. */
+  let refreshed = $state.raw<{ base: PageData; value: PageData } | null>(null);
+  const data = $derived(
+    refreshed && refreshed.base === loaded ? refreshed.value : loaded,
+  );
   /** BADGE_DISPLAY off: the card keeps score and rank and drops the badges. */
   const showBadges = $derived(data.uiFlags.BADGE_DISPLAY === true);
   /** ROLE_SELECTION off: no observers exist, so their tile and row badge go. */
@@ -38,11 +45,17 @@ import type { BadgeId, Rarity } from "@orakl/shared";
 
   const alreadyFlagged = $derived(new Set(data.alreadyFlaggedIds));
 
+  /** The lobby is gone: the saved game, read-only — no socket, no emotes, no next quiz. */
+  const archived = $derived(data.archived === true);
+
   // The socket delivers this player's breakdown per-connection at
   // final_scores (game-connection-handler.ts), ahead of the page-load data —
   // which reads game_results and is the only source on a refresh or from
   // history, since persistence is fire-and-forget from game-store.ts.
-  const breakdown = $derived(session.myBreakdown ?? data.breakdown);
+  // An archived page has no socket: the saved row is the only source.
+  const breakdown = $derived(
+    archived ? data.breakdown : (session.myBreakdown ?? data.breakdown),
+  );
 
   $effect(() => {
     if (data.claimed) toast.success("Your results are saved to your new account.");
@@ -63,29 +76,52 @@ import type { BadgeId, Rarity } from "@orakl/shared";
 
   // A socket flap can swallow the live results-ready frame: reload when the
   // socket returns, and once when the tab wakes without the breakdown row.
+  // Fetches the results itself rather than invalidating the load: a failed
+  // refresh must leave the live page and its socket in place.
+  async function refreshResults() {
+    const base = loaded;
+    try {
+      const res = await fetch(
+        `/api/quiz/results${data.claimed ? "?claimed=1" : ""}`,
+      );
+      // The game moved on while the socket was down: the layout's phase
+      // effect takes the page there, so there is nothing to refresh.
+      if (res.status === 409) return;
+      if (!res.ok) throw new Error(String(res.status));
+      const decoded = Schema.decodeUnknownEither(QuizResultsPageSchema)(
+        await res.json(),
+      );
+      if (Either.isLeft(decoded)) throw new Error("malformed");
+      refreshed = { base, value: { ...loaded, ...decoded.right } };
+    } catch {
+      toast.error("Could not refresh your results. Showing what we have.");
+    }
+  }
+
   let wasReconnecting = false;
   $effect(() => {
     const reconnecting = session.isReconnecting;
-    if (wasReconnecting && !reconnecting) invalidateAll();
+    if (wasReconnecting && !reconnecting) refreshResults();
     wasReconnecting = reconnecting;
   });
 
   let reloadedOnVisible = false;
   function onVisibilityChange() {
     if (
+      archived ||
       document.visibilityState !== "visible" ||
       reloadedOnVisible ||
       data.breakdown !== null
     )
       return;
     reloadedOnVisible = true;
-    invalidateAll();
+    refreshResults();
   }
 
   let waitingToastId: string | number | undefined;
 
   $effect(() => {
-    if (!data.claimed && !data.isAnonymousPlayer && !session.isCurator) {
+    if (!archived && !data.claimed && !data.isAnonymousPlayer && !session.isCurator) {
       waitingToastId = toast.loading("Waiting for curator to start the next quiz.", { duration: Infinity });
       return () => {
         if (waitingToastId !== undefined) toast.dismiss(waitingToastId);
@@ -96,7 +132,28 @@ import type { BadgeId, Rarity } from "@orakl/shared";
   // The roster as it stood at game end (roles included) — a later role flip
   // (e.g. curator "Stop playing along") must not move rows on this podium.
   const finalPlayers = $derived(
-    [...session.finalRoster].sort((a, b) => b.score - a.score),
+    data.standings
+      ? data.standings.map((s, index) => ({
+          id: String(index),
+          nickname: s.nickname,
+          avatar: s.avatarId ?? "",
+          score: s.score,
+          rank: s.rank,
+          role: s.role ?? ("player" as const),
+          isCurator: false,
+        }))
+      : [...session.finalRoster].sort((a, b) => b.score - a.score),
+  );
+  /** The caller's row: the session's player, or the saved game's own row. */
+  const currentPlayerId = $derived(
+    data.standings
+      ? String(data.standings.findIndex((s) => s.isViewer))
+      : session.playerId,
+  );
+  const isObserver = $derived(
+    data.standings
+      ? data.standings.some((s) => s.isViewer && s.role === "observer")
+      : session.isObserver,
   );
 
   // A non-participating curator ("NPC") isn't a spectator the way a regular
@@ -120,7 +177,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
   });
 
   const performance = $derived(
-    session.isObserver ? null : performanceFromBreakdown(breakdown),
+    isObserver ? null : performanceFromBreakdown(breakdown),
   );
 
   /** Observers see the results page's emotes but cannot send; no answered rule applies. */
@@ -130,8 +187,17 @@ import type { BadgeId, Rarity } from "@orakl/shared";
       session.pickedEmotes.length > 0,
   );
 
+  // An archived page has no session nickname: the viewer's saved row has it.
+  const claimNickname = $derived(
+    archived
+      ? (data.standings?.find((s) => s.isViewer)?.nickname ?? "")
+      : (session.nickname ?? ""),
+  );
+
   const standingsSubtitle = $derived(
-    `${session.stoppedAfter ? `${stoppedAfterCopy(session.stoppedAfter.served)} ` : ""}Ranks settle by score${roleSelection ? ", with observers marked apart from the contest" : ""}. The vault will open for the next quiz shortly.`,
+    archived
+      ? `Ranks settle by score${roleSelection ? ", with observers marked apart from the contest" : ""}. This lobby has ended. Its chronicle is kept.`
+      : `${session.stoppedAfter ? `${stoppedAfterCopy(session.stoppedAfter.served)} ` : ""}Ranks settle by score${roleSelection ? ", with observers marked apart from the contest" : ""}. The vault will open for the next quiz shortly.`,
   );
 </script>
 
@@ -168,7 +234,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
 
     <CeremonyLeaderboard
       players={leaderboardPlayers}
-      currentPlayerId={session.playerId}
+      {currentPlayerId}
       showObserverBadge={roleSelection}
     />
   </CeremonyFrame>
@@ -258,9 +324,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
           </p>
         </div>
         <Button
-          href="/signup?claim=1&nickname={encodeURIComponent(
-            session.nickname ?? '',
-          )}"
+          href="/signup?claim=1&nickname={encodeURIComponent(claimNickname)}"
           variant="secondary-inverted"
           intent="cta"
           class="self-end"
@@ -310,7 +374,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
 </div>
 {/snippet}
 
-{#if emoteLayer}
+{#if emoteLayer && !archived}
   <!-- Pending branch renders the results bare, so SSR HTML carries the full
        page and only the emote gesture wrapper arrives with the chunk. -->
   {#await emoteLayer}

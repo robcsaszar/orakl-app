@@ -57,6 +57,17 @@ const UPSTREAM_STRIPPED_HEADERS = [
  *  through `API_FORWARD_TIMEOUT_MS` (tests use a short one). */
 const API_FORWARD_TIMEOUT_MS = 60_000;
 
+/** Owner routing's replay header (ADR 0024); only Fly Proxy may act on it. */
+const FLY_REPLAY_HEADER = "fly-replay";
+
+/** The retryable answer for an API this hop cannot use. */
+function apiUnavailable(): Response {
+  return Response.json(
+    { error: "api_unavailable" },
+    { status: 503, headers: { "Retry-After": "5" } },
+  );
+}
+
 const handleApiForward: Handle = async ({ event, resolve }) => {
   const { pathname, search } = event.url;
   if (!isForwardedApiPath(pathname)) return resolve(event);
@@ -92,10 +103,15 @@ const handleApiForward: Handle = async ({ event, resolve }) => {
       },
       "api unreachable",
     );
-    return Response.json(
-      { error: "api_unavailable" },
-      { status: 503, headers: { "Retry-After": "5" } },
-    );
+    return apiUnavailable();
+  }
+  // A replay answer (ADR 0024) names the machine that owns the lobby, but this
+  // hop reaches the API over 6PN where no Fly Proxy honours it: passed on, it
+  // would reach the browser as an empty 200.
+  if (upstream.headers.has(FLY_REPLAY_HEADER)) {
+    await upstream.body?.cancel();
+    logger.warn({ url: pathname }, "api answered fly-replay to the web hop");
+    return apiUnavailable();
   }
   return maybeGzipJson(upstream, event.request.headers.get("accept-encoding"));
 };

@@ -5,6 +5,7 @@ import {
   createPlayerSession,
   GAME_SOCKET_MAX_REOPEN,
   type PlayerSessionCallbacks,
+  STALE_SOCKET_MS,
 } from "../src/lib/player-session.js";
 
 type Opts = ConstructorParameters<typeof WsClient<ClientMessage>>[1];
@@ -86,6 +87,16 @@ describe("connect()", () => {
     });
     session.connect();
     expect(c.opts()?.idleTimeoutMs).toBe(65_000);
+  });
+
+  it("reopens on wake a socket silent past STALE_SOCKET_MS", () => {
+    const c = makeFakeClient();
+    createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      url: "ws://x",
+    }).connect();
+    expect(c.opts()?.staleAfterMs).toBeTypeOf("number");
+    expect(c.opts()?.staleAfterMs).toBe(STALE_SOCKET_MS);
   });
 
   it("gives up after GAME_SOCKET_MAX_REOPEN reopens", () => {
@@ -170,6 +181,24 @@ describe("auth handshake", () => {
     const sent: ClientMessage[] = [];
     c.opts()?.onOpen?.((m) => sent.push(m));
     expect(sent).toEqual([]);
+  });
+
+  it("authenticates the next reconnect with the token a session:token frame carried", () => {
+    const c = makeFakeClient();
+    const session = createPlayerSession(callbacks, {
+      createClient: c.createClient,
+      url: "ws://x",
+      getAuthToken: () => "expired-token",
+    });
+    session.connect();
+    c.opts()?.onMessage({ type: "session:token", token: "fresh-token" });
+    const sent: ClientMessage[] = [];
+    c.opts()?.onOpen?.((m) => sent.push(m));
+    expect(sent).toEqual([{ type: "auth", token: "fresh-token" }]);
+    expect(callbacks.onMessage).toHaveBeenCalledWith({
+      type: "session:token",
+      token: "fresh-token",
+    });
   });
 });
 

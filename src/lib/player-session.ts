@@ -26,7 +26,8 @@ export interface PlayerSessionCallbacks {
 }
 
 export interface PlayerSessionDeps {
-  /** Native (Capacitor) bearer-token source; null on web/guest → cookie auth. */
+  /** Native (Capacitor) bearer-token source; null on web/guest → cookie auth.
+   *  A token from a `session:token` frame takes its place on later opens. */
   getAuthToken?: () => string | null;
   releaseWakeLock?: () => Promise<void>;
   /** Test seam: build the underlying client (defaults to a real WsClient). */
@@ -51,7 +52,7 @@ export interface PlayerSession {
   /** Send a player/curator action frame. No-op until the socket is open. */
   send(msg: ClientMessage): void;
   isConnected(): boolean;
-  /** Reopen a dropped socket at once instead of waiting out the backoff. */
+  /** Reopen a dropped or stale socket at once instead of waiting out the backoff. */
   reconnectNow(): void;
   /** Close the socket and stop reconnecting. */
   destroy(): void;
@@ -61,6 +62,11 @@ export interface PlayerSession {
  *  server `game:ping`s (every 30 s, `WS_PING_INTERVAL_MS` in ws-router.ts)
  *  plus 5 s slack. ws-router.ts is server code, so the value is a literal. */
 const IDLE_TIMEOUT_MS = 65_000;
+
+/** Silence after which a wake or `online` event reopens an open socket at
+ *  once: one missed server ping (every 30 s, `WS_PING_INTERVAL_MS` in
+ *  ws-router.ts) plus 5 s slack. The solo socket gets the same pings. */
+export const STALE_SOCKET_MS = 35_000;
 
 /** Failed reopens before the socket gives up and fires `onFatal`: 40 at the
  *  backoff's 30 s ceiling is about 20 minutes of attempts. */
@@ -85,6 +91,8 @@ export function createPlayerSession(
   const releaseWakeLockFn = deps?.releaseWakeLock ?? defaultReleaseWakeLock;
   const getAuthToken = deps?.getAuthToken ?? (() => null);
   let client: WsClient<ClientMessage> | null = null;
+  // The token a `session:token` frame carried; it outlives the sourced one.
+  let refreshedToken: string | null = null;
 
   function makeClient(): WsClient<ClientMessage> {
     const url =
@@ -101,12 +109,14 @@ export function createPlayerSession(
           client?.send({ type: "pong" });
           return;
         }
+        if (m.type === "session:token" && typeof m.token === "string")
+          refreshedToken = m.token;
         callbacks.onMessage(m);
       },
       onOpen: (send: (m: ClientMessage) => void) => {
         // Native/cross-origin: authenticate first. Web rides the cookie on the
         // upgrade and sends nothing — the server replays the snapshot.
-        const token = getAuthToken();
+        const token = refreshedToken ?? getAuthToken();
         if (token) send({ type: "auth", token });
       },
       onStatus: (s: WsStatus) => callbacks.onStatus?.(s),
@@ -118,6 +128,7 @@ export function createPlayerSession(
       autoReconnect: true,
       maxReopenAttempts: GAME_SOCKET_MAX_REOPEN,
       idleTimeoutMs: IDLE_TIMEOUT_MS,
+      staleAfterMs: STALE_SOCKET_MS,
     };
     return deps?.createClient
       ? deps.createClient(url, opts)

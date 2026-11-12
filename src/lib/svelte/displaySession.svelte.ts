@@ -175,6 +175,9 @@ export function createDisplaySession(
   /** A frame other than the lobby:update replay has arrived on this connection. */
   let frameSeen = false;
   let noLobbyTimer: ReturnType<typeof setInterval> | null = null;
+  /** Waiting-view reset held back by a replay's opening lobby:update; a game
+   *  frame later in the same replay cancels it. */
+  let pendingReset: ReturnType<typeof setTimeout> | null = null;
   /** The token the last socket opened with; a no_lobby retry reuses it. */
   let socketToken: string | null = null;
 
@@ -194,6 +197,11 @@ export function createDisplaySession(
       if (socketToken) connectGameSocket(socketToken);
       if (attempts >= NO_LOBBY_MAX_RETRIES) stopNoLobbyRetry();
     }, NO_LOBBY_RETRY_MS);
+  }
+
+  function cancelPendingReset() {
+    if (pendingReset) clearTimeout(pendingReset);
+    pendingReset = null;
   }
 
   function setAnswered(ids: Set<string>, count = ids.size) {
@@ -253,13 +261,19 @@ export function createDisplaySession(
       state.totalQuestions = msg.totalQuestions;
     },
     onLobbyUpdate(msg) {
-      // A lobby-phase snapshot replays only this frame: a first frame while a
-      // game view is showing means the lobby was reset while the socket was down.
-      if (!frameSeen && state.currentView !== "waiting") {
-        state.currentView = "waiting";
-        state.currentQuestion = null;
-        state.answerRevealed = false;
-        state.isIntermission = false;
+      // A replay opens with this frame. A lobby-phase snapshot sends nothing
+      // after it, so a game view still showing means the lobby was reset while
+      // the socket was down; a mid-game snapshot follows it with game frames in
+      // the same burst, so the reset waits for the next task and a game frame
+      // cancels it.
+      if (!frameSeen && state.currentView !== "waiting" && !pendingReset) {
+        pendingReset = setTimeout(() => {
+          pendingReset = null;
+          state.currentView = "waiting";
+          state.currentQuestion = null;
+          state.answerRevealed = false;
+          state.isIntermission = false;
+        }, 0);
       }
       state.players = [...(msg.players || [])];
       // Curator's live "Update quiz" edit — only carried when the server sent
@@ -343,6 +357,9 @@ export function createDisplaySession(
       state.players = state.players.filter((p) => p.id !== msg.playerId);
       updateSortedPlayers();
     },
+    onSessionToken(msg) {
+      if (msg.token) socketToken = msg.token;
+    },
   };
 
   function handleMessage(msg: ServerMessage) {
@@ -351,6 +368,7 @@ export function createDisplaySession(
       stopNoLobbyRetry();
       state.lobbyEnded = false;
     }
+    if (msg.type.startsWith("game:")) cancelPendingReset();
     dispatchGameFrame(msg, sink);
     frameSeen = true;
   }
@@ -447,6 +465,7 @@ export function createDisplaySession(
 
     destroy() {
       stopNoLobbyRetry();
+      cancelPendingReset();
       session?.destroy();
       session = null;
     },

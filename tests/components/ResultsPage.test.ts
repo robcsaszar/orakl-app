@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockQuizSession } from "../../src/lib/svelte/mockQuizSession.svelte.js";
+import { toast } from "../../src/lib/toast.js";
 import ResultsPage from "../../src/routes/(game)/quiz/results/+page.svelte";
 import LobbySessionHarness from "./LobbySessionHarness.svelte";
 
@@ -142,8 +143,24 @@ describe("results page — host allowance banner (map #1184)", () => {
   });
 });
 
-describe("results page — reload after a socket flap", () => {
-  beforeEach(() => invalidateAll.mockClear());
+describe("results page — refresh after a socket flap", () => {
+  const fetchMock = vi.fn();
+  const breakdownRow = {
+    questionIndex: 0,
+    categoryId: "general",
+    timeToAnswerMs: 1200,
+    questionText: "Fresh question text",
+    isCorrect: true,
+    selectedAnswerText: "a",
+    correctAnswerText: "a",
+  };
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.mocked(toast.error).mockClear();
+  });
+  afterEach(() => vi.unstubAllGlobals());
 
   function renderWith(data = makeData()) {
     const session = new MockQuizSession();
@@ -165,31 +182,89 @@ describe("results page — reload after a socket flap", () => {
     document.dispatchEvent(new Event("visibilitychange"));
   }
 
-  it("reloads once when the socket returns after a reconnect", async () => {
-    const session = renderWith();
-    await tick();
-    expect(invalidateAll).not.toHaveBeenCalled();
+  async function reconnect(session: MockQuizSession) {
     session.isReconnecting = true;
     await tick();
-    expect(invalidateAll).not.toHaveBeenCalled();
     session.isReconnecting = false;
     await tick();
-    expect(invalidateAll).toHaveBeenCalledTimes(1);
+  }
+
+  it("fetches the results once when the socket returns, without invalidateAll", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+    const session = renderWith();
+    await tick();
+    expect(fetchMock).not.toHaveBeenCalled();
+    session.isReconnecting = true;
+    await tick();
+    expect(fetchMock).not.toHaveBeenCalled();
+    session.isReconnecting = false;
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/quiz/results");
+    expect(invalidateAll).not.toHaveBeenCalled();
   });
 
-  it("reloads once on becoming visible while the breakdown row is absent", async () => {
+  it("a 503 refresh keeps the standings on screen and toasts once", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
+    const session = renderWith(makeData({ breakdown: [breakdownRow] }));
+    session.finalRoster = [
+      {
+        id: "p-9",
+        nickname: "Standing Kept",
+        avatar: "",
+        score: 3,
+        status: "active",
+        role: "player",
+      },
+    ];
+    await reconnect(session);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Standing Kept")).toBeInTheDocument();
+    expect(screen.getByText(/Fresh question text/)).toBeInTheDocument();
+  });
+
+  it("a 409 refresh (the game moved on) shows no error toast", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: "wrong_phase", route: "/quiz/lobby" },
+        { status: 409 },
+      ),
+    );
+    const session = renderWith();
+    await reconnect(session);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await tick();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("a successful refresh updates the breakdown", async () => {
+    fetchMock.mockImplementation(async () =>
+      Response.json(makeData({ breakdown: [breakdownRow], canFlag: false })),
+    );
+    const session = renderWith();
+    expect(screen.queryByText(/Fresh question text/)).toBeNull();
+    await reconnect(session);
+    await waitFor(() =>
+      expect(screen.getByText(/Fresh question text/)).toBeInTheDocument(),
+    );
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("refreshes once on becoming visible while the breakdown row is absent", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
     renderWith();
     setVisibility("hidden");
+    expect(fetchMock).not.toHaveBeenCalled();
+    setVisibility("visible");
+    setVisibility("visible");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(invalidateAll).not.toHaveBeenCalled();
-    setVisibility("visible");
-    setVisibility("visible");
-    expect(invalidateAll).toHaveBeenCalledTimes(1);
   });
 
-  it("does not reload on becoming visible when the breakdown row is present", async () => {
+  it("does not refresh on becoming visible when the breakdown row is present", async () => {
     renderWith(makeData({ breakdown: [] }));
     setVisibility("visible");
-    expect(invalidateAll).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
@@ -289,5 +364,124 @@ describe("results page — emote layer", () => {
     await layerReady(container);
     await fireEvent.contextMenu(screen.getAllByText("Alice")[0]);
     expect(screen.queryByRole("button", { name: /^Send / })).toBeNull();
+  });
+});
+
+describe("results page — archived (the lobby is gone; its saved game, read-only)", () => {
+  const standings = [
+    {
+      nickname: "Bob",
+      avatarId: null,
+      score: 90,
+      rank: 1,
+      role: "player" as const,
+      isViewer: false,
+    },
+    {
+      nickname: "Alice",
+      avatarId: null,
+      score: 50,
+      rank: 2,
+      role: "player" as const,
+      isViewer: true,
+    },
+  ];
+  const breakdown = [
+    {
+      questionIndex: 0,
+      categoryId: "general",
+      isCorrect: true,
+      timeToAnswerMs: 2000,
+      questionText: "Which oracle sat at Delphi?",
+      correctAnswerText: "Pythia",
+      selectedAnswerText: "Pythia",
+    },
+  ];
+
+  function archivedSession() {
+    const session = new MockQuizSession();
+    // No socket: nothing live, except a stray emote the layer would draw.
+    session.pickedEmotes = ["heart"];
+    session.activeEmotes = [
+      {
+        uid: "u1",
+        playerId: "p-2",
+        emoteId: "heart",
+        offsetX: 0.5,
+        offsetY: 0.5,
+      },
+    ];
+    return session;
+  }
+
+  function renderArchived(session = archivedSession()) {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    return render(
+      ResultsPage as never,
+      { data: makeData({ archived: true, standings, breakdown }) },
+      { wrapper: LobbySessionHarness, wrapperProps: { session } },
+    );
+  }
+
+  beforeEach(() => vi.mocked(toast.loading).mockClear());
+
+  it("renders the saved standings with the caller's row marked", () => {
+    renderArchived();
+    const rows = screen.getAllByRole("listitem");
+    expect(rows[0].textContent).toContain("Bob");
+    expect(rows[0].textContent).toContain("90");
+    expect(rows[1].textContent).toContain("Alice");
+    expect(rows[1].textContent).toContain("You");
+    expect(rows[0].textContent).not.toContain("You");
+    expect(screen.queryByText("Standings are still arriving.")).toBeNull();
+  });
+
+  it("renders the caller's own breakdown from the saved game", () => {
+    renderArchived();
+    expect(
+      screen.getByText(/Which oracle sat at Delphi\?/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Your answers")).toBeInTheDocument();
+  });
+
+  it("a guest's create-account link carries the nickname from the saved row", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    render(
+      ResultsPage as never,
+      {
+        data: makeData({
+          archived: true,
+          standings,
+          breakdown,
+          isAnonymousPlayer: true,
+        }),
+      },
+      {
+        wrapper: LobbySessionHarness,
+        wrapperProps: { session: archivedSession() },
+      },
+    );
+    const link = screen.getByRole("link", { name: "Create account" });
+    expect(link.getAttribute("href")).toContain("nickname=Alice");
+  });
+
+  it("no emotes and no wait for a next quiz", async () => {
+    const { container } = renderArchived();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(container.querySelector("div.pointer-events-none.z-20")).toBeNull();
+    expect(toast.loading).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText(/The vault will open for the next quiz/),
+    ).toBeNull();
   });
 });

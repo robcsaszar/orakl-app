@@ -2,7 +2,7 @@ import { QuizResultsPageSchema } from "@orakl/protocol";
 import type { JourneyState } from "@orakl/shared";
 import { error, redirect } from "@sveltejs/kit";
 import { Either, Schema } from "effect";
-import { failLoad } from "@/lib/page-data";
+import { failLoad, fetchWithRetry } from "@/lib/page-data";
 import type { PageLoad } from "./$types";
 
 /** Declarative phase gate (ADR 0004). */
@@ -12,7 +12,10 @@ export const load: PageLoad = async ({ fetch, url }) => {
   const claimed = url.searchParams.get("claimed") === "1" ? "1" : undefined;
   const query = new URLSearchParams(claimed ? { claimed } : {});
   const qs = query.toString();
-  const res = await fetch(`/api/quiz/results${qs ? `?${qs}` : ""}`);
+  const res = await fetchWithRetry(
+    fetch,
+    `/api/quiz/results${qs ? `?${qs}` : ""}`,
+  );
   if (res.status === 409) {
     const body = (await res.json()) as { route: string };
     redirect(303, body.route);
