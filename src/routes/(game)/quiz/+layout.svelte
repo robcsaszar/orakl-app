@@ -31,7 +31,7 @@ import { buildAvatarGroups } from "@orakl/shared";
   // /join before init() restores the live session; the server owns phase/membership
   // thereafter (these reads run at component init and don't track `data`).
   // svelte-ignore state_referenced_locally
-  const { membership, phase, lobby, avatars, emotesEnabled, emotePacks, playerId, isCurator } =
+  const { membership, phase, lobby, avatars, emotesEnabled, emotePacks, playerId, isCurator, archived } =
     data;
   session.membership = membership;
   session.phase = phase;
@@ -85,7 +85,10 @@ import { buildAvatarGroups } from "@orakl/shared";
   });
 
   // Phase-derived navigation: the one place client routing happens (ADR 0004).
+  // An archived context (the lobby is gone; its saved game is shown
+  // read-only) has no live phase to follow.
   $effect(() => {
+    if (archived) return;
     // Hold position while a transient overlay owns the screen. routeForPhase
     // reads membership + phase below, so the effect already tracks them.
     // A closed lobby holds only players: the curator's own client still
@@ -149,7 +152,9 @@ import { buildAvatarGroups } from "@orakl/shared";
     if (session.error) toast.error(session.error);
   });
 
+  // An archived context opens no game socket.
   onMount(() => {
+    if (archived) return;
     session.init({
       isLoggedIn: data.isLoggedIn,
       profileAvatarId: data.profileAvatarId,
@@ -166,11 +171,15 @@ import { buildAvatarGroups } from "@orakl/shared";
   // A phone that sleeps or drops offline waits out the socket's backoff; wake
   // and reconnect skip the wait.
   function reconnectIfVisible() {
-    if (document.visibilityState === "visible") session.reconnectNow();
+    if (!archived && document.visibilityState === "visible") session.reconnectNow();
+  }
+
+  function reconnectIfOnline() {
+    if (!archived) session.reconnectNow();
   }
 
   function reconnectIfRestored(e: PageTransitionEvent) {
-    if (e.persisted) session.reconnectNow();
+    if (!archived && e.persisted) session.reconnectNow();
   }
 
   // Redirect away after the "removed" notice has been shown.
@@ -228,7 +237,7 @@ import { buildAvatarGroups } from "@orakl/shared";
 </script>
 
 <svelte:document onvisibilitychange={reconnectIfVisible} />
-<svelte:window ononline={() => session.reconnectNow()} onpageshow={reconnectIfRestored} />
+<svelte:window ononline={reconnectIfOnline} onpageshow={reconnectIfRestored} />
 
 <QuizAvatarDialog />
 

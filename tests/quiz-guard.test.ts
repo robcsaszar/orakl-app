@@ -10,6 +10,7 @@ type Journey = {
   route: string;
   miss: "lobby_lost" | null;
   lobbyGone?: boolean;
+  savedResults?: boolean;
 };
 
 /** A fetch that answers `GET /api/quiz/journey` and records the URL it saw. */
@@ -139,6 +140,37 @@ describe("requireJourney (client helper over GET /api/quiz/journey)", () => {
       status: 303,
       location: "/join?ended=1",
     });
+  });
+
+  it("a seat whose gone lobby has a saved game is sent to the read-only results", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "none",
+      phase: null,
+      state: "code-entry",
+      route: "/join",
+      miss: null,
+      lobbyGone: true,
+      savedResults: true,
+    });
+    await expect(requireJourney(fetchFn, ["lobby"])).rejects.toMatchObject({
+      status: 303,
+      location: "/quiz/results",
+    });
+  });
+
+  it("/join itself stays open to a seat with saved results", async () => {
+    const { fetchFn } = journeyFetch({
+      membership: "none",
+      phase: null,
+      state: "code-entry",
+      route: "/join",
+      miss: null,
+      lobbyGone: true,
+      savedResults: true,
+    });
+    await expect(
+      requireJourney(fetchFn, ["code-entry"]),
+    ).resolves.toMatchObject({ state: "code-entry" });
   });
 
   it("a gone lobby never changes a redirect elsewhere", async () => {

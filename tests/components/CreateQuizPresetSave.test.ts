@@ -137,6 +137,18 @@ describe("Host quiz saves the preset", () => {
     expect(JSON.parse(storage.getQuizConfig() ?? "{}").undoEnabled).toBe(true);
   });
 
+  it("shows an error and stays when the lobby create answers an empty 200", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 200 })),
+    );
+    await hostWithPresetBox(true);
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Failed to host quiz"),
+    );
+    expect(goto).not.toHaveBeenCalled();
+  });
+
   it("does not save with the box unticked", async () => {
     const fetchMock = stubFetch(
       { status: 201, body: { code: "ABCD" } },

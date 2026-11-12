@@ -126,6 +126,10 @@ const CASES: {
     msg: { type: "game:ping" },
   },
   {
+    callback: "onSessionToken",
+    msg: { type: "session:token", token: "t" },
+  },
+  {
     callback: "onRateAck",
     msg: { type: "player:rate-ack", questionId: "q1", ok: true },
   },

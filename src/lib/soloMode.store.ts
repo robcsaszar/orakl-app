@@ -25,6 +25,7 @@ import type {
 } from "../../data/game.settings.js";
 import { GAME } from "../../data/game.settings.js";
 import { isFalseAnswerText } from "./answer-variants.js";
+import { STALE_SOCKET_MS } from "./player-session.js";
 import { drawMatchLines as drawMatchLinesHelper } from "./question-helpers.js";
 import {
   ackRating,
@@ -394,6 +395,7 @@ export function createSoloModeStore(
         autoReconnect: true,
         reopenDelays: RESUME_DELAYS_MS,
         maxReopenAttempts: MAX_RESUME_ATTEMPTS,
+        staleAfterMs: STALE_SOCKET_MS,
         // 1011: the server failed the frame. Each open resets the attempt
         // count, so retrying it could loop forever.
         fatalCloseCodes: [1008, 1011],

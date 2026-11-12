@@ -9,6 +9,37 @@ export const API_UNAVAILABLE_MESSAGE =
 export const isApiUnavailable = (status: number) =>
   status === 502 || status === 503 || status === 504;
 
+/** Retries a page-load fetch makes after a 502/503/504 or a network failure. */
+export const API_RETRY_LIMIT = 2;
+
+/** Wait before retry n (1-based) is `n` times this. */
+export const API_RETRY_BACKOFF_MS = 250;
+
+/**
+ * Fetches `url`, retrying a 502/503/504 or a thrown network failure up to
+ * `API_RETRY_LIMIT` times with a growing delay. Any other status returns at
+ * once; the last attempt's response (or error) is what the caller sees.
+ */
+export async function fetchWithRetry(
+  fetch: typeof globalThis.fetch,
+  url: string,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const last = attempt >= API_RETRY_LIMIT;
+    try {
+      const res = await fetch(url);
+      if (last || !isApiUnavailable(res.status)) return res;
+    } catch {
+      // A network failure that outlasts the retries is the API being away:
+      // the same retryable 503 page as a 503 answer.
+      if (last) failLoad(503);
+    }
+    await new Promise((r) =>
+      setTimeout(r, API_RETRY_BACKOFF_MS * (attempt + 1)),
+    );
+  }
+}
+
 /**
  * Throws the Kit error for a non-OK API answer with no body to read: a 502,
  * 503 or 504 becomes a 503 carrying `API_UNAVAILABLE_MESSAGE`; any other

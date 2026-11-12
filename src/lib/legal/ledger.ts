@@ -193,7 +193,7 @@ export const LEDGER: readonly LedgerRow[] = [
     parser:
       "Typed into the join form and passed through our own nickname sanitiser; no account is needed.",
     storage:
-      "In memory while the lobby lives, then in the game results of finished games; the emote choice is not kept with them.",
+      "In memory while the lobby lives, with a restart copy in our database until the lobby closes or sits idle for 24 hours; then in the game results of finished games; the emote choice is not kept with them.",
     retention:
       'Game results are kept indefinitely as history. If you later link an account and delete it, your nickname on those results is replaced with "Deleted player" and your avatar is removed; scores and answers stay as anonymised history.',
     basis: "contract",
@@ -231,7 +231,8 @@ export const LEDGER: readonly LedgerRow[] = [
     ],
     parser:
       "Sent by the page from the browser's visibility and focus events and its own timers; the device class (phone, tablet, desktop) comes from the viewport width, not from any identifier.",
-    storage: "The solo sessions and attempts tables in our database.",
+    storage:
+      "The solo sessions and attempts tables in our database, plus a restart copy of a run in progress until it ends or sits idle for 30 minutes.",
     retention:
       "Indefinitely; flagged runs are kept for review. When you delete your account the link to it is removed and the runs leave the leaderboard; scores and timings stay as anonymised history. You can download them first from your profile page.",
     basis: "legitimate-interest",

@@ -243,7 +243,9 @@
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      // A hosted lobby always answers its code; a body without one is a
+      // failed create, whatever the status.
+      if (!res.ok || typeof data.code !== "string" || !data.code) {
         toast.error(data.error || "Failed to host quiz");
         submitting = false;
         return;
@@ -276,12 +278,9 @@
       // game_token cookie, and every layout load (header user, quiz journey)
       // must re-run against it — one data round-trip instead of a document
       // reload + rehydration.
-      await goto(
-        data.code
-          ? `/quiz/lobby?code=${encodeURIComponent(data.code)}`
-          : "/quiz/lobby",
-        { invalidateAll: true },
-      );
+      await goto(`/quiz/lobby?code=${encodeURIComponent(data.code)}`, {
+        invalidateAll: true,
+      });
     } catch {
       toast.error("Failed to host quiz. Check your connection and try again.");
       submitting = false;

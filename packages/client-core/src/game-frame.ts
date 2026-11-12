@@ -35,6 +35,7 @@ import type {
   RoleSelectionStartMessage,
   RoleSelectionUpdateMessage,
   ServerMessage,
+  SessionTokenMessage,
 } from "@orakl/protocol";
 /** One optional callback per `ServerMessage` variant. A consumer implements
  *  only the rows it needs — everything else silently no-ops. */
@@ -61,6 +62,7 @@ export interface GameFrameSink {
   onPlayerEmote?(msg: PlayerEmoteBroadcastMessage): void;
   onGameError?(msg: GameErrorMessage): void;
   onPing?(msg: GamePingMessage): void;
+  onSessionToken?(msg: SessionTokenMessage): void;
   onRateAck?(msg: PlayerRateAckMessage): void;
   onUndoAck?(msg: PlayerUndoAckMessage): void;
   onPlayerUnanswered?(msg: PlayerUnansweredMessage): void;
@@ -143,6 +145,9 @@ export function dispatchGameFrame(
       break;
     case "game:ping":
       sink.onPing?.(msg);
+      break;
+    case "session:token":
+      sink.onSessionToken?.(msg);
       break;
     case "player:rate-ack":
       sink.onRateAck?.(msg);
