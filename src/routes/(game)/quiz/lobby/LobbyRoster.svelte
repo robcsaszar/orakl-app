@@ -107,7 +107,7 @@
         aria-label={`Remove ${player.nickname}`}
         class="hover:text-danger-light hover:bg-danger"
       >
-        <Icon name="close" class="size-5" />
+        <Icon name="delete" size="md" />
       </Button>
       <Button
         variant="ghost"
@@ -116,7 +116,7 @@
         aria-label={`Remove and block ${player.nickname}`}
         class="hover:text-danger-light hover:bg-danger"
       >
-        <Icon name="ban" class="size-5" />
+        <Icon name="block" size="md" />
       </Button>
       <Button
         variant="ghost"
@@ -124,7 +124,7 @@
         onclick={() => startEditPlayer(player.id, player.nickname)}
         aria-label={`Edit nickname for ${player.nickname}`}
       >
-        <Icon name="edit" class="size-5" />
+        <Icon name="edit" size="md" />
       </Button>
     {:else}
       <div class="flex gap-1">
@@ -135,7 +135,7 @@
           aria-label={`Save nickname for ${player.nickname}`}
           class="hover:text-success-light hover:bg-success"
         >
-          <Icon name="check" class="size-5" />
+          <Icon name="confirm" size="md" />
         </Button>
         <Button
           variant="ghost"
@@ -144,7 +144,7 @@
           aria-label={`Cancel edit for ${player.nickname}`}
           class="hover:text-danger-light hover:bg-danger"
         >
-          <Icon name="x" class="size-5" />
+          <Icon name="dismiss" size="md" />
         </Button>
       </div>
     {/if}

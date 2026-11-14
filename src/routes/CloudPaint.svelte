@@ -38,6 +38,7 @@
   import ConfirmButton from "@/lib/components/ui/ConfirmButton.svelte";
   import FileInput from "@/lib/components/ui/FileInput.svelte";
   import Icon from "@/lib/components/ui/Icon.svelte";
+  import type { RoleName } from "$lib/icons";
   import SegmentedPicker from "@/lib/components/ui/SegmentedPicker.svelte";
   import Slider from "@/lib/components/ui/Slider.svelte";
   import SwitchField from "@/lib/components/ui/SwitchField.svelte";
@@ -371,14 +372,14 @@
   }
 
   const TOOLS = [
-    { key: "auto", label: "Smart", icon: "tabler/wand", hint: "Adds cloud where you start on sky, rubs it out where you start on cloud." },
-    { key: "add", label: "Add", icon: "tabler/plus", hint: "Adds cloud wherever you paint." },
-    { key: "erase", label: "Rub out", icon: "tabler/eraser", hint: "Takes cloud away wherever you paint." },
+    { key: "auto", label: "Smart", icon: "wand", hint: "Adds cloud where you start on sky, rubs it out where you start on cloud." },
+    { key: "add", label: "Add", icon: "add", hint: "Adds cloud wherever you paint." },
+    { key: "erase", label: "Rub out", icon: "erase", hint: "Takes cloud away wherever you paint." },
   ] as const;
   const SHAPES = [
-    { key: "brush", label: "Brush", icon: "tabler/brush", hint: "Paints as you drag." },
-    { key: "line", label: "Line", icon: "tabler/line", hint: "Drag to draw one straight line." },
-    { key: "fill", label: "Fill", icon: "tabler/bucket-droplet", hint: "Click to change one whole patch." },
+    { key: "brush", label: "Brush", icon: "brush", hint: "Paints as you drag." },
+    { key: "line", label: "Line", icon: "line", hint: "Drag to draw one straight line." },
+    { key: "fill", label: "Fill", icon: "fill", hint: "Click to change one whole patch." },
   ] as const;
   const SIZE = ["", "tiny", "small", "medium", "large", "huge"];
   const STRENGTH = ["", "light", "normal", "full"];
@@ -392,15 +393,15 @@
   const plain = `${ui.slider} [&_input]:bg-secondary/25`;
 </script>
 
-{#snippet tool(o: { label: string; icon: string; hint: string })}
-  <span data-tooltip="{o.label}. {o.hint}" class="flex"><Icon name={o.icon} class="size-4" /><span class="sr-only">{o.label}</span></span>
+{#snippet tool(o: { label: string; icon: RoleName; hint: string })}
+  <span data-tooltip="{o.label}. {o.hint}" class="flex"><Icon name={o.icon} size="sm" /><span class="sr-only">{o.label}</span></span>
 {/snippet}
 {#snippet action(label: string, onclick: () => void, disabled = false)}
   <Button variant={disabled ? "disabled" : "outline"} intent="compact" radius="rounded" class={small} {disabled} {onclick}>{label}</Button>
 {/snippet}
-{#snippet iconAction(name: string, label: string, onclick: () => void, disabled = false)}
+{#snippet iconAction(name: RoleName, label: string, onclick: () => void, disabled = false)}
   <Button variant={disabled ? "disabled" : "outline"} intent="compact" radius="rounded" class={iconBtn} aria-label={label} data-tooltip={label} {disabled} {onclick}>
-    <Icon {name} class="size-3.5" />
+    <Icon {name} size="xs" />
   </Button>
 {/snippet}
 
@@ -434,8 +435,8 @@
     </div>
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5" role="toolbar" aria-label="Canvas tools">
       <div class="flex gap-1">
-        {@render iconAction("tabler/arrow-back-up", "Undo (Ctrl+Z)", undo, history.at < 0)}
-        {@render iconAction("tabler/arrow-forward-up", "Redo (Shift+Ctrl+Z)", redo, history.at >= history.changes.length - 1)}
+        {@render iconAction("undo", "Undo (Ctrl+Z)", undo, history.at < 0)}
+        {@render iconAction("redo", "Redo (Shift+Ctrl+Z)", redo, history.at >= history.changes.length - 1)}
       </div>
       <div class="flex gap-1">
         {@render action("Grow", grow)}
@@ -466,8 +467,8 @@
         onConfirm={resetCanvas}
         class="ml-auto gap-1 rounded-lg px-2.5 py-1.5 font-mono text-xs font-normal"
       >
-        {#snippet icon()}<Icon name="tabler/x" class="size-3.5" />{/snippet}
-        {#snippet confirmIcon()}<Icon name="tabler/check" class="size-3.5" />{/snippet}
+        {#snippet icon()}<Icon name="delete" size="xs" />{/snippet}
+        {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
       </ConfirmButton>
     </div>
     <div class="relative overflow-hidden rounded-lg border-2 border-secondary/25">
@@ -526,7 +527,7 @@
         }}
         onkeyup={() => setBare(false)}
       >
-        <Icon name="tabler/layers-difference" class="size-4" />
+        <Icon name="layers" size="sm" />
       </Button>
     </div>
     <p class="min-h-4 {hintCls}" role="status">

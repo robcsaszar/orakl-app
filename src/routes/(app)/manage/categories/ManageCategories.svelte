@@ -489,8 +489,8 @@
               variant="outline"
               onConfirm={() => removeTag(tag)}
             >
-              {#snippet icon()}<Icon name="x" />{/snippet}
-              {#snippet confirmIcon()}<Icon name="check" />{/snippet}
+              {#snippet icon()}<Icon name="delete" size="md" />{/snippet}
+              {#snippet confirmIcon()}<Icon name="confirm" size="md" />{/snippet}
             </ConfirmButton>
           {/if}
           </Card>
@@ -542,8 +542,8 @@
             variant="outline"
             onConfirm={() => removeSeason(season)}
           >
-            {#snippet icon()}<Icon name="x" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="check" />{/snippet}
+            {#snippet icon()}<Icon name="delete" size="md" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" size="md" />{/snippet}
           </ConfirmButton>
           </Card>
         </li>
@@ -754,8 +754,8 @@
               variant="outline"
               onConfirm={confirmDelete}
             >
-              {#snippet icon()}<Icon name="x" />{/snippet}
-              {#snippet confirmIcon()}<Icon name="check" />{/snippet}
+              {#snippet icon()}<Icon name="delete" size="md" />{/snippet}
+              {#snippet confirmIcon()}<Icon name="confirm" size="md" />{/snippet}
             </ConfirmButton>
           {/if}
         </div>

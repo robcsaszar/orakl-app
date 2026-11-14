@@ -55,6 +55,7 @@
   import Card from "@/lib/components/ui/Card.svelte";
   import ConfirmButton from "@/lib/components/ui/ConfirmButton.svelte";
   import Icon from "@/lib/components/ui/Icon.svelte";
+  import type { RoleName } from "$lib/icons";
   import Input from "@/lib/components/ui/Input.svelte";
   import Progress from "@/lib/components/ui/Progress.svelte";
   import SegmentedPicker from "@/lib/components/ui/SegmentedPicker.svelte";
@@ -878,20 +879,20 @@
   <Button variant={disabled ? "disabled" : "outline"} intent="compact" radius="rounded" class={compact} {disabled} {onclick}>{label}</Button>
 {/snippet}
 <!-- A button that asks first; it holds its place, dim and still, while it has nothing to do. -->
-{#snippet ask(label: string, question: string, onConfirm: () => void, live: boolean, hint: string, mark = "tabler/check")}
+{#snippet ask(label: string, question: string, onConfirm: () => void, live: boolean, hint: string, mark: RoleName = "confirm")}
   <span class="flex transition-opacity duration-150 motion-reduce:transition-none {live ? '' : 'pointer-events-none opacity-40'}" inert={!live} use:hinted={hint}>
     <ConfirmButton {label} confirmLabel={question} confirmVariant="danger" variant="outline" revealDelay={0} duration={4000} {onConfirm} class={confirmCls}>
-      {#snippet icon()}<Icon name={mark} class="size-3.5" />{/snippet}
-      {#snippet confirmIcon()}<Icon name="tabler/check" class="size-3.5" />{/snippet}
+      {#snippet icon()}<Icon name={mark} size="xs" />{/snippet}
+      {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
     </ConfirmButton>
   </span>
 {/snippet}
-{#snippet iconAction(name: string, label: string, onclick: () => void, disabled = false)}
+{#snippet iconAction(name: RoleName, label: string, onclick: () => void, disabled = false)}
   <Button variant={disabled ? "disabled" : "outline"} intent="compact" radius="rounded" class="p-2" aria-label={label} data-tooltip={label} {disabled} {onclick}>
-    <Icon {name} class="size-4" />
+    <Icon {name} size="sm" />
   </Button>
 {/snippet}
-{#snippet barTool(name: string, label: string, onclick: () => void, o: { pressed?: boolean; disabled?: boolean } = {})}
+{#snippet barTool(name: RoleName, label: string, onclick: () => void, o: { pressed?: boolean; disabled?: boolean } = {})}
   <SkyBarTool {name} {label} {onclick} {...o} />
 {/snippet}
 {#snippet fold(title: string)}
@@ -903,7 +904,7 @@
       onclick={() => (folded[title] = !folded[title])}
     >
       {title}
-      <Icon name={folded[title] ? "tabler/chevron-down" : "tabler/chevron-up"} class="size-4 text-foreground-darker" />
+      <Icon name={folded[title] ? "expand" : "collapse"} class="text-foreground-darker" size="sm" />
     </Button>
   </h3>
 {/snippet}
@@ -969,12 +970,12 @@
 {#if shown}
   <SkyPanel mode={{ key: "clouds", label: "Clouds" }} {modes} {onmode} bind:open wide={prefs.large && skyView.view === "settings" && tab === "paint"} {savedNote}>
     {#snippet tools()}
-        {@render barTool("tabler/arrow-back-up", "Undo (Ctrl+Z)", () => step(-1), { disabled: history.at < 0 })}
-        {@render barTool("tabler/arrow-forward-up", "Redo (Shift+Ctrl+Z)", () => step(1), { disabled: history.at >= history.changes.length - 1 })}
+        {@render barTool("undo", "Undo (Ctrl+Z)", () => step(-1), { disabled: history.at < 0 })}
+        {@render barTool("redo", "Redo (Shift+Ctrl+Z)", () => step(1), { disabled: history.at >= history.changes.length - 1 })}
         <span class="mx-1 h-5 w-px bg-secondary/20 max-sm:hidden" aria-hidden="true"></span>
-        {@render barTool("tabler/hand-grab", prefs.grab ? "Grabbing clouds: drag one to move it. Click to use the page instead." : "Grab clouds: drag one to move it", () => (prefs.grab = !prefs.grab), { pressed: prefs.grab })}
-        {@render barTool("tabler/tag", cloudLab.tags ? "Name tags are on. Click to hide them." : "Show a name tag under each cloud in the sky", () => (cloudLab.tags = !cloudLab.tags), { pressed: cloudLab.tags })}
-        {@render barTool("tabler/lock", cloudLab.paused ? "Clouds are held still. Click to let them drift." : "Hold clouds still", () => (cloudLab.paused = !cloudLab.paused), { pressed: cloudLab.paused })}
+        {@render barTool("grab", prefs.grab ? "Grabbing clouds: drag one to move it. Click to use the page instead." : "Grab clouds: drag one to move it", () => (prefs.grab = !prefs.grab), { pressed: prefs.grab })}
+        {@render barTool("tag", cloudLab.tags ? "Name tags are on. Click to hide them." : "Show a name tag under each cloud in the sky", () => (cloudLab.tags = !cloudLab.tags), { pressed: cloudLab.tags })}
+        {@render barTool("locked", cloudLab.paused ? "Clouds are held still. Click to let them drift." : "Hold clouds still", () => (cloudLab.paused = !cloudLab.paused), { pressed: cloudLab.paused })}
     {/snippet}
 
     <div class="flex shrink-0 flex-col gap-2 border-b border-secondary/15 px-6 py-4 max-sm:gap-1.5 max-sm:px-4 max-sm:py-2">
@@ -1015,8 +1016,8 @@
             onConfirm={undoAll}
             class={confirmCls}
           >
-            {#snippet icon()}<Icon name="tabler/arrow-back-up" class="size-3.5" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="tabler/check" class="size-3.5" />{/snippet}
+            {#snippet icon()}<Icon name="undo" size="xs" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
           </ConfirmButton>
         {/if}
         {#if picked && clouds.length > 1}
@@ -1030,8 +1031,8 @@
             onConfirm={remove}
             class="{confirmCls} ml-auto"
           >
-            {#snippet icon()}<Icon name="tabler/x" class="size-3.5" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="tabler/check" class="size-3.5" />{/snippet}
+            {#snippet icon()}<Icon name="delete" size="xs" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
           </ConfirmButton>
         {/if}
       </div>
@@ -1190,7 +1191,7 @@
                     value={picked.name}
                     oninput={(e: Event) => rename((e.currentTarget as HTMLInputElement).value.trim())}
                   />
-                  {@render iconAction("tabler/dice-5", "Roll a name", randomName)}
+                  {@render iconAction("roll", "Roll a name", randomName)}
                 </div>
               </section>
               <section class={group} aria-label="How often it shows">
@@ -1288,7 +1289,7 @@
                 <div class="flex flex-wrap items-center gap-1">
                   <span use:hinted={"Swaps this cloud for a fresh one made with the same settings. Use it when the settings are right and the cloud is not."}>
                     <Button variant="outline" intent="compact" radius="rounded" class="{compact} gap-1.5" onclick={newCloud}>
-                      <Icon name="tabler/dice-5" class="size-3.5" /> Roll again
+                      <Icon name="roll" size="xs" /> Roll again
                     </Button>
                   </span>
                   <span use:hinted={"Adds a second cloud to the sky that starts out just like this one."}>
@@ -1335,7 +1336,7 @@
                     () => dropTemplate(template.name),
                     !!S.templates[template.name],
                     CLOUD_PRESETS[template.name] ? `Makes the ${template.name} template as the code has it again.` : `Takes your ${template.name} template away. Clouds made from it stay as they are.`,
-                    CLOUD_PRESETS[template.name] ? "tabler/restore" : "tabler/x",
+                    CLOUD_PRESETS[template.name] ? "reset" : "delete",
                   )}
                 </div>
               </section>

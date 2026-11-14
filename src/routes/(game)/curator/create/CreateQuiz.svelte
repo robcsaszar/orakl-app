@@ -727,7 +727,7 @@
                   onConfirm={() => deletePreset(preset.id)}
                 >
                   {#snippet icon()}
-                    <Icon name="x" class="size-4" />
+                    <Icon name="delete" size="sm" />
                   {/snippet}
                 </ConfirmButton>
                 <Button

@@ -86,6 +86,7 @@ describe("bird settings", () => {
         height: 800,
         phase: "noon",
         seed,
+        clock: () => HOUR_START,
       });
       const s = defaultBirdSettings();
       s.scenarios.noon = { ...s.scenarios.noon, days };

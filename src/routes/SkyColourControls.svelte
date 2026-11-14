@@ -601,8 +601,8 @@
 {/snippet}
 {#snippet confirm(text: string, question: string, onConfirm: () => void, danger = false)}
   <ConfirmButton label={text} confirmLabel={question} confirmVariant={danger ? "danger" : "neutral"} variant="outline" revealDelay={0} duration={4000} {onConfirm} class={confirmCls}>
-    {#snippet icon()}<Icon name="tabler/x" class="size-3.5" />{/snippet}
-    {#snippet confirmIcon()}<Icon name="tabler/check" class="size-3.5" />{/snippet}
+    {#snippet icon()}<Icon name="delete" size="xs" />{/snippet}
+    {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
   </ConfirmButton>
 {/snippet}
 {#snippet hslSlider(part: 0 | 1 | 2, text: string, max: number, trackCss: string, hint: string, format: (v: number) => string)}
@@ -614,8 +614,8 @@
 {#if shown}
   <SkyPanel mode={{ key: "sky", label: "Sky" }} {modes} {onmode} bind:open {savedNote}>
     {#snippet tools()}
-      <SkyBarTool name="tabler/arrow-back-up" label="Undo (Ctrl+Z)" onclick={() => step(-1)} disabled={history.at < 0} />
-      <SkyBarTool name="tabler/arrow-forward-up" label="Redo (Shift+Ctrl+Z)" onclick={() => step(1)} disabled={history.at >= history.changes.length - 1} />
+      <SkyBarTool name="undo" label="Undo (Ctrl+Z)" onclick={() => step(-1)} disabled={history.at < 0} />
+      <SkyBarTool name="redo" label="Redo (Shift+Ctrl+Z)" onclick={() => step(1)} disabled={history.at >= history.changes.length - 1} />
     {/snippet}
 
       <div class="shrink-0 border-b border-secondary/15 px-6 py-4 max-sm:px-4 max-sm:py-1.5" use:hinted={"The time of day to change. The small pictures show your colours as you change them."}>
@@ -635,7 +635,7 @@
           </SegmentedPicker>
           <span class="flex shrink-0" use:hinted={"Adds a new time of day. It starts as a copy of the open one. You name it, tune it, and say where it is used."}>
             <Button variant="outline" intent="compact" radius="rounded" class="h-full px-2" aria-label="Add a time of day" data-tooltip="Add a time of day" onclick={add}>
-              <Icon name="tabler/plus" class="size-4" />
+              <Icon name="add" size="sm" />
             </Button>
           </span>
         </div>
@@ -705,7 +705,7 @@
                 <!-- Always there, so the heading row keeps its height; it works once the stop is changed. -->
                 <div class="flex items-center gap-1">
                   <h3 class={heading}>{stop + 1}. {STOP_NAMES[stop]}</h3>
-                  <SkyBarTool name="tabler/restore" label="Reset this stop" onclick={resetStop} disabled={!stopChanged(stop)} />
+                  <SkyBarTool name="reset" label="Reset this stop" onclick={resetStop} disabled={!stopChanged(stop)} />
                 </div>
                 <div class="grid grid-cols-[4rem_1fr] items-end gap-3" use:hinted={"The colour, picked by eye or typed as a hex code."}>
                   <Input id="sky-pick" name="sky-pick" type="color" size="sm" label="Colour" value={colour} class="h-9 w-full cursor-pointer p-1" oninput={(e: Event) => setColour((e.currentTarget as HTMLInputElement).value)} />
@@ -872,21 +872,21 @@
                   <span class={choiceLabel}>Arrange</span>
                   <div class="flex items-center" role="toolbar" aria-label="Arrange the picked things">
                     <span class="flex" use:hinted={several ? "Puts the picked things at the same height, side by side." : needs(2)}>
-                      <SkyBarTool name="tabler/layout-align-middle" label="Line up in a row" onclick={() => align("y")} disabled={!several} />
+                      <SkyBarTool name="align-middle" label="Line up in a row" onclick={() => align("y")} disabled={!several} />
                     </span>
                     <span class="flex" use:hinted={several ? "Puts the picked things one above another." : needs(2)}>
-                      <SkyBarTool name="tabler/layout-align-center" label="Line up in a column" onclick={() => align("x")} disabled={!several} />
+                      <SkyBarTool name="align-center" label="Line up in a column" onclick={() => align("x")} disabled={!several} />
                     </span>
                     <span class="mx-1 h-5 w-px bg-secondary/20" aria-hidden="true"></span>
                     <span class="flex" use:hinted={picks.length >= SPREAD_FROM ? "Spaces the picked things evenly from the leftmost to the rightmost." : needs(SPREAD_FROM)}>
-                      <SkyBarTool name="tabler/layout-distribute-vertical" label="Space evenly across" onclick={() => spread("x")} disabled={picks.length < SPREAD_FROM} />
+                      <SkyBarTool name="distribute-vertical" label="Space evenly across" onclick={() => spread("x")} disabled={picks.length < SPREAD_FROM} />
                     </span>
                     <span class="flex" use:hinted={picks.length >= SPREAD_FROM ? "Spaces the picked things evenly from the highest to the lowest." : needs(SPREAD_FROM)}>
-                      <SkyBarTool name="tabler/layout-distribute-horizontal" label="Space evenly down" onclick={() => spread("y")} disabled={picks.length < SPREAD_FROM} />
+                      <SkyBarTool name="distribute-horizontal" label="Space evenly down" onclick={() => spread("y")} disabled={picks.length < SPREAD_FROM} />
                     </span>
                     <span class="mx-1 h-5 w-px bg-secondary/20" aria-hidden="true"></span>
                     <span class="flex" use:hinted={anyRolls ? "Swaps each picked cloud for another shape of the same size." : "Pick a cloud to roll it another shape."}>
-                      <SkyBarTool name="tabler/dice-5" label="Roll the cloud again" onclick={() => setPicked("rolled", (it) => { if (SCENE_KINDS[it.kind].rolls) it.seed = Math.floor(Math.random() * 1e9); })} disabled={!anyRolls} />
+                      <SkyBarTool name="roll" label="Roll the cloud again" onclick={() => setPicked("rolled", (it) => { if (SCENE_KINDS[it.kind].rolls) it.seed = Math.floor(Math.random() * 1e9); })} disabled={!anyRolls} />
                     </span>
                   </div>
                 </div>
@@ -914,9 +914,9 @@
                         >
                           {itemName(i)}
                         </Button>
-                        <SkyBarTool name="tabler/chevron-up" label="Bring {groupName(i)} forward" onclick={() => moveLayer(i, 1)} disabled={!canMove(i, 1)} />
-                        <SkyBarTool name="tabler/chevron-down" label="Send {groupName(i)} back" onclick={() => moveLayer(i, -1)} disabled={!canMove(i, -1)} />
-                        <SkyBarTool name="tabler/x" label="Remove {groupName(i)}" onclick={() => removeItem(i)} />
+                        <SkyBarTool name="collapse" label="Bring {groupName(i)} forward" onclick={() => moveLayer(i, 1)} disabled={!canMove(i, 1)} />
+                        <SkyBarTool name="expand" label="Send {groupName(i)} back" onclick={() => moveLayer(i, -1)} disabled={!canMove(i, -1)} />
+                        <SkyBarTool name="delete" label="Remove {groupName(i)}" onclick={() => removeItem(i)} />
                       </li>
                     {/each}
                   </ul>

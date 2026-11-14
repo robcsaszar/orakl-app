@@ -5,6 +5,7 @@
 <script lang="ts">
   import Button from "@/lib/components/ui/Button.svelte";
   import Icon from "@/lib/components/ui/Icon.svelte";
+  import type { RoleName } from "$lib/icons";
 
   let {
     name,
@@ -13,7 +14,7 @@
     pressed,
     disabled = false,
   }: {
-    name: string;
+    name: RoleName;
     label: string;
     onclick: () => void;
     pressed?: boolean;
@@ -34,5 +35,5 @@
       : 'cursor-pointer text-foreground hover:bg-secondary/15'}"
   {onclick}
 >
-  <Icon {name} class="size-5" />
+  <Icon {name} size="md" />
 </Button>

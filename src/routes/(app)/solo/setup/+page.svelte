@@ -92,7 +92,7 @@ import type { GuestEntitlements } from "@orakl/shared";
 
 {#if claimed}
   <Card variant="success" padding="md" class="mb-8 flex flex-row items-center gap-2 text-sm text-success-light">
-    <Icon name="wreath" class="size-5 shrink-0" />
+    <Icon name="wreath" class="shrink-0" size="md" />
     {data.uiFlags.PLAYER_HISTORY
       ? "Your run is saved to your record."
       : "Your run is saved."}

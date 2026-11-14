@@ -78,11 +78,11 @@
             )}
             style="--i: {i}"
           >
-            <Icon name={met[i] ? "check" : "x"} class="size-4 shrink-0 stroke-3" />
+            <Icon name={met[i] ? "met" : "failed"} size="sm" class="shrink-0" />
             {rule.label}
             {#if rule.required}
               <span class="text-danger">
-                <Icon name="asterisk" class="size-3 stroke-2" />
+                <Icon name="required" size="xs" />
               </span>
             {/if}
           </li>

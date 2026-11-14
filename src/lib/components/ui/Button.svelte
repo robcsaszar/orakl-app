@@ -4,6 +4,7 @@
   import type { VariantProps } from "tailwind-variants";
   import { cn } from "tailwind-variants";
   import { buttonVariants } from "@/lib/button-variants";
+  import type { RoleName } from "$lib/icons";
   import Icon from "./Icon.svelte";
 
   type ButtonVariants = VariantProps<typeof buttonVariants>;
@@ -27,8 +28,8 @@
     intent?: ButtonVariants["intent"];
     radius?: ButtonVariants["radius"];
     behavior?: ButtonVariants["behavior"];
-    iconBefore?: string;
-    iconAfter?: string;
+    iconBefore?: RoleName;
+    iconAfter?: RoleName;
     loading?: boolean;
     /** Render with only `class` — no buttonVariants base/variant styling. */
     unstyled?: boolean;
@@ -44,6 +45,7 @@
       ? className
       : cn(buttonVariants({ variant, intent, radius, behavior, class: className })),
   );
+  const iconStep = $derived(intent === "compact" ? "sm" : "md");
   const disabled = $derived(variant === "disabled");
 </script>
 
@@ -51,10 +53,10 @@
   {#if loading}
     <span class="is-loading flex">Loading<span>.</span><span>.</span><span>.</span></span>
   {:else}
-    {#if iconBefore}<Icon name={iconBefore} />{/if}
+    {#if iconBefore}<Icon name={iconBefore} size={iconStep} />{/if}
     {@render children?.()}
     {#if iconAfter}
-      <Icon name={iconAfter} class="transition-transform duration-300 group-hover:translate-x-1 group-focus:translate-x-1 group-active:translate-x-1" />
+      <Icon name={iconAfter} size={iconStep} class="transition-transform duration-300 group-hover:translate-x-1 group-focus:translate-x-1 group-active:translate-x-1" />
     {/if}
   {/if}
 {/snippet}

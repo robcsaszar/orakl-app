@@ -13,6 +13,7 @@ import { percent } from "@orakl/shared";
   import SoloGuestCta from "../SoloGuestCta.svelte";
   import { getSoloSession } from "@/lib/svelte/soloSession.svelte.js";
   import type { PageData } from "./$types";
+  import type { RoleName } from "$lib/icons";
 
   let { data }: { data: PageData } = $props();
 
@@ -27,7 +28,7 @@ import { percent } from "@orakl/shared";
     { id: "accuracy", label: "Accuracy", icon: "" },
     { id: "speed", label: "Speed", icon: "hourglass" },
     { id: "survival", label: "Survival", icon: "shield" },
-  ] as const;
+  ] as const satisfies readonly { id: string; label: string; icon: RoleName | "" }[];
   const SCOPES = [
     { id: "all-time", label: "All-time" },
     { id: "daily", label: "Today" },
@@ -161,7 +162,7 @@ import { percent } from "@orakl/shared";
 <div class="flex flex-col gap-6">
   {#if claimed}
     <Card variant="success" padding="md" class="flex flex-row items-center gap-2 text-sm text-success-light">
-      <Icon name="wreath" class="size-5 shrink-0" />
+      <Icon name="wreath" class="shrink-0" size="md" />
       Your run is saved and now stands on the rankings.
     </Card>
   {/if}
@@ -179,7 +180,7 @@ import { percent } from "@orakl/shared";
       <div class="flex items-center gap-3">
         {#if data.userRank && data.scope !== "season"}
           <Link href={shareUrl} class="flex items-center gap-1 text-sm">
-            <Icon name="top-right" class="size-4" /> Share rank
+            <Icon name="share" size="sm" /> Share rank
           </Link>
         {/if}
         {#if data.uiFlags.PLAYER_HISTORY}
@@ -230,7 +231,7 @@ import { percent } from "@orakl/shared";
       hrefFor={(b) => buildUrl({ board: b.id })}
     >
       {#snippet option(b)}
-        {#if b.icon}<Icon name={b.icon} class="size-4" />{/if}
+        {#if b.icon}<Icon name={b.icon} size="sm" />{/if}
         {b.label}
       {/snippet}
     </SegmentedPicker>
@@ -325,7 +326,7 @@ import { percent } from "@orakl/shared";
             <td class="py-2 pr-4 text-right font-mono tabular-nums">
               {#if data.board === "streak"}
                 <span class="inline-flex items-center justify-end gap-1 text-flame">
-                  <Icon name="flame" class="size-4" />{entry.max_streak}
+                  <Icon name="flame" size="sm" />{entry.max_streak}
                 </span>
               {:else}
                 {metric(entry)}

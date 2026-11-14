@@ -17,8 +17,8 @@
   } = $props();
 
   const thumbs = [
-    { value: "down", label: "Bad question", icon: "thumb-down" },
-    { value: "up", label: "Good question", icon: "thumb-up" },
+    { value: "down", label: "Bad question", icon: "rate-down" },
+    { value: "up", label: "Good question", icon: "rate-up" },
   ] as const;
 
   // The ✗ clears RATING_ERROR_MS after its ack; a new ack restarts the clock.
@@ -52,7 +52,7 @@
         type="button"
         variant="outline"
         intent="icon"
-        iconBefore={state === "ok" ? "check" : state === "error" ? "x" : thumb.icon}
+        iconBefore={state === "ok" ? "confirm" : state === "error" ? "failed" : thumb.icon}
         class={cn(
           rating.pending === thumb.value && "opacity-50",
           state === "ok" && "border-success text-success",

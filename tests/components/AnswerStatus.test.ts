@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import AnswerStatus from "$lib/components/quiz/AnswerStatus.svelte";
+import { ICON_SCALE, ROLES } from "$lib/icons";
 
 describe("AnswerStatus", () => {
   it("pending → role=status (polite live region)", () => {
@@ -83,4 +84,18 @@ describe("AnswerStatus", () => {
     render(AnswerStatus, { props: { status: "incorrect" } });
     expect(screen.getByRole("alert").className).toMatch(/danger/);
   });
+
+  it.each(["correct", "incorrect", "timeout"] as const)(
+    "%s renders the %s emblem role at the md step",
+    (status) => {
+      const { container } = render(AnswerStatus, { props: { status } });
+      const svg = container.querySelector("svg") as SVGElement;
+      const d = new DOMParser()
+        .parseFromString(ROLES[status].svg, "image/svg+xml")
+        .querySelector("path")
+        ?.getAttribute("d");
+      expect(svg.querySelector("path")?.getAttribute("d")).toBe(d);
+      expect(svg.style.width).toBe(`${ICON_SCALE.emblem.md.px}px`);
+    },
+  );
 });

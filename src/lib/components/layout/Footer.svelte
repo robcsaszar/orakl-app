@@ -46,6 +46,7 @@ import type { AnalyticsState } from "@orakl/shared";
           <AnalyticsControl {analytics} variant="inline" />
         {/if}
       </span>
+      <Link href="/legal/credits" class={linkClass}>Credits</Link>
     </nav>
     <span class="text-sm font-sans text-foreground-darker">
       &copy; {new Date().getFullYear()} Orakl. All rights reserved.

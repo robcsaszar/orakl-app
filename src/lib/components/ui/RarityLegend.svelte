@@ -37,7 +37,7 @@ import { RARITY_METAL_CLASSES } from "$lib/rarity-classes";
         </span>
         {#if i < RARITY_ORDER.length - 1}
           <span aria-hidden="true">
-            <Icon name="chevron-right" class="text-foreground-darker" />
+            <Icon name="leads-to" size="md" class="text-foreground-darker" />
           </span>
         {/if}
       {/each}

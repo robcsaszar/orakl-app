@@ -2,6 +2,7 @@
 import type { MediaCredit, QuestionSource } from "@orakl/shared";
   import { tv } from "tailwind-variants";
   import Icon from "$lib/components/ui/Icon.svelte";
+  import type { RoleName } from "$lib/icons";
   import Card from "$lib/components/ui/Card.svelte";
   import Link from "$lib/components/ui/Link.svelte";
   import QuestionMedia from "$lib/components/quiz/QuestionMedia.svelte";
@@ -35,7 +36,7 @@ import type { MediaCredit, QuestionSource } from "@orakl/shared";
     },
   });
 
-  const ICON: Record<string, string> = { correct: "check", incorrect: "x", timeout: "hourglass" };
+  const ICON: Record<string, RoleName> = { correct: "correct", incorrect: "incorrect", timeout: "timeout" };
   const LABEL: Record<string, string> = { correct: "Correct", incorrect: "Missed", timeout: "Timed out" };
 
   let {
@@ -71,7 +72,7 @@ import type { MediaCredit, QuestionSource } from "@orakl/shared";
 <Card>
   <div class="flex items-start gap-3">
     <div class={indicator()}>
-      <Icon name={ICON[outcome]} class="size-4" />
+      <Icon name={ICON[outcome]} size="sm" />
     </div>
 
     <div class="min-w-0 flex-1 flex flex-col gap-2">

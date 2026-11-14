@@ -85,6 +85,10 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
   const canManageAvatars = $derived(
     hasPower(data.user, "can-manage-avatars"),
   );
+  // The icon admin answers to the admin role and the Power, both.
+  const canManageIcons = $derived(
+    isAdmin && hasPower(data.user, "can-manage-icons"),
+  );
   const canModerateQuestions = $derived(
     hasPower(data.user, "can-moderate-questions"),
   );
@@ -460,6 +464,9 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
                 <Button href="/manage/avatars" variant="secondary"
                   >Avatar management</Button
                 >
+              {/if}
+              {#if canManageIcons}
+                <Button href="/admin/icons" variant="secondary">Icons</Button>
               {/if}
               {#if canModerateQuestions}
                 <Button href="/manage/flagged-questions" variant="secondary"

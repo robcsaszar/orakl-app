@@ -98,14 +98,14 @@
             class="flex items-center gap-2 justify-center"
             in:slide={{ duration: 150, axis: "x", easing: elasticIn }}
           >
-            <Button type="button" variant="success" intent="icon" iconBefore="check" onclick={saveNickname} aria-label="Save"
+            <Button type="button" variant="success" intent="icon" iconBefore="confirm" onclick={saveNickname} aria-label="Save"
             ></Button>
-            <Button type="button" variant="danger" intent="icon" iconBefore="x" onclick={() => (isEditingNickname = false)} aria-label="Cancel"
+            <Button type="button" variant="danger" intent="icon" iconBefore="dismiss" onclick={() => (isEditingNickname = false)} aria-label="Cancel"
             ></Button>
           </div>
         {/if}
       {/snippet}
     </Input>
   </div>
-  <Icon name="bonfire" class="text-secondary-600/20 size-40 absolute bottom-0 -right-30 rotate-12 -z-10" />
+  <Icon name="bonfire" size="xl" class="text-secondary-600/20 absolute bottom-0 -right-30 rotate-12 -z-10" />
 </Card>

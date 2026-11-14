@@ -58,7 +58,7 @@ import type { MediaCredit, QuestionSource } from "@orakl/shared";
           <li class="flex flex-col gap-1">
             <div class="flex items-baseline justify-between gap-4">
               <span class={option.correct ? "flex items-center gap-1 text-success" : "text-foreground"}>
-                {#if option.correct}<Icon name="check" class="size-4" /><span class="sr-only">Correct answer:</span>{/if}
+                {#if option.correct}<Icon name="correct" size="sm" /><span class="sr-only">Correct answer:</span>{/if}
                 {option.text}
               </span>
               <span class="tabular-nums text-foreground-darker">{option.count}</span>

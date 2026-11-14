@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Button from "./Button.svelte";
+  import type { RoleName } from "$lib/icons";
   import Icon from "./Icon.svelte";
   import Popover from "./Popover.svelte";
 
@@ -22,7 +23,7 @@
     children,
   }: {
     id: string;
-    icon: string;
+    icon: RoleName;
     ariaLabel: string;
     title?: string;
     buttonClass?: string;
@@ -81,7 +82,7 @@
     onclick={() => (open = !open)}
     class={buttonClass}
   >
-    <Icon name={icon} class="size-4" />
+    <Icon name={icon} size="sm" />
   </Button>
 </span>
 <Popover

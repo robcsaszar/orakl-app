@@ -17,6 +17,6 @@
   confirmAriaLabel={confirmAriaLabel ?? `Click again to confirm: ${label.toLowerCase()}`}
 >
   {#snippet icon()}
-  <Icon name="power" />
+  <Icon name="end-session" size="md" />
   {/snippet}
 </ConfirmButton>

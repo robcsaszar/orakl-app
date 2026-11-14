@@ -69,7 +69,7 @@
   <IconPopover
     bind:open
     id={popoverId}
-    icon="eye"
+    icon="reveal"
     ariaLabel="What this page collects"
     title="What this page collects"
     {shine}
