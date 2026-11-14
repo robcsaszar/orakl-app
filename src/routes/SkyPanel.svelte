@@ -75,10 +75,10 @@
         <div class="flex items-center pr-3 max-sm:pr-1.5" role="toolbar" aria-label="{mode.label} tools">
           {@render tools()}
           <span class="mx-1 h-5 w-px bg-secondary/20 max-sm:hidden" aria-hidden="true"></span>
-          <SkyBarTool name="tabler/history" label="History of the whole sky" onclick={() => toggle("history")} pressed={skyView.view === "history"} />
-          <SkyBarTool name="tabler/upload" label="Save and share the whole sky" onclick={() => toggle("save")} pressed={skyView.view === "save"} />
+          <SkyBarTool name="revisions" label="History of the whole sky" onclick={() => toggle("history")} pressed={skyView.view === "history"} />
+          <SkyBarTool name="upload" label="Save and share the whole sky" onclick={() => toggle("save")} pressed={skyView.view === "save"} />
           <span class="mx-1 h-5 w-px bg-secondary/20 max-sm:hidden" aria-hidden="true"></span>
-          <SkyBarTool name="tabler/x" label="Hide the controls (Esc)" onclick={() => (open = false)} />
+          <SkyBarTool name="dismiss" label="Hide the controls (Esc)" onclick={() => (open = false)} />
         </div>
       {/snippet}
       {#snippet panel()}

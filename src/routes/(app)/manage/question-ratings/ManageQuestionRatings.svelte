@@ -263,7 +263,7 @@
       onConfirm={() => deleteQuestion(p.row)}
     >
       {#snippet icon()}
-        <Icon name="x" class="size-4" />
+        <Icon name="delete" size="sm" />
       {/snippet}
     </ConfirmButton>
   </span>
@@ -304,11 +304,11 @@
       <span class="text-xs text-foreground-darker">{sourceLabel(row)}</span>
       <span class="flex flex-wrap items-start gap-4">
         <span class="flex items-start gap-1">
-          <span role="img" aria-label="Thumbs down"><Icon name="thumb-down" class="size-4" /></span>
+          <span role="img" aria-label="Thumbs down"><Icon name="rate-down" size="sm" /></span>
           {@render RatingCell({ value: row.down, allTime: row.downAllTime, edited: row.edited })}
         </span>
         <span class="flex items-start gap-1">
-          <span role="img" aria-label="Thumbs up"><Icon name="thumb-up" class="size-4" /></span>
+          <span role="img" aria-label="Thumbs up"><Icon name="rate-up" size="sm" /></span>
           {@render RatingCell({ value: row.up, allTime: row.upAllTime, edited: row.edited })}
         </span>
         <span class="font-mono text-xs tabular-nums text-foreground-darker">

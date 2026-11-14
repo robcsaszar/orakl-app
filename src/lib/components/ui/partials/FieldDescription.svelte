@@ -77,12 +77,12 @@
       {#if icon === "bulbs"}
         {#if open}
           <span class="sr-only">Hide description</span>
-          <Icon name="bulb-on" class="animate-pop" />
+          <Icon name="hint-on" size="md" class="animate-pop" />
         {:else}
-          <Icon name="bulb" />
+          <Icon name="hint" size="md" />
         {/if}
       {:else}
-        <Icon name={icon} />
+        <Icon name={icon === "question" ? "help" : icon} size="md" />
       {/if}
     </button>
     <p

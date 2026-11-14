@@ -48,6 +48,7 @@
     {#if hasQuiz}
       <ConfirmButton
         label=""
+        ariaLabel="Dismiss quiz"
         confirmLabel=""
         confirmAriaLabel="Click again to confirm dismissal"
         progressStyle="border"
@@ -56,10 +57,10 @@
         class={buttonVariants({ variant: "danger", intent: "icon" })}
       >
         {#snippet icon()}
-          <Icon name="x" class="shrink-0 size-7" />
+          <Icon name="dismiss" class="shrink-0" size="xl" />
         {/snippet}
         {#snippet confirmIcon()}
-          <Icon name="check" class="shrink-0 size-7" />
+          <Icon name="confirm" class="shrink-0" size="xl" />
         {/snippet}
       </ConfirmButton>
     {/if}

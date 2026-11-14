@@ -198,7 +198,7 @@
           aria-label="Password strength"
           aria-haspopup="dialog"
         >
-          <Icon name="shield" class="size-6" />
+          <Icon name="secure" size="md" />
         </button>
       {/if}
       {#if showStrength && showStrengthPopover}
@@ -210,7 +210,7 @@
           aria-label="Password strength"
           aria-haspopup="dialog"
         >
-          <Icon name="x" class="size-6" />
+          <Icon name="dismiss" size="md" />
         </button>
       {/if}
       <button
@@ -221,7 +221,7 @@
         aria-pressed={showPassword}
         onclick={toggleReveal}
       >
-        <Icon name={showPassword ? "orakl-closed" : "orakl"} />
+        <Icon name={showPassword ? "password-hide" : "password-show"} size="md" />
       </button>
     {/if}
   </div>
@@ -238,7 +238,7 @@
     <span class="order-1 flex {size === 'sm' ? 'min-h-0' : 'min-h-8'} flex-nowrap items-baseline justify-{labelEndJustify} gap-2">
       <span class={cn("flex items-center gap-1", size === "sm" ? "font-mono text-xs" : "text-lg")}>
         {label}
-        {#if required}<Icon name="asterisk" class="text-danger size-4 self-start stroke-3" />{/if}
+        {#if required}<Icon name="required" size="sm" class="text-danger self-start" />{/if}
       </span>
       {@render labelEnd?.()}
     </span>

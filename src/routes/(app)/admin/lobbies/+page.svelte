@@ -396,7 +396,7 @@
                                 aria-label={`Save nickname for ${member.nickname}`}
                                 class="hover:text-success-light hover:bg-success"
                               >
-                                <Icon name="check" class="size-5" />
+                                <Icon name="confirm" size="md" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -405,7 +405,7 @@
                                 aria-label={`Cancel rename for ${member.nickname}`}
                                 class="hover:text-danger-light hover:bg-danger"
                               >
-                                <Icon name="x" class="size-5" />
+                                <Icon name="dismiss" size="md" />
                               </Button>
                             {:else}
                               {#if !member.curator}
@@ -417,7 +417,7 @@
                                   aria-label={`Remove ${member.nickname}`}
                                   class="hover:text-danger-light hover:bg-danger"
                                 >
-                                  <Icon name="close" class="size-5" />
+                                  <Icon name="delete" size="md" />
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -427,7 +427,7 @@
                                   aria-label={`Remove and block ${member.nickname}`}
                                   class="hover:text-danger-light hover:bg-danger"
                                 >
-                                  <Icon name="ban" class="size-5" />
+                                  <Icon name="block" size="md" />
                                 </Button>
                               {/if}
                               <Button
@@ -437,7 +437,7 @@
                                 aria-label={`Rename ${member.nickname}`}
                                 data-rename-player={member.playerId}
                               >
-                                <Icon name="edit" class="size-5" />
+                                <Icon name="edit" size="md" />
                               </Button>
                             {/if}
                           </span>

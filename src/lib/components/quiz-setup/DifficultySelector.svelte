@@ -35,19 +35,19 @@
 >
   {#snippet optionLabel(d)}
     {#if d === "all"}
-      <span aria-hidden="true"><Icon name="shuffle" /></span>
+      <span aria-hidden="true"><Icon name="shuffle" size="md" /></span>
     {:else}
     <!-- Show a star per difficulty level -->
       <span aria-hidden="true" class="flex gap-0.5">
         {#each Array(flameCount[d]) as _}
-          <Icon name="difficulty" />
+          <Icon name="difficulty" size="md" />
         {/each}
       </span>
 
       <!-- Three stars every time but opacity changes based on difficulty -->
       <!-- <span aria-hidden="true" class="flex gap-0.5">
         {#each Array(3) as _, i}
-          <Icon name="difficulty" class={cn(i < flameCount[d] ? "opacity-100" : "opacity-20")} />
+          <Icon name="difficulty" size="md" class={cn(i < flameCount[d] ? "opacity-100" : "opacity-20")} />
         {/each}
       </span> -->
     {/if}

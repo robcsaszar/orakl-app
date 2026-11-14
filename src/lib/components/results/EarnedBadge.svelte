@@ -3,6 +3,7 @@ import { BADGES, RARITY_LABELS } from "@orakl/shared";
 import { RARITY_METAL_CLASSES } from "$lib/rarity-classes";
 import type { BadgeId, Rarity } from "@orakl/shared";
   import Icon from "$lib/components/ui/Icon.svelte";
+  import type { RoleName } from "$lib/icons";
 
   let {
     id,
@@ -44,7 +45,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
   data-tooltip={form === "compact" ? tip : undefined}
 >
   <span class="emblem" aria-hidden="true">
-    <span class="glyph"><Icon name={meta.icon} class="size-full" /></span>
+    <span class="glyph"><Icon name={meta.icon as RoleName} size="fill" /></span>
     {#if rarity === "exotic"}<span class="sheen"></span>{/if}
   </span>
   {#if form === "extended" && count !== undefined && count > 1}

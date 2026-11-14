@@ -157,7 +157,7 @@ import { percent } from "@orakl/shared";
             <span
               class="inline-flex items-center justify-center {locked ? 'opacity-70' : 'opacity-10 group-hover:opacity-30 group-has-checked:opacity-100'}"
             >
-              <Icon name={locked ? "lock" : "scroll"} class="size-5" />
+              <Icon name={locked ? "locked" : "scroll"} size="md" />
             </span>
           </span>
         </CheckboxOption>
@@ -174,7 +174,7 @@ import { percent } from "@orakl/shared";
       onclick={() => (expanded = !expanded)}
       aria-expanded={expanded}
       aria-label={expanded ? "Show less categories" : "Show more categories"}
-      iconBefore={expanded ? "chevron-up" : "chevron-down"}
+      iconBefore={expanded ? "collapse" : "expand"}
     >
       {expanded ? "Show less" : "Show more"}
     </Button>

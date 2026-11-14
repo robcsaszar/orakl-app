@@ -35,3 +35,6 @@
 - name: javascript
   color: "168700"
   description: "Pull requests that update javascript code"
+- name: icons
+  color: "e2b65a"
+  description: "Icon changes from the icon admin; merging syncs orakl-app."

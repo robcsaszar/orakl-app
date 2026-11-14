@@ -65,7 +65,7 @@
             aria-label={`Remove ${player.nickname}`}
             data-tooltip={`Remove ${player.nickname}`}
           >
-            <Icon name="x" class="size-4" />
+            <Icon name="delete" size="sm" />
           </Button>
         {/if}
         {#if onRemoveAndBlock}
@@ -78,7 +78,7 @@
             aria-label={`Remove and block ${player.nickname}`}
             data-tooltip={`Remove and block ${player.nickname}`}
           >
-            <Icon name="ban" class="size-4" />
+            <Icon name="block" size="sm" />
           </Button>
         {/if}
       {/snippet}

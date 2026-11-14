@@ -129,7 +129,7 @@
               {#if season.icon}
                 <img src={season.icon} alt="" class="size-5" />
               {:else}
-                <Icon name={locked ? "lock" : "scroll"} class="size-5" />
+                <Icon name={locked ? "locked" : "scroll"} size="md" />
               {/if}
             </span>
           </span>

@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ProfilePage from "../../src/routes/(app)/profile/+page.svelte";
 
 vi.mock("$app/navigation", () => ({
@@ -14,6 +14,10 @@ vi.mock("../../src/lib/toast.js", () => ({
 
 import { invalidateAll, replaceState } from "$app/navigation";
 import { toast } from "../../src/lib/toast.js";
+
+// The page starts a dynamic import of ThemePicker on render; a worker that
+// closes while it is in flight rejects it after the suite has finished.
+afterEach(() => vi.dynamicImportSettled());
 
 beforeEach(() => {
   // jsdom lacks the Web Animations API — stub so any transition is inert.

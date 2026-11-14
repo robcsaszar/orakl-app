@@ -2,6 +2,7 @@ import type { TimerState } from "@orakl/client-core";
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import RingTimer from "$lib/components/ui/RingTimer.svelte";
+import { ICON_SCALE, ROLES } from "$lib/icons";
 
 function setup(
   timerState: TimerState,
@@ -67,6 +68,25 @@ describe("RingTimer — result states", () => {
     const cls = ring?.className.baseVal ?? ring?.getAttribute("class") ?? "";
     expect(cls).toContain("stroke-danger");
   });
+});
+
+function pathOf(svg: string): string {
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  return doc.querySelector("path")?.getAttribute("d") ?? "";
+}
+
+describe("RingTimer — glyph roles", () => {
+  it.each(["correct", "incorrect", "timeout"] as const)(
+    "%s state renders the %s emblem role at xl",
+    (state) => {
+      const { container } = setup(state);
+      const svg = container.querySelector("span.absolute svg") as SVGElement;
+      expect(svg.querySelector("path")?.getAttribute("d")).toBe(
+        pathOf(ROLES[state].svg),
+      );
+      expect(svg.style.width).toBe(`${ICON_SCALE.emblem.xl.px}px`);
+    },
+  );
 });
 
 describe("RingTimer — final state (last countdown)", () => {

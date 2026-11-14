@@ -142,7 +142,7 @@
                     data-tooltip-position="top"
                     class="shrink-0 text-foreground-darker transition-colors hover:text-foreground focus-visible:text-foreground cursor-help"
                   >
-                    <Icon name="info" class="size-4" />
+                    <Icon name="info" size="sm" />
                   </Button>
                 </div>
                 {#if session.location}

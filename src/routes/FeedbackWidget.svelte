@@ -373,7 +373,7 @@
             aria-label="Select parent element"
             class={styles.iconButton()}
           >
-            <Icon name="chevron-up" class="size-3.5" />
+            <Icon name="collapse" size="xs" />
           </Button>
           <Button
             unstyled
@@ -381,7 +381,7 @@
             aria-label="Pick a different element"
             class={styles.iconButton()}
           >
-            <Icon name="shuffle" class="size-3.5" />
+            <Icon name="shuffle" size="xs" />
           </Button>
         </div>
       </div>
@@ -389,7 +389,7 @@
       <div class={styles.emptyCard()}>
         <p class="text-xs text-foreground-darker">No element selected yet</p>
         <Button unstyled onclick={beginPicking} class={styles.pickButton()}>
-          <Icon name="shuffle" class="size-3.5" />
+          <Icon name="shuffle" size="xs" />
           Pick element
         </Button>
       </div>
@@ -436,8 +436,8 @@
       class={fabClass}
       style={fabStyle}
     >
-      <Icon name="pencil" class="size-4" />
-      <Icon name="grip" class="size-3 opacity-50" />
+      <Icon name="pencil" size="sm" />
+      <Icon name="drag" class="opacity-50" size="xs" />
     </Button>
   {/if}
 </div>

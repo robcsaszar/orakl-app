@@ -416,11 +416,11 @@ import { BADGES, BADGE_ORDER } from "@orakl/shared";
   style={fabStyle}
   class={fabVariants({ tone: "warning", class: "fixed px-3 py-2.5 font-mono text-xs font-semibold" })}
 >
-  <Icon name="gear" class="size-4" />
+  <Icon name="settings" size="sm" />
   DEV
   <span class="text-foreground-darker/50">·</span>
   <span class="text-[10px] text-warning/70">{currentMode}</span>
-  <Icon name="grip" class="size-3 opacity-50" />
+  <Icon name="drag" size="xs" class="opacity-50" />
 </Button>
 
 {#snippet heading(text: string, value?: string)}
@@ -455,7 +455,7 @@ import { BADGES, BADGE_ORDER } from "@orakl/shared";
   <details class="group border-b border-secondary/15" open={openByDefault}>
     <summary class="flex cursor-pointer select-none list-none items-center justify-between px-4 py-2.5 [&::-webkit-details-marker]:hidden">
       <span class="font-mono text-[10px] font-bold uppercase tracking-widest text-foreground-darker group-open:text-warning">{title}</span>
-      <Icon name="chevron-down" class="size-3 text-foreground-darker transition-transform group-open:rotate-180" />
+      <Icon name="expand" size="xs" class="text-foreground-darker transition-transform group-open:rotate-180" />
     </summary>
     <div class="flex flex-col gap-3 px-4 pb-4">
       {@render body()}
@@ -637,7 +637,7 @@ import { BADGES, BADGE_ORDER } from "@orakl/shared";
           disabled={castRows.length <= 1}
           onclick={() => removeCastRow(i)}
         >
-          <Icon name="close" class="size-4" />
+          <Icon name="delete" size="sm" />
         </Button>
       </div>
     {/each}
@@ -718,7 +718,7 @@ import { BADGES, BADGE_ORDER } from "@orakl/shared";
     <div class="flex shrink-0 items-center justify-between border-b border-secondary/15 px-4 py-2.5">
       <span class="font-mono text-[10px] font-bold uppercase tracking-widest text-warning">Mimic</span>
       <Button variant="ghost" intent="icon-inline" radius="rounded" class="p-0.5 text-foreground-darker hover:text-foreground" aria-label="Close" onclick={() => (open = false)}>
-        <Icon name="x" class="size-3.5" />
+        <Icon name="dismiss" size="xs" />
       </Button>
     </div>
     <div class="min-h-0 flex-1 overflow-y-auto">

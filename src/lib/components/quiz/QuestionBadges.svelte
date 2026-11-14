@@ -23,7 +23,7 @@
     <Badge variant={variant} class="transition-colors duration-200 ease-ease-in-out-quart">
       <span aria-hidden="true" class="flex gap-0.5">
         {#each Array(3) as _, i}
-          <Icon name="difficulty" class={cn(["size-4 transition-opacity duration-200 ease-ease-in-out-quart", i < flameCount[difficulty] ? "opacity-100" : "opacity-30"])} />
+          <Icon name="difficulty" size="sm" class={cn(["transition-opacity duration-200 ease-ease-in-out-quart", i < flameCount[difficulty] ? "opacity-100" : "opacity-30"])} />
         {/each}
       </span>
       <span class="sr-only">{difficulty}</span>

@@ -10,6 +10,6 @@
   class="group"
 >
   {#snippet icon()}
-    <Icon name="logout" />
+    <Icon name="sign-out" size="md" />
   {/snippet}
 </ConfirmButton>

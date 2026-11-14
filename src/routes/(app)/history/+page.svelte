@@ -265,12 +265,12 @@ import type { Rarity } from "@orakl/shared";
         {#if data.stats.runs > 0 && data.mastery.strongest}
           <div class="flex flex-col gap-1">
             <div class="flex items-start gap-2">
-              <Icon name="star" class="mt-1" />
+              <Icon name="star" class="mt-1" size="md" />
               <p class="text-foreground-darker">Your strongest category is <span class="text-foreground font-bold">{data.categoryName[data.mastery.strongest.categoryId] ?? data.mastery.strongest.categoryId}</span>, with <span class="text-foreground font-bold">{masteryPerc(data.mastery.strongest)}</span> accuracy.</p>
             </div>
             {#if data.mastery.weakest}
               <div class="flex items-start gap-2">
-                <Icon name="candle" class="mt-1" />
+                <Icon name="candle" class="mt-1" size="md" />
                 <p class="text-foreground-darker">Your weakest category is <span class="text-foreground font-bold">{data.categoryName[data.mastery.weakest.categoryId] ?? data.mastery.weakest.categoryId}</span>, with <span class="text-foreground font-bold">{masteryPerc(data.mastery.weakest)}</span> accuracy.</p>
               </div>
             {/if}
@@ -326,7 +326,7 @@ import type { Rarity } from "@orakl/shared";
                   <span>{cats || "Trial"}</span>
                   {#if run.mode === "endless"}
                     <Badge variant="status" tone="warning" class="inline-flex items-center gap-1">
-                      <Icon name="infinity" class="size-3" /> Endless
+                      <Icon name="endless" size="xs" /> Endless
                     </Badge>
                   {/if}
                 {/snippet}

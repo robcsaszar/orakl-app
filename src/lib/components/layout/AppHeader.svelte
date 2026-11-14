@@ -95,7 +95,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
               {#if link.type === "link"}
                 <Link href={link.href} active={isNavActive(link.href)}>
                   {#if link.icon}
-                    <Icon name={link.icon} />
+                    <Icon name={link.icon} size="md" />
                   {/if}
                   {link.label}
                 </Link>
@@ -120,7 +120,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
                   {config.rightBadge.label}
                 </span>
               {/if}
-              <Icon name={config.rightBadge.icon} class="size-8" />
+              <Icon name={config.rightBadge.icon} size="xl" />
             </div>
           {/if}
           {#if rightAction}
@@ -133,7 +133,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
                 <Link href={link.href} active={isNavActive(link.href)}>
                   {link.label}
                   {#if link.icon}
-                    <Icon name={link.icon} />
+                    <Icon name={link.icon} size="md" />
                   {/if}
                 </Link>
               {:else if link.type === "action"}

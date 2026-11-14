@@ -337,7 +337,7 @@ import { percent } from "@orakl/shared";
         transition:fly={{ duration: 200, y: -10 }}
         aria-live="polite"
       >
-        <Icon name="info" class="size-4" />
+        <Icon name="info" size="sm" />
         {coarsePointer.current
           ? "Touch and hold, or double-tap, to react"
           : "Long-press or right-click to react"}
