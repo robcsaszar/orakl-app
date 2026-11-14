@@ -47,16 +47,16 @@
 </script>
 
 <Card variant="mezzanine" padding="lg" class={cn("relative isolate flex-1 overflow-hidden", className)}>
-  <Icon name="sun-detail" class="size-md text-secondary/10 md:text-secondary/20 absolute -right-8 -top-8 z-0" />
+  <span class="size-md text-secondary/10 md:text-secondary/20 absolute -right-8 -top-8 z-0" aria-hidden="true"><Icon name="sun-detail" size="fill" /></span>
   <div class="z-10 flex flex-col gap-4">
     <div class="flex flex-col gap-2">
-      <h2 class="text-xl font-bold flex items-start gap-2"><Icon name="sun" class="size-7 shrink-0" />{headline}</h2>
+      <h2 class="text-xl font-bold flex items-start gap-2"><Icon name="sun" class="shrink-0" size="xl" />{headline}</h2>
       <p class="text-foreground-darker">{subline}</p>
     </div>
     <ul class="flex flex-col gap-2 text-sm">
       {#each perks as perk (perk)}
         <li class="flex items-center gap-2">
-          <Icon name="star" class="size-3 shrink-0" />
+          <Icon name="star" class="shrink-0" size="xs" />
           {perk}
         </li>
       {/each}

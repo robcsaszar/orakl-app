@@ -106,7 +106,8 @@
       {#each Array(GAME.endless.lives) as _, i}
         <Icon
           name="heart"
-          class={cn(["size-4", i < (strikes ?? 0) ? "text-gray-500" : "text-danger"])}
+          size="sm"
+          class={cn([i < (strikes ?? 0) ? "text-gray-500" : "text-danger"])}
         />
       {/each}
     </div>
@@ -127,10 +128,10 @@
       >
         {#if activeDelta !== null}
           <span class="text-sm text-foreground-darker/50">{fmt(prevScore)}</span>
-          <Icon name="chevron-right" class="size-3 text-foreground-darker/40" />
+          <Icon name="leads-to" size="xs" class="text-foreground-darker/40" />
         {/if}
         <span class="flex items-center gap-1 text-primary">
-          <Icon name="rhombus" class="size-3" />
+          <Icon name="rhombus" size="xs" />
           <span class="text-lg font-bold">{fmt(displayScore)}</span>
         </span>
         {#if activeDelta !== null}
@@ -162,7 +163,7 @@
           <span class="text-sm font-bold text-success-light">+{fmt(activeDelta)}</span>
         {/if}
         <span class="flex items-center gap-1 text-primary">
-          <Icon name="rhombus" class="size-3" />
+          <Icon name="rhombus" size="xs" />
           <span class="text-lg font-bold">{fmt(displayScore)}</span>
         </span>
       </div>

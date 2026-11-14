@@ -33,6 +33,10 @@ describe("Footer — variants (decision #13)", () => {
     expect(
       within(nav).getByRole("link", { name: "Cookies" }),
     ).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Credits" })).toHaveAttribute(
+      "href",
+      "/legal/credits",
+    );
     // The analytics control sits beside the Cookies link, in the nav.
     expect(
       within(nav).getByRole("button", { name: "Analytics on" }),

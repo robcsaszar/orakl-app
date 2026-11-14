@@ -17,7 +17,7 @@ import { avatarDescription } from "@orakl/shared";
     {#if src}
       <img {src} alt="" aria-hidden="true" class="size-10" style="image-rendering: pixelated;" />
     {:else}
-      <Icon name="orakl" class="size-8"></Icon>
+      <Icon name="orakl" size="xl"></Icon>
     {/if}
   </div>
   <div class="flex flex-col gap-1 min-w-0" aria-live="polite">

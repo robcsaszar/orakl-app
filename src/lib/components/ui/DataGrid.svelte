@@ -234,8 +234,9 @@
             <details class="group mt-2 border-t border-border pt-2{cardDisclosureClass ? ` ${cardDisclosureClass}` : ''}">
               <summary class="flex list-none cursor-pointer items-center gap-1 py-2 text-xs text-foreground-darker [&::-webkit-details-marker]:hidden">
                 <Icon
-                  name="chevron-down"
-                  class="size-3.5 transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] group-open:rotate-180 motion-reduce:transition-none"
+                  name="expand"
+                  size="xs"
+                  class="transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] group-open:rotate-180 motion-reduce:transition-none"
                 />
                 More
               </summary>

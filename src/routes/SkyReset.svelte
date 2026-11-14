@@ -38,5 +38,5 @@
     onclick();
   }}
 >
-  <Icon name="tabler/restore" class="size-3.5" />
+  <Icon name="reset" size="xs" />
 </Button>

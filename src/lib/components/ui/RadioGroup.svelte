@@ -77,7 +77,7 @@
         {@render optionLabel(option)}
         {#if locked}
           <span class="absolute right-1.5 top-1.5" aria-hidden="true">
-            <Icon name="lock" class="size-3.5" />
+            <Icon name="locked" size="xs" />
           </span>
           <span class="sr-only">(locked — sign in to unlock)</span>
         {/if}

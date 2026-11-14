@@ -17,6 +17,7 @@ import type { SkyPhase } from "@orakl/shared";
   import { setPowerUser } from "@/lib/svelte/powerUser.svelte.js";
   
   import { Toaster } from "svelte-sonner";
+  import IconDraftBar from "$lib/components/admin/IconDraftBar.svelte";
   import Tooltip from "$lib/components/ui/Tooltip.svelte";
   import FeedbackWidget from "./FeedbackWidget.svelte";
 
@@ -92,6 +93,9 @@ import type { SkyPhase } from "@orakl/shared";
 {/if}
 <Toaster position="bottom-right" theme="dark" />
 <Tooltip />
+{#if data.iconScaleDraft || (data.iconDrafts && Object.keys(data.iconDrafts).length > 0)}
+  <IconDraftBar />
+{/if}
 {#if data.feedbackWidgetEnabled}
   <FeedbackWidget />
 {/if}

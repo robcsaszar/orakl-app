@@ -332,8 +332,8 @@ import type { BadgeId, Rarity } from "@orakl/shared";
           Create account
         </Button>
       </div>
-      <div class="absolute -bottom-2 -left-5 text-secondary-600/50 pointer-events-none -z-10">
-        <Icon name="orakl" class="size-xs -rotate-27" />
+      <div class="absolute -bottom-2 -left-5 size-xs text-secondary-600/50 pointer-events-none -z-10">
+        <Icon name="orakl" size="fill" class="-rotate-27" />
       </div>
     </Card>
   {/if}

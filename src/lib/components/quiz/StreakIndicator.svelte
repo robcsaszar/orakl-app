@@ -88,7 +88,7 @@
         class="inline-flex items-center gap-1 text-xl font-bold font-mono tabular-nums"
         in:fade={{ duration: 200 }}
       >
-        <Icon name="flame" />
+        <Icon name="flame" size="md" />
         <span class="sr-only">Streak: </span>{streak}
       </span>
     </div>

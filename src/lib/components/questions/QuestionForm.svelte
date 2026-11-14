@@ -796,7 +796,7 @@
             placeholder="Left {i + 1}"
             bind:value={pair.left}
           />
-          <Icon name="chevron-right" class="shrink-0 text-foreground-darker" />
+          <Icon name="leads-to" size="md" class="shrink-0 text-foreground-darker" />
           <Input
             id="pair-right-{i}"
             label=""

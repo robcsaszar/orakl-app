@@ -1,6 +1,7 @@
 import type { FeatureFlagName, UserPower, UserRole } from "@orakl/shared";
 import { hasPower, hasRole } from "@orakl/shared";
 import type { HeaderActionKey } from "./header-action-state.svelte.js";
+import type { RoleName } from "./icons.js";
 import type { UseCaseId } from "./legal/ledger.js";
 
 export type LinkEntry =
@@ -22,7 +23,7 @@ export type LinkEntry =
        *  (`headerActionState.phase`, `header-action-state.svelte.ts`) —
        *  e.g. only show once a lobby exists. Omit to ignore phase entirely. */
       showWhenPhase?: string | string[];
-      icon?: string;
+      icon?: RoleName;
     }
   | { type: "logout"; showWhen?: UserRole }
   | {
@@ -55,7 +56,7 @@ export type HeaderConfig = {
   back?: string;
   leftLinks?: LinkEntry[];
   rightLinks?: LinkEntry[];
-  rightBadge?: { icon: string; label?: string };
+  rightBadge?: { icon: RoleName; label?: string };
 };
 
 /** Footer block of a route (map #840 decision #13). Every route renders a
@@ -133,14 +134,14 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
           label: "Profile",
           href: "/profile",
           showWhen: "member",
-          icon: "campfire",
+          icon: "profile",
         },
         {
           type: "link",
           label: "Sign in",
           href: "/login",
           showWhen: "anonymous",
-          icon: "moon",
+          icon: "sign-in",
         },
       ],
       rightLinks: [
@@ -149,7 +150,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
           label: "Sign up",
           href: "/signup",
           showWhen: "anonymous",
-          icon: "north-star",
+          icon: "sign-up",
         },
         { type: "logout", showWhen: "member" },
       ],
@@ -167,7 +168,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
           label: "Sign up",
           href: "/signup",
           showWhen: "anonymous",
-          icon: "north-star",
+          icon: "sign-up",
         },
       ],
     },
@@ -187,7 +188,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
           label: "Sign in",
           href: "/login",
           showWhen: "anonymous",
-          icon: "moon",
+          icon: "sign-in",
         },
       ],
     },
@@ -229,7 +230,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
           label: "Sign in",
           href: "/login",
           showWhen: "anonymous",
-          icon: "moon",
+          icon: "sign-in",
         },
       ],
     },
@@ -675,7 +676,7 @@ export const PAGE_CONFIG: Record<string, PageConfig> = {
         {
           type: "link",
           label: "Edit quiz",
-          icon: "arrow-left",
+          icon: "back",
           href: "/curator/create",
           showWhen: "curator",
           showWhenPhase: "lobby",

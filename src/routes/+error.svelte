@@ -93,7 +93,7 @@
       </p>
     </div>
     <div class="flex gap-3">
-      <Button variant="secondary" iconBefore="arrow-left" onclick={() => history.back()}>
+      <Button variant="secondary" iconBefore="back" onclick={() => history.back()}>
         Go back
       </Button>
       <Button href="/" iconBefore="orakl">Go home</Button>
@@ -109,7 +109,7 @@
     </div>
     <div class="flex gap-3">
       {#if routeHistory.paths.length > 1}
-        <Button variant="secondary" iconBefore="arrow-left" onclick={() => history.back()}>
+        <Button variant="secondary" iconBefore="back" onclick={() => history.back()}>
           Go back
         </Button>
       {/if}

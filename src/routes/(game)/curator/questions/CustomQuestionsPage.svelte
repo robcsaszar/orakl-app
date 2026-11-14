@@ -229,12 +229,12 @@
             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
               {#if q.ratings}
                 <Badge variant="status" tone="neutral" class="inline-flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-secondary" tabindex={0} data-tooltip="{q.ratings.upAllTime} all time">
-                  <Icon name="thumb-up" class="size-4" />
+                  <Icon name="rate-up" size="sm" />
                   <span aria-hidden="true">{q.ratings.up}</span>
                   <span class="sr-only">{q.ratings.up} good since last edit, {q.ratings.upAllTime} all time</span>
                 </Badge>
                 <Badge variant="status" tone="neutral" class="inline-flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-secondary" tabindex={0} data-tooltip="{q.ratings.downAllTime} all time">
-                  <Icon name="thumb-down" class="size-4" />
+                  <Icon name="rate-down" size="sm" />
                   <span aria-hidden="true">{q.ratings.down}</span>
                   <span class="sr-only">{q.ratings.down} bad since last edit, {q.ratings.downAllTime} all time</span>
                 </Badge>
@@ -268,7 +268,7 @@
                 onConfirm={() => deleteQuestion(q.id)}
               >
                 {#snippet icon()}
-                  <Icon name="x" class="size-4" />
+                  <Icon name="delete" size="sm" />
                 {/snippet}
               </ConfirmButton>
             </div>

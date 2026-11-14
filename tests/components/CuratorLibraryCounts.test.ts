@@ -130,10 +130,10 @@ describe("curator library rating counts", () => {
       expect(svg).toHaveAttribute("aria-hidden", "true");
     }
     expect(up.querySelector("svg")?.innerHTML).toBe(
-      renderIcon("thumb-up").innerHTML,
+      renderIcon("rate-up").innerHTML,
     );
     expect(down.querySelector("svg")?.innerHTML).toBe(
-      renderIcon("thumb-down").innerHTML,
+      renderIcon("rate-down").innerHTML,
     );
     expect(up.querySelector('[aria-hidden="true"]:not(svg)')).toHaveTextContent(
       "3",
