@@ -126,32 +126,31 @@ describe("Tabs overflow cue", () => {
     });
   }
 
-  it("renders no chevron overlay when the row does not overflow", async () => {
+  const earlier = () =>
+    screen.queryByRole("button", { name: "Show earlier tabs" });
+  const more = () => screen.queryByRole("button", { name: "Show more tabs" });
+
+  it("renders no chevron when the row does not overflow", async () => {
     renderTabs();
     const tablist = screen.getByRole("tablist", { name: "Sections" });
     setMetrics(tablist, { scrollLeft: 0, scrollWidth: 100, clientWidth: 100 });
     tablist.dispatchEvent(new Event("scroll"));
     await tick();
-    expect(
-      document.querySelector('[aria-hidden="true"] svg'),
-    ).not.toBeInTheDocument();
+    expect(earlier()).not.toBeInTheDocument();
+    expect(more()).not.toBeInTheDocument();
   });
 
-  it("shows the right cue only, at the start of an overflowing row", async () => {
+  it("shows the right chevron only, at the start of an overflowing row", async () => {
     renderTabs();
     const tablist = screen.getByRole("tablist", { name: "Sections" });
     setMetrics(tablist, { scrollLeft: 0, scrollWidth: 300, clientWidth: 100 });
     tablist.dispatchEvent(new Event("scroll"));
     await tick();
-    expect(
-      document.querySelector(".right-0 [aria-hidden]"),
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector(".left-0 [aria-hidden]"),
-    ).not.toBeInTheDocument();
+    expect(more()).toBeInTheDocument();
+    expect(earlier()).not.toBeInTheDocument();
   });
 
-  it("swaps the cue to the left once scrolled to the end", async () => {
+  it("swaps the chevron to the left once scrolled to the end", async () => {
     renderTabs();
     const tablist = screen.getByRole("tablist", { name: "Sections" });
     setMetrics(tablist, { scrollLeft: 0, scrollWidth: 300, clientWidth: 100 });
@@ -166,10 +165,37 @@ describe("Tabs overflow cue", () => {
     tablist.dispatchEvent(new Event("scroll"));
     await tick();
 
-    expect(
-      document.querySelector(".right-0 [aria-hidden]"),
-    ).not.toBeInTheDocument();
-    expect(document.querySelector(".left-0 [aria-hidden]")).toBeInTheDocument();
+    expect(more()).not.toBeInTheDocument();
+    expect(earlier()).toBeInTheDocument();
+  });
+
+  it("scrolls the row half its width toward the chevron clicked", async () => {
+    renderTabs();
+    const tablist = screen.getByRole("tablist", { name: "Sections" });
+    const scrollBy = vi.fn();
+    tablist.scrollBy = scrollBy;
+    setMetrics(tablist, {
+      scrollLeft: 100,
+      scrollWidth: 600,
+      clientWidth: 200,
+    });
+    tablist.dispatchEvent(new Event("scroll"));
+    await tick();
+    const user = userEvent.setup();
+    await user.click(more() as HTMLElement);
+    await user.click(earlier() as HTMLElement);
+    const [right, left] = scrollBy.mock.calls.map(([options]) => options.left);
+    expect(right).toBe(tablist.clientWidth / 2);
+    expect(left).toBe(-tablist.clientWidth / 2);
+  });
+
+  it("keeps the chevrons out of the tab order", async () => {
+    renderTabs();
+    const tablist = screen.getByRole("tablist", { name: "Sections" });
+    setMetrics(tablist, { scrollLeft: 0, scrollWidth: 300, clientWidth: 100 });
+    tablist.dispatchEvent(new Event("scroll"));
+    await tick();
+    expect(more()).toHaveAttribute("tabindex", "-1");
   });
 
   it("scrolls the focused tab into view on ArrowRight", async () => {

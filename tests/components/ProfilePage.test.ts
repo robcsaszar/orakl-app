@@ -31,6 +31,7 @@ function profileData(over: Record<string, unknown> = {}) {
   return {
     user: {
       nickname: "Rob",
+      email: "rob@example.com",
       role: "member",
       powers: [],
       avatar: "",
@@ -77,6 +78,11 @@ describe("/profile page — tabs", () => {
       "aria-selected",
       "true",
     );
+  });
+
+  it("Your details shows the account email", () => {
+    renderPage();
+    expect(screen.getByText("rob@example.com")).toBeInTheDocument();
   });
 
   it("Account panel holds its cards and not the other tabs' content", () => {

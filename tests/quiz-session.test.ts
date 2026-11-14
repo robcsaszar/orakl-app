@@ -350,6 +350,20 @@ describe("QuizSession (injectable factory)", () => {
       expect(session.lobbyClosed).toBe(true);
       expect(session.membership).toBe("none");
     });
+
+    it("drops the curator's stored quiz config so /curator/create mounts as a fresh host", () => {
+      vi.mocked(storage.removeQuizConfig).mockClear();
+      session.isCurator = true;
+      send({ type: "lobby:ended" });
+      expect(storage.removeQuizConfig).toHaveBeenCalled();
+    });
+
+    it("keeps a player's stored quiz config", () => {
+      vi.mocked(storage.removeQuizConfig).mockClear();
+      session.isCurator = false;
+      send({ type: "lobby:ended" });
+      expect(storage.removeQuizConfig).not.toHaveBeenCalled();
+    });
   });
 
   describe("avatar dialog", () => {

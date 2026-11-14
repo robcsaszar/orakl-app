@@ -902,6 +902,11 @@ export class QuizSession implements PlayerSessionView {
       this.lobbyEndedReason = msg.reason ?? null;
       storage.removePlayerId();
       storage.removeLobbyCode();
+      // This frame routes the curator to /curator/create before the DELETE
+      // in closeLobby() resolves; with the config still stored that page
+      // mounts as "Update quiz". Dropped here so it mounts as "Host quiz",
+      // for an admin close as well.
+      if (this.isCurator) storage.removeQuizConfig();
       this.playerId = null;
       this.lobbyCode = "";
       this.membership = "none";

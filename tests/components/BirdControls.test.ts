@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { afterEach, describe, expect, it } from "vitest";
 import { current } from "@/lib/birds/current.svelte";
+import { birdLab } from "@/lib/birds/lab.svelte";
 import { BirdRunner } from "@/lib/birds/runner";
 import BirdControls from "../../src/routes/BirdControls.svelte";
 
@@ -26,6 +27,7 @@ function mountRunner(): BirdRunner {
 }
 
 afterEach(() => {
+  localStorage.clear();
   current.runner?.dispose();
   current.runner = null;
 });
@@ -33,27 +35,49 @@ afterEach(() => {
 describe("BirdControls", () => {
   it("says so when no sky is mounted", () => {
     render(BirdControls);
-    expect(screen.getByText(/No sky mounted/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/There are no birds on this page/),
+    ).toBeInTheDocument();
   });
 
-  it("spawns the chosen kind into the mounted runner", async () => {
+  it("sends the chosen kind into the mounted runner, again, and clears it", async () => {
     const runner = mountRunner();
     render(BirdControls);
-    await fireEvent.click(screen.getByRole("button", { name: "raptor" }));
+    await fireEvent.click(screen.getByRole("radio", { name: /^Hawk/ }));
+    await fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(runner.events).toHaveLength(1);
     expect(runner.events[0].kind).toBe("raptor");
     await fireEvent.click(screen.getByRole("button", { name: "Clear sky" }));
     expect(runner.events).toHaveLength(0);
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Send same again" }),
+    );
+    expect(runner.events[0]?.kind).toBe("raptor");
   });
 
-  it("toggles the phase schedule and sets the sky phase attribute", async () => {
+  it("turns the schedule off and sets the sky phase attribute", async () => {
     const runner = mountRunner();
     render(BirdControls);
     await fireEvent.click(
-      screen.getByLabelText("Phase schedule spawns events"),
+      screen.getByRole("switch", { name: "Flocks come by themselves" }),
     );
     expect(runner.engine.auto).toBe(false);
-    await fireEvent.click(screen.getByRole("radio", { name: "sunset" }));
+    await fireEvent.click(screen.getByRole("radio", { name: "Sunset" }));
     expect(document.documentElement.dataset.skyPhase).toBe("sunset");
+  });
+
+  it("lends the sky its settings while mounted, and a changed one can be undone", async () => {
+    mountRunner();
+    const { unmount } = render(BirdControls);
+    expect(birdLab.active).toBe(true);
+    await fireEvent.click(screen.getByRole("tab", { name: "Look" }));
+    const size = screen.getByRole("slider", { name: "Size" });
+    const was = birdLab.settings.scale;
+    await fireEvent.input(size, { target: { value: String(was * 2) } });
+    expect(birdLab.settings.scale).toBe(was * 2);
+    await fireEvent.click(screen.getByRole("button", { name: /^Undo/ }));
+    expect(birdLab.settings.scale).toBe(was);
+    unmount();
+    expect(birdLab.active).toBe(false);
   });
 });

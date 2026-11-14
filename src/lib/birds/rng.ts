@@ -10,6 +10,8 @@ export interface Rng {
   sign(): number;
   /** True with probability p. */
   chance(p: number): boolean;
+  /** A second generator that continues from here, leaving this one untouched. */
+  clone(): Rng;
 }
 
 export function mulberry32(seed: number): Rng {
@@ -26,5 +28,6 @@ export function mulberry32(seed: number): Rng {
     int: (min, max) => min + Math.floor(next() * (max - min + 1)),
     sign: () => (next() < 0.5 ? -1 : 1),
     chance: (p) => next() < p,
+    clone: () => mulberry32(a),
   };
 }

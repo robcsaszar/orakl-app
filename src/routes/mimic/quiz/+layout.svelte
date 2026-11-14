@@ -140,7 +140,18 @@
     session.pickedEmotes = emotesEnabled
       ? session.emotePacks[0].emotes.slice(0, 5).map((e) => e.id)
       : [];
-    session.activeEmotes = [];
+    // `emoteburst=N`: N emotes in flight from other players, spread over both
+    // halves of the area, so the rails can be checked at full load.
+    const burst = Math.max(0, Math.min(16, parseInt(params.get("emoteburst") ?? "0", 10)));
+    const burstIds = session.emotePacks[0].emotes.map((e) => e.id);
+    const bots = newPlayers.filter((p) => p.id !== MOCK_PLAYER_ID);
+    session.activeEmotes = Array.from({ length: burst }, (_, i) => ({
+      uid: `burst-${i}`,
+      playerId: bots[i % Math.max(1, bots.length)]?.id ?? "bot",
+      emoteId: burstIds[i % burstIds.length],
+      offsetX: i % 2 === 0 ? 0.2 : 0.8,
+      offsetY: 0.15 + ((i * 0.2) % 0.8),
+    }));
     // "+N points" cue — the round's gain on a correct answer. Adjustable via
     // `earned` so the IdentityPill prototypes can be checked against the
     // variable amounts time-based scoring produces (default 100).
@@ -251,6 +262,8 @@
   };
   $effect(() => {
     headerActionState.phase = MIMIC_ROUTE_PHASE[page.url.pathname] ?? null;
+    // The results page gates its emote fan on final_scores, as the server does.
+    session.phase = page.url.pathname === "/mimic/quiz/results" ? "final_scores" : "playing";
   });
 </script>
 

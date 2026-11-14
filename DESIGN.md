@@ -559,7 +559,7 @@ Dialog (centered modal) and drawer (bottom sheet, Vaul-style with a drag handle)
 
 ### Tooltips
 
-Hover and focus hints go through one global host (`Tooltip.svelte`, mounted once in the root layout) that watches for `data-tooltip` on any element — no per-component tooltip markup. A tooltip carries short, non-essential copy; anything a user must read to proceed belongs in the control's label or description, not a hover. Never use the native `title` attribute for meaningful copy: it is inconsistent across devices and invisible on touch.
+Hover and focus hints go through one global host (`Tooltip.svelte`, mounted once in the root layout) that watches for `data-tooltip` on any element — no per-component tooltip markup. A tooltip carries short, non-essential copy; anything a user must read to proceed belongs in the control's label or description, not a hover. Never use the native `title` attribute for meaningful copy: it is inconsistent across devices and invisible on touch. Every tooltip leaves by itself after a short time (longer for longer text). On a touch screen a tooltip shows only for plain content, never for a button, link or form control, where a tap would open it over the thing just tapped.
 
 ### Utility partials
 

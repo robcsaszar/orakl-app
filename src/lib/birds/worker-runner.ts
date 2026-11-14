@@ -4,6 +4,7 @@ import type { SkyCue, SkySnapshot } from "./engine";
 import type { EventSpec } from "./event";
 import type { SkyStats } from "./loop";
 import type { ModifierId } from "./modifiers";
+import type { BirdSettings } from "./settings";
 
 /**
  * The page side of a sky that runs in a worker: hands the canvas over as an
@@ -18,6 +19,8 @@ export class WorkerRunner implements SkyDriver {
     ms: 0,
     captions: [],
     sentences: [],
+    live: [],
+    next: [],
   };
   private readonly worker: Worker;
   private speed$ = 1;
@@ -26,7 +29,6 @@ export class WorkerRunner implements SkyDriver {
 
   constructor(
     canvas: HTMLCanvasElement,
-    far: HTMLCanvasElement | null,
     worker: Worker,
     options: {
       width: number;
@@ -46,11 +48,9 @@ export class WorkerRunner implements SkyDriver {
       }
     };
     const offscreen = canvas.transferControlToOffscreen();
-    const farOff = far ? far.transferControlToOffscreen() : null;
     const init: ToWorker = {
       type: "init",
       canvas: offscreen,
-      far: farOff,
       seed: options.seed,
       wind: options.wind,
       width: options.width,
@@ -59,7 +59,7 @@ export class WorkerRunner implements SkyDriver {
       phase: options.phase,
       small: options.small,
     };
-    worker.postMessage(init, farOff ? [offscreen, farOff] : [offscreen]);
+    worker.postMessage(init, [offscreen]);
   }
 
   private send(m: ToWorker): void {
@@ -119,6 +119,26 @@ export class WorkerRunner implements SkyDriver {
 
   clear(): void {
     this.send({ type: "clear" });
+  }
+
+  setSettings(settings: BirdSettings): void {
+    this.send({ type: "settings", settings });
+  }
+
+  retire(id: number): void {
+    this.send({ type: "retire", id });
+  }
+
+  sendNext(index: number): void {
+    this.send({ type: "sendNext", index });
+  }
+
+  replay(): void {
+    this.send({ type: "replay" });
+  }
+
+  watch(every: number): void {
+    this.send({ type: "watch", every });
   }
 
   setWind(x: number, z: number): void {

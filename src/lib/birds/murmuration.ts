@@ -17,6 +17,11 @@ const CELL = 4.5;
 const TABLE = 4096;
 const SEP_R2 = 1.1 * 1.1;
 const NEAR_R2 = CELL * CELL;
+/** Each bird's own unrest, m/s²: enough to keep the cloud from freezing into a lattice. */
+const JITTER = 0.6;
+/** Share of its crossing after which a cloud stops to wheel in the open sky, and for how many seconds. */
+const HOLD_AT: [number, number] = [0.35, 0.6];
+const HOLD_FOR: [number, number] = [20, 45];
 /** Starlings react to about seven nearest neighbours, whatever the density. */
 const MAX_NEIGHBOURS = 7;
 const MIN_SPEED = 5;
@@ -25,12 +30,23 @@ const MAX_FORCE = 14;
 const LEAD_SPEED = 7;
 const LEAD_GAIN = 0.5;
 const TURB = 2.6;
+/** How much of a bird's alarm is left after a 60 Hz step, and how much of a neighbour's it takes on. */
+const ALARM_KEEP = 0.965;
+const ALARM_PASS = 0.94;
+/** At full alarm: extra pull into line with the neighbours, extra speed and force (as shares), and the sideways kick. */
+const ALARM_ALIGN = 3;
+const ALARM_SPEED = 0.45;
+const ALARM_FORCE = 1.25;
+const ALARM_KICK = 9;
+/** Seconds between one wave of alarm and the next, [shortest, longest]. */
+const WAVE_EVERY: [number, number] = [5, 11];
 
 /**
  * A starling murmuration: one fluid mass. Local boids over a hashed grid
  * (short separation, strong alignment, cohesion to the seven nearest), a
  * global spring to the flock's own centroid so the cloud can stretch and
- * fold but never splits, the whole cloud dragged along a slow `Crossing`,
+ * fold but never splits, the whole cloud dragged along a slow `Crossing`
+ * that stops partway so the cloud wheels in the open sky before it goes on,
  * and a wandering lead direction the whole mass streams after, with a
  * breathing spring that rolls density waves through it. Scales to thousands
  * of birds: steering is refreshed for half the flock each step (positions
@@ -39,7 +55,9 @@ const TURB = 2.6;
  *
  * Modifiers: `pulse` (sudden contractions), `ribbon` (stretched along its
  * path), `funnel` (drains down into the roost), `probing` (a raptor circles
- * above it, never stooping); `giant` is the engine's: twice the birds.
+ * above it, never stooping), `wave` (alarm starts at one bird and passes
+ * from neighbour to neighbour, so a band of hard-turning birds rolls through
+ * the cloud); `giant` is the engine's: twice the birds.
  */
 export class Murmuration implements SkyEvent {
   readonly kind = "murmuration";
@@ -51,6 +69,10 @@ export class Murmuration implements SkyEvent {
   done = false;
 
   private t = 0;
+  /** Seconds travelled along the crossing; it stands still while the cloud wheels in the open sky. */
+  private along = 0;
+  private holdAt = 0;
+  private holdLeft = 0;
   /** The crossing, or null when milling about a station. */
   private readonly path: Crossing | null;
   private readonly station: Float32Array | null;
@@ -84,6 +106,12 @@ export class Murmuration implements SkyEvent {
   private readonly pulse: boolean;
   private pulseIn: number;
   private pulseLeft = 0;
+  /** Alarm per bird, 0 to 1, and the buffer the next step's is written to; null without the `wave` twist. */
+  private alarm: Float32Array | null;
+  private alarmNext: Float32Array | null;
+  private waveIn: number;
+  /** The way this wave's birds jink. */
+  private readonly waveDir = new Float32Array(3);
   private readonly raptor: Flock | null;
   private raptorHeading = 0;
   private raptorTurn = 0;
@@ -106,6 +134,10 @@ export class Murmuration implements SkyEvent {
     this.funnel = has("funnel");
     this.pulse = has("pulse");
     this.pulseIn = rng.range(6, 12);
+    const wave = has("wave");
+    this.alarm = wave ? new Float32Array(count) : null;
+    this.alarmNext = wave ? new Float32Array(count) : null;
+    this.waveIn = wave ? rng.range(WAVE_EVERY[0], WAVE_EVERY[1]) : 0;
     // Small flocks sit denser than the great clouds, or they fall into clumps.
     this.wind = o.wind;
     this.cloud = 1.5 + Math.cbrt(count) * (count < 150 ? 1.3 : 2.1);
@@ -155,6 +187,12 @@ export class Murmuration implements SkyEvent {
     }
     this.flock.vary(rng);
     this.centroid.set(this.c);
+    // A crossing cloud stops partway to wheel where it can be seen; a funnel goes straight to its roost.
+    if (this.path && !this.funnel) {
+      this.holdAt = this.path.duration * rng.range(HOLD_AT[0], HOLD_AT[1]);
+      this.holdLeft = rng.range(HOLD_FOR[0], HOLD_FOR[1]);
+      this.maxLife += this.holdLeft;
+    }
     this.lead = dir > 0 ? 0 : Math.PI;
 
     if (has("probing")) {
@@ -274,13 +312,16 @@ export class Murmuration implements SkyEvent {
     const c = this.c;
     const rng = this.rng;
     if (this.path) {
-      this.path.posAt(this.t, c);
+      if (this.holdLeft > 0 && this.along >= this.holdAt && !this.leaving)
+        this.holdLeft -= dt;
+      else this.along += dt;
+      this.path.posAt(this.along, c);
       // The whole cloud drifts on the wind.
-      c[0] += this.wind[0] * this.t;
-      c[2] += this.wind[1] * this.t;
+      c[0] += this.wind[0] * this.along;
+      c[2] += this.wind[1] * this.along;
       // Roost funnel: past the middle of the crossing the cloud drains down
       // out of the view instead of crossing it.
-      if (this.funnel && this.t > this.path.duration * 0.5) {
+      if (this.funnel && this.along > this.path.duration * 0.5) {
         this.path.posAt(this.path.duration * 0.5, c);
         c[1] = worldYAt(this.view, c[2], 1.4);
       }
@@ -343,6 +384,27 @@ export class Murmuration implements SkyEvent {
       }
       if (this.pulseLeft > 0) this.pulseLeft -= dt;
     }
+    // A wave of alarm: one bird takes fright, and the fright runs on from it.
+    const alarm = this.alarm;
+    const alarmNext = this.alarmNext;
+    const keep = ALARM_KEEP ** (dt * 60);
+    if (alarm) {
+      this.waveIn -= dt;
+      if (this.waveIn <= 0) {
+        this.waveIn = rng.range(WAVE_EVERY[0], WAVE_EVERY[1]);
+        alarm[Math.floor(rng.next() * f.n) % f.n] = 1;
+        // The birds jink across the way the cloud is heading, and a little up or down.
+        const side = rng.sign();
+        const rise = rng.range(-0.5, 0.5);
+        const wl = Math.hypot(1, rise);
+        this.waveDir[0] = (-Math.sin(this.lead) * side) / wl;
+        this.waveDir[1] = rise / wl;
+        this.waveDir[2] = (Math.cos(this.lead) * side) / wl;
+      }
+    }
+    const kx = this.waveDir[0] * ALARM_KICK;
+    const ky = this.waveDir[1] * ALARM_KICK;
+    const kz = this.waveDir[2] * ALARM_KICK;
     // Under attack the cloud tightens; the burst is local, below.
     const threatNear =
       this.threatStrength > 0 &&
@@ -365,7 +427,7 @@ export class Murmuration implements SkyEvent {
     const breathe =
       (f.n < 150 ? 0.14 : 0.06) * (1 + 0.5 * Math.sin(t * 0.45)) * squeeze;
     const loose = this.cloud * (this.ribbon ? 1.6 : 1.1);
-    const align = this.ribbon ? 3 : 2;
+    const align = this.ribbon ? 4.2 : 3.2;
 
     const items = this.items;
     const starts = this.starts;
@@ -387,6 +449,8 @@ export class Murmuration implements SkyEvent {
       const iz = Math.floor(pz / CELL);
       let maxForce = MAX_FORCE;
       let maxSpeed = MAX_SPEED;
+      // Its own alarm fades; the steering below may take on a neighbour's.
+      let scare = alarm ? alarm[i] * keep : 0;
 
       // Steering (neighbours, springs, lead, turbulence) for half the flock
       // per step; the other half keeps last step's forces.
@@ -424,6 +488,8 @@ export class Murmuration implements SkyEvent {
                 avx += f.vx[j];
                 avy += f.vy[j];
                 avz += f.vz[j];
+                if (alarm && alarm[j] * ALARM_PASS > scare)
+                  scare = alarm[j] * ALARM_PASS;
                 if (++count >= MAX_NEIGHBOURS) break outer;
               }
             }
@@ -441,9 +507,11 @@ export class Murmuration implements SkyEvent {
         }
         if (count > 0) {
           const inv = 1 / count;
-          ax += (cx * inv - px) * 0.5 + (avx * inv - f.vx[i]) * align;
-          ay += (cy * inv - py) * 0.5 + (avy * inv - f.vy[i]) * align;
-          az += (cz * inv - pz) * 0.5 + (avz * inv - f.vz[i]) * align;
+          // A scared bird holds harder to its neighbours' heading.
+          const line = align + ALARM_ALIGN * scare;
+          ax += (cx * inv - px) * 0.5 + (avx * inv - f.vx[i]) * line;
+          ay += (cy * inv - py) * 0.5 + (avy * inv - f.vy[i]) * line;
+          az += (cz * inv - pz) * 0.5 + (avz * inv - f.vz[i]) * line;
         }
         // Global spring to the cloud's own centroid: soft inside, firm beyond.
         const tx = g[0] - px;
@@ -481,9 +549,9 @@ export class Murmuration implements SkyEvent {
         az += turbZ[ck];
         // One random number, three jitter components.
         const r = rng.next();
-        ax += (r - 0.5) * 1.6;
-        ay += (((r * 7.31) % 1) - 0.5) * 1.6;
-        az += (((r * 13.7) % 1) - 0.5) * 1.6;
+        ax += (r - 0.5) * JITTER;
+        ay += (((r * 7.31) % 1) - 0.5) * JITTER;
+        az += (((r * 13.7) % 1) - 0.5) * JITTER;
         const fl = Math.sqrt(ax * ax + ay * ay + az * az);
         if (fl > maxForce) {
           const k = maxForce / fl;
@@ -528,6 +596,8 @@ export class Murmuration implements SkyEvent {
           az += bz * k;
           maxForce = MAX_FORCE * 4;
           maxSpeed = MAX_SPEED * 1.4;
+          // A bird the predator reaches starts a wave of its own.
+          if (alarm) scare = 1;
           const fl = Math.sqrt(ax * ax + ay * ay + az * az);
           if (fl > maxForce) {
             const k2 = maxForce / fl;
@@ -538,12 +608,31 @@ export class Murmuration implements SkyEvent {
         }
       }
 
+      if (alarmNext) {
+        alarmNext[i] = scare;
+        // A scared bird jinks, and may fly faster and turn harder than the rest.
+        ax += kx * scare;
+        ay += ky * scare;
+        az += kz * scare;
+        maxSpeed *= 1 + ALARM_SPEED * scare;
+        maxForce *= 1 + ALARM_FORCE * scare;
+        const fl = Math.sqrt(ax * ax + ay * ay + az * az);
+        if (fl > maxForce) {
+          const k = maxForce / fl;
+          ax *= k;
+          ay *= k;
+          az *= k;
+        }
+      }
+
       f.ax[i] += ax;
       f.ay[i] += ay;
       f.az[i] += az;
       f.integrate(i, dt, MIN_SPEED, maxSpeed);
     }
     this.threatStrength = 0;
+    this.alarm = alarmNext;
+    this.alarmNext = alarm;
 
     if (this.raptor) {
       this.updateRaptor(dt);
@@ -564,10 +653,10 @@ export class Murmuration implements SkyEvent {
       // Stationed: finished once sent off and clear of the view.
       if (this.leaving && !anyVisible(this, this.view)) this.done = true;
     } else if (this.funnel) {
-      if (this.t > this.path.duration * 0.5 + 30) this.done = true;
+      if (this.along > this.path.duration * 0.5 + 30) this.done = true;
     } else if (
-      this.t > this.path.duration &&
-      this.path.passed(g[0] - this.wind[0] * this.t, this.cloud)
+      this.along > this.path.duration &&
+      this.path.passed(g[0] - this.wind[0] * this.along, this.cloud)
     ) {
       this.done = true;
     }

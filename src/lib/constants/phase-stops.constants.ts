@@ -18,24 +18,24 @@ export const PHASE_STOPS: Record<
     colors: ["#26415e", "#2e3f60", "#637697", "#aa7164", "#c28770", "#dcc1ac"],
   },
   morning: {
-    offsets: [0, 22, 50, 79, 92, 100],
+    offsets: [0, 20, 50, 79, 92, 100],
     colors: ["#c9d6e3", "#d1dde8", "#dbe6ef", "#ebd5c5", "#f0ceb5", "#e6c798"],
   },
   noon: {
     offsets: [0, 22, 50, 79, 88, 100],
-    colors: ["#1a80c4", "#2f90cc", "#4aa4d6", "#6dbce2", "#78c4e6", "#87ceeb"],
+    colors: ["#1a80c4", "#2f90cc", "#4aa4d6", "#6dbce2", "#78c4e6", "#bed5e8"],
   },
   evening: {
     offsets: [0, 34, 50, 79, 92, 100],
     colors: ["#73c1e7", "#67abd5", "#6ab0d2", "#beb896", "#d7bc83", "#ee9268"],
   },
   sunset: {
-    offsets: [0, 23, 67, 79, 92, 100],
-    colors: ["#c74848", "#ca5d44", "#d87a4b", "#e5a443", "#f2bc7d", "#fadbd8"],
+    offsets: [0, 20, 67, 84, 92, 100],
+    colors: ["#9396c2", "#d1b2be", "#df8f68", "#e5a443", "#f2bc7d", "#f5eed8"],
   },
   dusk: {
     offsets: [0, 38, 67, 84, 93, 100],
-    colors: ["#12172b", "#1a2856", "#283e77", "#664e79", "#825b8b", "#ba5a5a"],
+    colors: ["#12172b", "#1a2856", "#283e77", "#664e79", "#825b8b", "#ae84ae"],
   },
 };
 
@@ -48,4 +48,15 @@ export const BIRD_COLORS: Record<SkyPhase, string> = {
   evening: "#695635",
   sunset: "#5c2a0e",
   dusk: "#c8b8d0",
+};
+
+/** Cloud tint per phase, lit top to shaded underside; the sprite masks this gradient. */
+export const CLOUD_TINT: Record<SkyPhase, readonly [string, string]> = {
+  night: ["#ffffff", "#ffffff"],
+  dawn: ["#f3e6e6", "#b58a90"],
+  morning: ["#ffffff", "#efdccb"],
+  noon: ["#ffffff", "#d6e6f2"],
+  evening: ["#fff6ea", "#e3c39a"],
+  sunset: ["#ffeedd", "#dd8a62"],
+  dusk: ["#dccbe0", "#7c5c86"],
 };

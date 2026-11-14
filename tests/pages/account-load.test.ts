@@ -61,6 +61,7 @@ describe("/profile load", () => {
     const payload = {
       user: {
         nickname: "Nyx",
+        email: "nyx@example.com",
         role: "member",
         powers: [],
         avatar: "",

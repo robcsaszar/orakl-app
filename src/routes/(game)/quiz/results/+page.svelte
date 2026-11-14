@@ -386,7 +386,6 @@ import type { BadgeId, Rarity } from "@orakl/shared";
       emoteStillSrc={(id) => session.getEmoteStillSrc(id)}
       emoteTitle={(id) => session.getEmoteTitle(id)}
       activeEmotes={session.activeEmotes}
-      selfPlayerId={session.playerId}
       {canEmote}
       mode="wrapper"
       onSend={(emoteId, x, y) => session.sendEmote(emoteId, x, y)}

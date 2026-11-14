@@ -2,7 +2,7 @@
   Every sky module behind one dynamic-import boundary (map #859, decision 5).
   `+layout.svelte` imports this only inside `if (__FEATURE_SKY__)`, so with the
   build flag off the whole chunk — Background, DynamicBackground and
-  clouds.png — is dropped from the bundle. Birds sit behind `__FEATURE_BIRDS__`
+  cloud painter — is dropped from the bundle. Birds sit behind `__FEATURE_BIRDS__`
   as well.
 -->
 <script lang="ts">
@@ -14,15 +14,16 @@ import type { SkyPhase } from "@orakl/shared";
 
   let { phase, dynamic }: { phase: SkyPhase; dynamic: boolean } = $props();
 
-  // One wind for clouds and birds alike, the day's, per phase.
-  const wind = $derived(windFor(daySeed(new Date()), phase).x);
+  // One seed and one wind for clouds and birds alike, the day's, per phase.
+  const seed = daySeed(new Date());
+  const wind = $derived(windFor(seed, phase));
 
   // The flocks sit behind their own build flag, inside the sky's: with
   // BIRDS off the engine, worker and sprites never enter the bundle.
   const birds = __FEATURE_BIRDS__ ? import("$lib/components/Birds.svelte") : null;
 </script>
 
-<Background timeOfDay={phase} {wind} cloudOpacity={0.5} />
+<Background timeOfDay={phase} {wind} {seed} />
 {#if birds}
   {#await birds then { default: Birds }}
     <Birds timeOfDay={phase} />

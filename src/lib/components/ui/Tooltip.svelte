@@ -47,6 +47,18 @@ import { calculatePercentageOffset } from "@orakl/shared";
   } | null = null;
   let mutationObserver: MutationObserver | null = null;
 
+  /** A tooltip with no `data-tooltip-timeout` goes by itself: this long, plus reading time for its text, up to the cap. */
+  const AUTO_HIDE_MS = 1500;
+  const AUTO_HIDE_PER_CHAR_MS = 45;
+  const AUTO_HIDE_MAX_MS = 6000;
+  const autoHideAfter = (content: string) =>
+    Math.min(AUTO_HIDE_MAX_MS, AUTO_HIDE_MS + content.length * AUTO_HIDE_PER_CHAR_MS);
+
+  /** Controls a tap works: on a touch screen a tap would open their tooltip over the thing just tapped. */
+  const INTERACTIVE =
+    'a[href], button, input, select, textarea, summary, label, [role="button"], [role="link"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], [role="menuitem"], [role="option"]';
+  const onTouch = () => globalThis.matchMedia?.("(hover: none) and (pointer: coarse)").matches ?? false;
+
   function arrowClass(pos: Position): string {
     switch (pos) {
       case Position.TOP:
@@ -104,8 +116,8 @@ import { calculatePercentageOffset } from "@orakl/shared";
   ) {
     const st = $tooltipStore;
     if (st.isVisible && targetElement === target && st.content === content) {
+      // Hover and focus often both ask for the same tooltip: it stays, and still goes on its first timer.
       if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null; }
-      if (autoHideTimeout) { clearTimeout(autoHideTimeout); autoHideTimeout = null; }
       return;
     }
 
@@ -131,9 +143,7 @@ import { calculatePercentageOffset } from "@orakl/shared";
       target.setAttribute("aria-describedby", "orakl-tooltip");
       setupIntersectionObserver();
 
-      if (options.timeout) {
-        autoHideTimeout = window.setTimeout(() => hide(), options.timeout);
-      }
+      autoHideTimeout = window.setTimeout(() => hide(), options.timeout ?? autoHideAfter(content));
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -410,6 +420,7 @@ import { calculatePercentageOffset } from "@orakl/shared";
       const { content, position, showArrow, timeout, once } = parseTooltipAttrs(el);
       if (!content) return;
       if (once && shownOnceElements.has(el)) return;
+      if (onTouch() && el.matches(INTERACTIVE)) return;
       show(el, content, { position, showArrow, timeout });
       if (once) shownOnceElements.add(el);
     };

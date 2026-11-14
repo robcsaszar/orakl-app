@@ -48,19 +48,19 @@ import type { SkyPhase } from "@orakl/shared";
 
   // Build-level flag (map #859, decision 5). The import() sits inside the
   // guard, so with __FEATURE_SKY__ false the sky chunk — Background,
-  // DynamicBackground and the bundled clouds.png — never enters the bundle
-  // (Birds has its own flag inside SkyLayer).
-  // (static/clouds.png is a separate copied-verbatim asset, unaffected.) The
+  // DynamicBackground and the cloud painter — never enters the bundle
+  // (Birds has its own flag inside SkyLayer). The
   // cost of the dynamic boundary is that the decorative, aria-hidden sky
   // paints after hydration rather than during SSR.
   const skyLayer = __FEATURE_SKY__
     ? import("$lib/components/SkyLayer.svelte")
     : null;
 
-  // `?birds` on any URL opens the flock control panel (lazy, same chunk rule).
-  const birdControls = $derived(
-    __FEATURE_SKY__ && __FEATURE_BIRDS__ && page.url.searchParams.has("birds")
-      ? import("./BirdControls.svelte")
+  // `?sky`, `?stars`, `?clouds` or `?birds` on any URL opens the sky controls on that part (lazy, same chunk rule).
+  const skyControls = $derived(
+    __FEATURE_SKY__ &&
+      (page.url.searchParams.has("sky") || page.url.searchParams.has("stars") || page.url.searchParams.has("clouds") || (__FEATURE_BIRDS__ && page.url.searchParams.has("birds")))
+      ? import("./SkyControls.svelte")
       : null,
   );
 </script>
@@ -83,9 +83,9 @@ import type { SkyPhase } from "@orakl/shared";
 <div class="relative z-10">
   {@render children()}
 </div>
-{#if birdControls}
-  {#await birdControls then { default: BirdControls }}
-    <BirdControls />
+{#if skyControls}
+  {#await skyControls then { default: SkyControls }}
+    <SkyControls />
   {:catch}
     <!-- Dev panel; a failed chunk load just means no panel. -->
   {/await}

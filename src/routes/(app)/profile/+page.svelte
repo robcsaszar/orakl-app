@@ -272,8 +272,8 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
           <div class="flex flex-col gap-2">
             <h2 class="text-lg font-semibold">Your details</h2>
             <p class="text-foreground-darker font-sans">
-              View or manage your profile information, including your nickname and
-              role.
+              View or manage your profile information, including your nickname,
+              email and role.
             </p>
           </div>
           <div class="grid grid-cols-2 gap-4 items-baseline">
@@ -282,6 +282,8 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
               <span class="text-lg font-semibold">{data.user.nickname ?? "—"}</span
               ><Badge>{data.user.role}</Badge>
             </div>
+            <span class="text-foreground-darker justify-self-end">Email</span>
+            <span class="break-all">{data.user.email ?? "—"}</span>
           </div>
         </div>
         <div class="flex flex-col gap-4 items-start">

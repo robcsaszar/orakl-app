@@ -367,7 +367,6 @@ import { percent } from "@orakl/shared";
         emoteStillSrc={(id) => session.getEmoteStillSrc(id)}
         emoteTitle={(id) => session.getEmoteTitle(id)}
         activeEmotes={session.activeEmotes}
-        selfPlayerId={session.playerId}
         {canEmote}
         intermission={session.isIntermission}
         onSend={(emoteId, x, y) => session.sendEmote(emoteId, x, y)}

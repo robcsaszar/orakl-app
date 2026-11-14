@@ -5,6 +5,7 @@ import type { EventSpec, SkyEvent } from "./event";
 import { SkyLoop, type SkyStats } from "./loop";
 import type { ModifierId } from "./modifiers";
 import type { Ctx2D } from "./render";
+import type { BirdSettings } from "./settings";
 
 /**
  * The sky on the page's own thread: a `SkyLoop` on the page canvas. The
@@ -13,13 +14,8 @@ import type { Ctx2D } from "./render";
 export class BirdRunner implements SkyDriver {
   readonly loop: SkyLoop;
 
-  constructor(
-    canvas: HTMLCanvasElement,
-    ctx: Ctx2D,
-    options: EngineOptions,
-    far: { surface: HTMLCanvasElement; ctx: Ctx2D } | null = null,
-  ) {
-    this.loop = new SkyLoop(canvas, ctx, options, far);
+  constructor(canvas: HTMLCanvasElement, ctx: Ctx2D, options: EngineOptions) {
+    this.loop = new SkyLoop(canvas, ctx, options);
   }
 
   get engine() {
@@ -83,6 +79,25 @@ export class BirdRunner implements SkyDriver {
   clear(): void {
     this.loop.clear();
   }
+
+  setSettings(settings: BirdSettings): void {
+    this.loop.setSettings(settings);
+  }
+
+  retire(id: number): void {
+    this.loop.retire(id);
+  }
+
+  sendNext(index: number): void {
+    this.loop.sendNext(index);
+  }
+
+  replay(): void {
+    this.loop.replay();
+  }
+
+  /** Stats are read live on the page, so there is nothing to speed up. */
+  watch(_every: number): void {}
 
   setWind(x: number, z: number): void {
     this.loop.engine.setWind(x, z);

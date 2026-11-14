@@ -145,7 +145,7 @@
   });
 </script>
 
-<label for={id} class="flex flex-1 flex-col gap-2 group">
+<label for={id} class={cn("flex flex-1 flex-col group", size === "sm" ? "gap-1" : "gap-2")}>
   <div class="relative order-3 flex gap-2 items-center justify-center self-stretch flex-1" style="anchor-name: {anchorName}" >
     {#if isTextarea}
       <textarea
@@ -245,7 +245,7 @@
   {/if}
 
   {#if description}
-    <p id="{id}-desc" class="order-2 text-sm text-foreground-darker">{description}</p>
+    <p id="{id}-desc" class={cn("order-2 text-foreground-darker", size === "sm" ? "text-[11px] leading-snug" : "text-sm")}>{description}</p>
   {/if}
 </label>
 

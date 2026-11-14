@@ -10,7 +10,7 @@ export interface SkyWind {
 }
 
 /** Phases with calmer air. */
-const CALM: Partial<Record<SkyPhase, number>> = {
+export const CALM: Partial<Record<SkyPhase, number>> = {
   dawn: 0.5,
   dusk: 0.6,
   night: 0.5,

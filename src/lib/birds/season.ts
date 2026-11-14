@@ -1,8 +1,8 @@
 import type { EventKind } from "./event";
 import type { ModifierId } from "./modifiers";
 
-/** Month multipliers (January first) on how often a kind is picked. */
-const KIND: Record<EventKind, number[]> = {
+/** Month multipliers (January first) on how often a kind is picked, as the code has them. */
+export const KIND_SEASONS: Record<EventKind, number[]> = {
   // Geese move in spring and autumn; summer skies are nearly empty of them.
   skein: [1.2, 1.2, 1.8, 1.8, 1.0, 0.5, 0.4, 0.6, 1.6, 2.0, 2.0, 1.4],
   // Murmurations are a winter sight.
@@ -20,11 +20,6 @@ const MOD: Partial<Record<ModifierId, number[]>> = {
   funnel: [1.5, 1.4, 1.0, 0.8, 0.6, 0.5, 0.5, 0.6, 1.0, 1.3, 1.5, 1.6],
   landing: [1.0, 1.0, 1.5, 1.5, 1.0, 0.7, 0.7, 0.8, 1.4, 1.6, 1.6, 1.2],
 };
-
-/** Season multiplier on an event kind's pick weight for a month (0 = January). */
-export function kindSeason(kind: EventKind, month: number): number {
-  return KIND[kind][((month % 12) + 12) % 12];
-}
 
 /** Season multiplier on a modifier's weight for a month (0 = January). */
 export function modSeason(mod: ModifierId, month: number): number {

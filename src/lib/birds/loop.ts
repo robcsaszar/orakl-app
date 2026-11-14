@@ -1,8 +1,14 @@
 import type { SkyPhase } from "@orakl/shared";
-import { BirdEngine, type EngineOptions } from "./engine";
+import {
+  BirdEngine,
+  type EngineOptions,
+  type LiveEvent,
+  type NextEvent,
+} from "./engine";
 import type { EventSpec, SkyEvent } from "./event";
 import type { ModifierId } from "./modifiers";
 import { BirdRenderer, type Ctx2D } from "./render";
+import type { BirdSettings } from "./settings";
 
 const STEP = 1 / 60;
 const MAX_FRAME = 0.1;
@@ -21,6 +27,10 @@ export interface SkyStats {
   captions: string[];
   /** One short sentence per event: the kind and its modifiers. */
   sentences: string[];
+  /** The flocks up now, oldest first. */
+  live: LiveEvent[];
+  /** The next flocks the schedule will send. */
+  next: NextEvent[];
 }
 
 /** A canvas that can be resized: the page's or an OffscreenCanvas in a worker. */
@@ -48,8 +58,6 @@ export class SkyLoop {
   private paused = false;
   private readonly surface: Surface;
   private readonly ctx: Ctx2D;
-  private readonly farSurface: Surface | null;
-  private readonly farCtx: Ctx2D | null;
   private frames = 0;
   private dpr = 1;
   private raf = 0;
@@ -60,16 +68,9 @@ export class SkyLoop {
   private readonly raf$: (cb: (ts: number) => void) => number;
   private readonly cancel$: (id: number) => void;
 
-  constructor(
-    surface: Surface,
-    ctx: Ctx2D,
-    options: EngineOptions,
-    far: { surface: Surface; ctx: Ctx2D } | null = null,
-  ) {
+  constructor(surface: Surface, ctx: Ctx2D, options: EngineOptions) {
     this.surface = surface;
     this.ctx = ctx;
-    this.farSurface = far?.surface ?? null;
-    this.farCtx = far?.ctx ?? null;
     this.engine = new BirdEngine(options);
     this.frame = this.frame.bind(this);
     // Workers in some browsers have no requestAnimationFrame; a 60 Hz timer
@@ -104,31 +105,33 @@ export class SkyLoop {
       ms: this.frameMs,
       captions: this.engine.captions,
       sentences: this.engine.sentences,
+      live: this.engine.live(),
+      next: this.engine.upcoming(),
     };
   }
 
   draw(): void {
     const e = this.engine;
-    this.renderer.draw(
-      this.ctx,
-      e.view,
-      this.dpr,
-      e.events,
-      e.palette,
-      this.farCtx,
-    );
+    this.renderer.scale = e.scale;
+    this.renderer.draw(this.ctx, e.view, this.dpr, e.events, e.palette);
   }
 
   /** Fits the backing store to the viewport at a pixel ratio and redraws. */
   resize(width: number, height: number, dpr: number): void {
     if (width < 1 || height < 1) return;
-    this.dpr = Math.min(2, dpr || 1);
-    this.surface.width = Math.round(width * this.dpr);
-    this.surface.height = Math.round(height * this.dpr);
-    if (this.farSurface) {
-      this.farSurface.width = this.surface.width;
-      this.farSurface.height = this.surface.height;
-    }
+    const ratio = Math.min(2, dpr || 1);
+    const w = Math.round(width * ratio);
+    const h = Math.round(height * ratio);
+    // Setting a canvas's size clears and reallocates it, so the same size is no work.
+    if (
+      w === this.surface.width &&
+      h === this.surface.height &&
+      ratio === this.dpr
+    )
+      return;
+    this.dpr = ratio;
+    this.surface.width = w;
+    this.surface.height = h;
     this.engine.setView(width, height);
     this.draw();
   }
@@ -170,8 +173,34 @@ export class SkyLoop {
   }
 
   clear(): void {
-    this.engine.events.length = 0;
+    this.engine.clear();
     this.draw();
+  }
+
+  setSettings(settings: BirdSettings): void {
+    this.engine.setSettings(settings);
+    this.wakeUp();
+  }
+
+  retire(id: number): void {
+    this.engine.retire(id);
+  }
+
+  sendNext(index: number): void {
+    this.engine.sendNext(index);
+    this.wakeUp();
+  }
+
+  replay(): void {
+    this.engine.replay();
+    this.wakeUp();
+  }
+
+  /** Redraws a still sky, or re-reads when the next flock is due. */
+  private wakeUp(): void {
+    if (this.running) return;
+    this.draw();
+    this.resume();
   }
 
   private start(): void {
@@ -211,6 +240,9 @@ export class SkyLoop {
     const elapsed = this.lastTs
       ? Math.min(MAX_FRAME, (ts - this.lastTs) / 1000)
       : STEP;
+    // The first frame and a paused sky always draw; after that, only a frame
+    // that moved the birds does (a 120 Hz screen has a step every other frame).
+    let moved = this.paused || !this.lastTs;
     this.lastTs = ts;
     if (!this.paused) {
       this.acc += elapsed * this.speed;
@@ -221,8 +253,9 @@ export class SkyLoop {
         n++;
       }
       if (this.acc > STEP) this.acc = 0;
+      moved ||= n > 0;
     }
-    this.draw();
+    if (moved) this.draw();
     this.frameMs = this.frameMs * 0.9 + (performance.now() - t0) * 0.1;
     this.govern();
     if (!this.paused && this.engine.idleFor > 0) {
