@@ -3,13 +3,14 @@ import type { SkyCue, SkySnapshot } from "./engine";
 import type { EventSpec } from "./event";
 import type { SkyStats } from "./loop";
 import type { ModifierId } from "./modifiers";
+import type { BirdSettings } from "./settings";
 
 /**
  * What `Birds.svelte` and the `?birds` panel drive, whether the sky runs on
  * the page (`BirdRunner`) or in a worker (`WorkerRunner`).
  */
 export interface SkyDriver {
-  /** Latest numbers for the panel; a worker's are a quarter-second old. */
+  /** Latest numbers for the panel; a worker's are as old as `watch` allows, and empty until it is asked. */
   readonly stats: SkyStats;
   speed: number;
   resize(width: number, height: number): void;
@@ -23,6 +24,16 @@ export interface SkyDriver {
   setAuto(on: boolean): void;
   spawn(spec: EventSpec, mods?: ModifierId[]): void;
   clear(): void;
+  /** Swaps the tables the sky runs on. */
+  setSettings(settings: BirdSettings): void;
+  /** Asks one flock, by its live id, to leave. */
+  retire(id: number): void;
+  /** Sends the scheduled flock at this place in the queue now. */
+  sendNext(index: number): void;
+  /** Sends the last hand-sent flock again as it was. */
+  replay(): void;
+  /** How often the stats are refreshed, ms: often for name tags, seldom for lists, 0 for never. */
+  watch(every: number): void;
   /** The sky's wind for the current phase. */
   setWind(x: number, z: number): void;
   /** A nudge from the quiz: a reveal, the lobby's head count. */
@@ -37,8 +48,6 @@ export type ToWorker =
   | {
       type: "init";
       canvas: OffscreenCanvas;
-      /** Birds beyond the cloud layer draw here, behind the clouds. */
-      far: OffscreenCanvas | null;
       seed: number;
       wind: [number, number];
       width: number;
@@ -58,6 +67,11 @@ export type ToWorker =
   | { type: "speed"; speed: number }
   | { type: "spawn"; spec: EventSpec; mods?: ModifierId[] }
   | { type: "clear" }
+  | { type: "settings"; settings: BirdSettings }
+  | { type: "retire"; id: number }
+  | { type: "sendNext"; index: number }
+  | { type: "replay" }
+  | { type: "watch"; every: number }
   | { type: "wind"; x: number; z: number }
   | { type: "cue"; cue: SkyCue }
   | { type: "snapshot"; id: number };

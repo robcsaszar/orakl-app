@@ -16,6 +16,7 @@
       size: {
         default: "p-2.5 pr-10",
         compact: "px-2 py-1 pr-8 text-sm",
+        sm: "rounded-lg px-2 py-1 pr-8 font-mono text-xs",
       },
     },
     defaultVariants: { size: "default" },
@@ -54,12 +55,12 @@
   );
 </script>
 
-<label for={id} class="flex flex-1 flex-col gap-2 group">
-  <span class={cn("order-1 flex min-h-8 items-baseline gap-2 text-lg", hideLabel && "sr-only")}>
+<label for={id} class={cn("flex flex-1 flex-col group", size === "sm" ? "gap-1" : "gap-2")}>
+  <span class={cn("order-1 flex items-baseline gap-2", size === "sm" ? "font-mono text-xs" : "min-h-8 text-lg", hideLabel && "sr-only")}>
     {label}
   </span>
   {#if description}
-    <p id="{id}-desc" class="order-2 text-sm text-foreground-darker">{description}</p>
+    <p id="{id}-desc" class={cn("order-2 text-foreground-darker", size === "sm" ? "text-[11px] leading-snug" : "text-sm")}>{description}</p>
   {/if}
   <select
     {id}

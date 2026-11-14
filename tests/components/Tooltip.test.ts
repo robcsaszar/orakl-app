@@ -88,4 +88,61 @@ describe("Tooltip", () => {
       "Seal the vault",
     );
   });
+
+  it("goes by itself after a short time, and gives long text longer", async () => {
+    render(Tooltip);
+    await nextFrame();
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    /** Shows a tooltip, and says whether it is still up after the wait. */
+    const stillUpAfter = async (text: string, ms: number) => {
+      const target = document.createElement("span");
+      target.setAttribute("data-tooltip", text);
+      document.body.appendChild(target);
+      await Promise.resolve();
+      target.dispatchEvent(new MouseEvent("mouseenter"));
+      await screen.findByRole("tooltip");
+      await wait(ms);
+      const up = screen.queryByRole("tooltip") !== null;
+      target.dispatchEvent(new MouseEvent("mouseleave"));
+      await wait(300);
+      target.remove();
+      return up;
+    };
+    // The pointer never leaves, yet the short one is gone and the long one is not.
+    expect(await stillUpAfter("Undo", 2400)).toBe(false);
+    expect(
+      await stillUpAfter(
+        "Grabbing clouds: drag one to move it. Click to use the page instead.",
+        2400,
+      ),
+    ).toBe(true);
+  });
+
+  it("on a touch screen shows no tooltip for a control a tap works, and still shows one for plain content", async () => {
+    const real = globalThis.matchMedia;
+    globalThis.matchMedia = ((query: string) => ({
+      matches: query.includes("pointer: coarse"),
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof matchMedia;
+    render(Tooltip);
+    await nextFrame();
+
+    const button = document.createElement("button");
+    button.setAttribute("data-tooltip", "Seal the vault");
+    const badge = document.createElement("span");
+    badge.setAttribute("data-tooltip", "A relic");
+    badge.tabIndex = 0;
+    document.body.append(button, badge);
+    await Promise.resolve();
+
+    button.dispatchEvent(new FocusEvent("focus"));
+    await nextFrame();
+    expect(screen.queryByRole("tooltip")).toBeNull();
+
+    badge.dispatchEvent(new FocusEvent("focus"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("A relic");
+    globalThis.matchMedia = real;
+  });
 });

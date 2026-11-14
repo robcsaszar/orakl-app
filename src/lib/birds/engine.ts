@@ -7,17 +7,28 @@ import {
   type EventSpec,
   type SkyEvent,
 } from "./event";
-import { eventSentence, type ModifierId, rollModifiers } from "./modifiers";
+import {
+  eventLabel,
+  eventSentence,
+  type ModifierId,
+  rollModifiers,
+} from "./modifiers";
 import { Murmuration } from "./murmuration";
-import { PALETTES, SCENARIOS, type Scenario } from "./phases";
+import type { Scenario } from "./phases";
 import { Raptor } from "./raptor";
 import type { Palette } from "./render";
 import { mulberry32, type Rng } from "./rng";
-import { kindSeason } from "./season";
 import { mix } from "./seed";
+import {
+  type BirdSettings,
+  defaultBirdSettings,
+  type KindLimits,
+  RANGES,
+} from "./settings";
+
 import { Skein } from "./skein";
 import { Soar } from "./soar";
-import { makeView, type View } from "./view";
+import { makeView, project, type View } from "./view";
 
 export interface EngineOptions {
   width: number;
@@ -33,6 +44,34 @@ export interface EngineOptions {
   clock?: () => number;
   /** The sky's wind, metres per second along x and z. */
   wind?: [number, number];
+  /** The tables to run on; the code's own when omitted. */
+  settings?: BirdSettings;
+}
+
+/** A flock in the sky, for a list and for a name tag that follows it. */
+export interface LiveEvent {
+  /** Stable while the flock is up. */
+  id: number;
+  kind: EventKind;
+  label: string;
+  sentence: string;
+  /** Seconds since it started. */
+  age: number;
+  birds: number;
+  /** Where its middle is on screen, CSS pixels. */
+  x: number;
+  y: number;
+  /** Asked to leave and on its way out. */
+  leaving: boolean;
+}
+
+/** A flock the schedule will send. */
+export interface NextEvent {
+  kind: EventKind;
+  label: string;
+  /** Seconds until it starts. */
+  in: number;
+  birds: number;
 }
 
 /** Something the quiz tells the sky. */
@@ -61,21 +100,8 @@ interface Planned {
   seed: number;
 }
 
-const DEFAULT_DEPTH: [number, number] = [30, 150];
-/**
- * What each kind may be: bird count after tunes and modifiers, and spawn depth
- * in metres. Phase tables stay inside these; manual spawns are clamped to them
- * (a near murmuration swallows the camera, a lone goose is no skein).
- */
-export const RANGES: Record<
-  EventKind,
-  { count: [number, number]; depth: [number, number] }
-> = {
-  skein: { count: [15, 80], depth: [16, 260] },
-  murmuration: { count: [100, 2500], depth: [30, 120] },
-  soar: { count: [2, 60], depth: [20, 160] },
-  raptor: { count: [1, 6], depth: [30, 120] },
-};
+export { RANGES };
+
 /** Past this multiple of maxLife an event is dropped even with birds in view. */
 const HARD_CAP = 2.5;
 const PALETTE_EASE = 1.5;
@@ -106,6 +132,16 @@ export class BirdEngine {
   /** Multiplier on scheduled flock sizes, set by the frame-time governor. */
   budget: number;
   private wind: [number, number];
+  private settings: BirdSettings;
+  /** The last flock sent by hand, to send the same one again. */
+  private last: {
+    spec: EventSpec;
+    mods: ModifierId[];
+    count: number;
+    rng: Rng;
+  } | null = null;
+  private readonly ids: number[] = [];
+  private nextId = 1;
   private readonly ages: number[] = [];
   private readonly retired: boolean[] = [];
   /** Phase waiting for the sky to empty before its schedule takes over. */
@@ -133,8 +169,9 @@ export class BirdEngine {
     this.budget = o.small ? 0.6 : 1;
     this.wind = o.wind ?? [0, 0];
     this.phase = o.phase ?? "noon";
-    this.scenario = SCENARIOS[this.phase];
-    this.target = PALETTES[this.phase];
+    this.settings = o.settings ?? defaultBirdSettings();
+    this.scenario = this.settings.scenarios[this.phase];
+    this.target = this.settings.palettes[this.phase];
     const p = this.target;
     this.palette = {
       body: [p.body[0], p.body[1], p.body[2]],
@@ -152,6 +189,106 @@ export class BirdEngine {
     this.wind = [x, z];
   }
 
+  /** Multiplier on every bird's drawn size. */
+  get scale(): number {
+    return this.settings.scale;
+  }
+
+  /** Empties the sky at once. */
+  clear(): void {
+    this.dropAll();
+  }
+
+  /**
+   * Swaps the tables the sky runs on. Flocks already up fly on as they are;
+   * the colours ease over, and the schedule is laid out again from now.
+   */
+  setSettings(settings: BirdSettings): void {
+    this.settings = settings;
+    this.scenario = settings.scenarios[this.pending ?? this.phase];
+    this.target = settings.palettes[this.pending ?? this.phase];
+    this.timelineHour = -1;
+    this.plan();
+  }
+
+  private odds(kind: EventKind) {
+    return {
+      one: this.settings.twistShare[kind],
+      two: this.settings.twoTwists,
+      weights: this.settings.twists,
+    };
+  }
+
+  /** The flocks up now, oldest first. */
+  live(): LiveEvent[] {
+    const pt = [0, 0];
+    return this.events.map((e, i) => {
+      const f = e.flock;
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      const n = Math.min(f.n, 64);
+      for (let k = 0; k < n; k++) {
+        x += f.px[k] as number;
+        y += f.py[k] as number;
+        z += f.pz[k] as number;
+      }
+      project(this.view, x / n, y / n, Math.max(1, z / n), pt);
+      return {
+        id: this.ids[i] as number,
+        kind: e.kind,
+        label: e.label,
+        sentence: eventSentence(e.kind, e.mods),
+        age: this.ages[i] as number,
+        birds: e.flocks.reduce((sum, flock) => sum + flock.n, 0),
+        x: pt[0] as number,
+        y: pt[1] as number,
+        leaving: (this.retired[i] as boolean) || e.done,
+      };
+    });
+  }
+
+  /** The next flocks the schedule will send, soonest first. */
+  upcoming(limit = 3): NextEvent[] {
+    if (!this.auto || this.pending !== null) return [];
+    return this.timeline.slice(0, limit).map((p) => ({
+      kind: p.spec.kind,
+      label: eventLabel(p.spec.kind, p.mods),
+      in: p.at - this.time,
+      birds: this.finalCount(p.spec, p.count, p.mods),
+    }));
+  }
+
+  /** Sends a scheduled flock now; the ones before it are skipped. */
+  sendNext(index: number): void {
+    const p = this.timeline[index];
+    if (!p) return;
+    this.timeline.splice(0, index + 1);
+    this.dropAll();
+    this.spawnPlanned(p);
+  }
+
+  /** Asks one flock to leave. */
+  retire(id: number): void {
+    const i = this.ids.indexOf(id);
+    if (i >= 0) this.retireAt(i);
+  }
+
+  /** Sends the last hand-sent flock again: the same shape on the same path. */
+  replay(): void {
+    if (!this.last) return;
+    this.dropAll();
+    const { spec, mods, count, rng } = this.last;
+    this.build(spec, mods, count, rng.clone());
+  }
+
+  private dropAll(): void {
+    this.events.length = 0;
+    this.ids.length = 0;
+    this.ages.length = 0;
+    this.retired.length = 0;
+  }
+
   setBudget(b: number): void {
     this.budget = Math.min(1, Math.max(MIN_BUDGET, b));
   }
@@ -163,7 +300,7 @@ export class BirdEngine {
    */
   setPhase(phase: SkyPhase): void {
     if (phase === this.phase && this.pending === null) return;
-    this.target = PALETTES[phase];
+    this.target = this.settings.palettes[phase];
     if (this.events.length === 0) {
       this.applyPhase(phase);
       return;
@@ -175,7 +312,7 @@ export class BirdEngine {
   private applyPhase(phase: SkyPhase): void {
     this.pending = null;
     this.phase = phase;
-    this.scenario = SCENARIOS[phase];
+    this.scenario = this.settings.scenarios[phase];
     const phaseRng = mulberry32(mix(this.seed, SKY_PHASES.indexOf(phase), 7));
     this.skeinDir = phaseRng.sign();
     this.timelineHour = -1;
@@ -185,7 +322,9 @@ export class BirdEngine {
     const next = this.timeline[0];
     const first = this.scenario.first;
     this.firstIn =
-      this.scenario.events.length === 0
+      this.scenario.events.length === 0 ||
+      !(this.scenario.perHour > 0) ||
+      !this.birdDay
         ? Number.POSITIVE_INFINITY
         : next && next.at - this.time <= first[1]
           ? Number.POSITIVE_INFINITY
@@ -199,14 +338,22 @@ export class BirdEngine {
     this.timelineHour = hour;
     this.timeline = [];
     const sc = this.scenario;
-    if (sc.events.length === 0) return;
+    if (sc.events.length === 0 || !(sc.perHour > 0) || !this.birdDay) return;
+    // The gaps between flocks vary by half about the mean the rate gives.
+    const gap = HOUR / sc.perHour;
     const rng = mulberry32(
       mix(this.seed, SKY_PHASES.indexOf(this.phase), hour, this.month),
     );
     let t = rng.range(sc.first[0], sc.first[1]);
     while (t < HOUR) {
       const spec = this.pick(rng);
-      const mods = rollModifiers(spec.kind, this.phase, rng, this.month);
+      const mods = rollModifiers(
+        spec.kind,
+        this.phase,
+        rng,
+        this.month,
+        this.odds(spec.kind),
+      );
       this.timeline.push({
         at: hour * HOUR + t,
         spec,
@@ -214,7 +361,8 @@ export class BirdEngine {
         count: this.baseCount(spec, rng),
         seed: rng.int(0, 2 ** 31 - 1),
       });
-      t += rng.range(sc.interval[0], sc.interval[1]);
+      // A wait of nothing would never reach the end of the hour.
+      t += Math.max(1, rng.range(gap * 0.5, gap * 1.5));
     }
     this.timeline = this.timeline.filter((e) => e.at > this.time);
   }
@@ -277,6 +425,7 @@ export class BirdEngine {
         this.ages[i] > e.maxLife * HARD_CAP
       ) {
         this.events.splice(i, 1);
+        this.ids.splice(i, 1);
         this.ages.splice(i, 1);
         this.retired.splice(i, 1);
       }
@@ -315,7 +464,8 @@ export class BirdEngine {
 
   private pick(rng: Rng): EventSpec {
     const specs = this.scenario.events;
-    const weight = (s: EventSpec) => s.weight * kindSeason(s.kind, this.month);
+    const weight = (s: EventSpec) =>
+      s.weight * (this.settings.seasons[s.kind]?.[this.month % 12] ?? 1);
     let total = 0;
     for (const s of specs) total += weight(s);
     let r = rng.range(0, total);
@@ -326,8 +476,38 @@ export class BirdEngine {
     return specs[specs.length - 1];
   }
 
+  /** The bounds a kind is kept in: the settings' own, never wider than `RANGES`. */
+  private limit(kind: EventKind): KindLimits {
+    const hard = RANGES[kind];
+    const own = this.settings.limits[kind] ?? hard;
+    const within = (
+      pair: [number, number],
+      [lo, hi]: [number, number],
+    ): [number, number] => {
+      const a = Math.min(hi, Math.max(lo, Math.min(pair[0], pair[1])));
+      const b = Math.min(hi, Math.max(lo, Math.max(pair[0], pair[1])));
+      return [a, b];
+    };
+    return {
+      count: within(own.count, hard.count),
+      depth: within(own.depth, hard.depth),
+    };
+  }
+
+  /** Whether this day has flocks at the time of day in the sky: the same for everyone on the day. */
+  private get birdDay(): boolean {
+    const days = this.scenario.days ?? 1;
+    if (days >= 1) return true;
+    return (
+      mulberry32(
+        mix(this.seed, SKY_PHASES.indexOf(this.phase), 0xda75),
+      ).next() < days
+    );
+  }
+
   private baseCount(spec: EventSpec, rng: Rng): number {
-    const [lo, hi] = spec.count ?? [1, 1];
+    // A kind's flocks are as large as its own bounds say, at every time of day; a flock sent by hand names its size.
+    const [lo, hi] = spec.count ?? this.limit(spec.kind).count;
     return rng.int(lo, hi);
   }
 
@@ -346,7 +526,9 @@ export class BirdEngine {
     if (spec.kind === "soar" && mods.includes("frenzy")) {
       n = Math.round(n * 1.5);
     }
-    const [lo, hi] = RANGES[spec.kind].count;
+    // A flock that comes by itself stays inside its kind's own bounds; one sent by hand with a size may be as large as the kind allows at all.
+    const [lo, hi] = (spec.count ? RANGES[spec.kind] : this.limit(spec.kind))
+      .count;
     return Math.min(hi, Math.max(lo, n));
   }
 
@@ -356,9 +538,10 @@ export class BirdEngine {
     count: number,
     rng: Rng,
   ): SkyEvent {
-    const [near, far] = RANGES[spec.kind].depth;
+    const [near, far] = (spec.depth ? RANGES[spec.kind] : this.limit(spec.kind))
+      .depth;
     const clampZ = (z: number) => Math.min(far, Math.max(near, z));
-    const [lo, hi] = spec.depth ?? DEFAULT_DEPTH;
+    const [lo, hi] = spec.depth ?? [near, far];
     const o: EventOptions = {
       count: this.finalCount(spec, count, mods),
       depth: [clampZ(lo), clampZ(hi)],
@@ -384,6 +567,7 @@ export class BirdEngine {
         break;
     }
     this.events.push(e);
+    this.ids.push(this.nextId++);
     this.ages.push(0);
     this.retired.push(false);
     return e;
@@ -403,14 +587,20 @@ export class BirdEngine {
     spec: EventSpec = this.pick(this.rng),
     forced?: ModifierId[],
   ): SkyEvent {
-    this.events.length = 0;
-    this.ages.length = 0;
-    this.retired.length = 0;
+    this.dropAll();
     const mods =
       forced ??
       spec.mods ??
-      rollModifiers(spec.kind, this.phase, this.rng, this.month);
-    return this.build(spec, mods, this.baseCount(spec, this.rng), this.rng);
+      rollModifiers(
+        spec.kind,
+        this.phase,
+        this.rng,
+        this.month,
+        this.odds(spec.kind),
+      );
+    const count = this.baseCount(spec, this.rng);
+    this.last = { spec, mods, count, rng: this.rng.clone() };
+    return this.build(spec, mods, count, this.rng);
   }
 
   /** The quiz's nudge: a reveal moves a murmuration, the lobby fills the gulls. */

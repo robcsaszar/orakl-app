@@ -44,8 +44,8 @@ import { LOGO_SCHEDULE } from "@orakl/shared";
   const gR = $derived((Math.sqrt(vbW ** 2 + vbH ** 2) / 2) * 1.5 * effectiveGradientScale);
 
   const paused = $derived(speed === 0);
-  const cxDur = $derived(speed > 0 ? `${(120 / speed).toFixed(1)}s` : "0s");
-  const cyDur = $derived(speed > 0 ? `${(156 / speed).toFixed(1)}s` : "0s");
+  const cxDur = $derived(speed > 0 ? `${(240 / speed).toFixed(1)}s` : "0s");
+  const cyDur = $derived(speed > 0 ? `${(312 / speed).toFixed(1)}s` : "0s");
   const maxOut = $derived(Math.round(gR * 0.5));
   const cxValues = $derived(`${gCx};${-maxOut};${vbW + maxOut};${gCx};${vbW + maxOut};${-maxOut};${gCx}`);
   const cyValues = $derived(`${gCy};${vbH + maxOut};${-maxOut};${gCy};${-maxOut};${vbH + maxOut};${gCy}`);
@@ -199,6 +199,15 @@ import { LOGO_SCHEDULE } from "@orakl/shared";
   :global(html[data-sky-phase="morning"] [data-animated-logo] .logo-rect-dark),
   :global(html[data-sky-phase="noon"] [data-animated-logo] .logo-rect-dark),
   :global(html[data-sky-phase="evening"] [data-animated-logo] .logo-rect-dark) {
+    opacity: 1;
+  }
+  /* The sky controls' pick for the time of day in the sky, over the phase's own. */
+  :global(html[data-sky-logo="dark"] [data-animated-logo] .logo-rect-light),
+  :global(html[data-sky-logo="light"] [data-animated-logo] .logo-rect-dark) {
+    opacity: 0;
+  }
+  :global(html[data-sky-logo="dark"] [data-animated-logo] .logo-rect-dark),
+  :global(html[data-sky-logo="light"] [data-animated-logo] .logo-rect-light) {
     opacity: 1;
   }
 </style>

@@ -8,22 +8,23 @@
   `prefers-reduced-motion`. `?birds` on any URL opens a control panel.
 -->
 <script lang="ts">
-import { PHASE_CONFIG } from "@orakl/shared";
 import type { SkyPhase } from "@orakl/shared";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { current } from "@/lib/birds/current.svelte";
   import type { SkyDriver } from "@/lib/birds/driver";
   import { BirdRunner } from "@/lib/birds/runner";
+  import { birdLab } from "@/lib/birds/lab.svelte";
   import { daySeed } from "@/lib/birds/seed";
+  import { defaultBirdSettings } from "@/lib/birds/settings";
   import { WorkerRunner } from "@/lib/birds/worker-runner";
+  import { cloudLab } from "@/lib/sky-clouds-lab.svelte";
+  import { skyStrength } from "@/lib/sky-colours-lab.svelte";
   import { subscribeSkyPhase } from "@/lib/sky-phase";
   import { windFor } from "@/lib/sky-wind";
 
   let { timeOfDay = "noon" }: { timeOfDay?: SkyPhase } = $props();
 
   let canvas: HTMLCanvasElement;
-  /** Birds beyond the cloud layer: drawn behind the clouds. */
-  let farCanvas: HTMLCanvasElement;
 
   /** A worker-backed sky, or null where the page must run it. */
   function tryWorker(options: {
@@ -45,11 +46,50 @@ import type { SkyPhase } from "@orakl/shared";
         new URL("../birds/sky.worker.ts", import.meta.url),
         { type: "module" },
       );
-      return new WorkerRunner(canvas, farCanvas, worker, options);
+      return new WorkerRunner(canvas, worker, options);
     } catch {
       return null;
     }
   }
+
+  /** The part of the viewport the flocks fly in: the top of it while a panel holds the bottom. */
+  const share = $derived(cloudLab.skyShare);
+
+  // The bird controls' tables while the panel is up, the code's own after it goes.
+  let lent = false;
+  $effect(() => {
+    const sky = current.runner;
+    if (!sky) return;
+    if (birdLab.active) {
+      // A dragged slider changes the tables many times a frame; the sky takes the last.
+      const tables = $state.snapshot(birdLab.settings);
+      const queued = requestAnimationFrame(() => sky.setSettings(tables));
+      lent = true;
+      return () => cancelAnimationFrame(queued);
+    }
+    if (lent) {
+      sky.setSettings(defaultBirdSettings());
+      lent = false;
+    }
+  });
+
+  $effect(() => {
+    current.runner?.resize(globalThis.innerWidth, globalThis.innerHeight * share);
+  });
+
+  let livePhase = $state(untrack(() => timeOfDay));
+  const opacity = $derived(skyStrength(livePhase).birds);
+  /** Whether the tab shows and motion is wanted; the sky also needs birds that can be seen. */
+  let awake = $state(false);
+  // Birds at a strength of nothing are not flown or drawn.
+  $effect(() => {
+    const sky = current.runner as (SkyDriver & { setAllowed(allowed: boolean): void }) | null;
+    if (!sky) return;
+    const on = awake && opacity > 0;
+    sky.setAllowed(on);
+    if (on) sky.resume();
+    else if (opacity > 0) sky.draw();
+  });
 
   onMount(() => {
     // Everyone on the same date shares the seed, so a lobby sees one sky.
@@ -68,12 +108,10 @@ import type { SkyPhase } from "@orakl/shared";
     if (!runner) {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const farCtx = farCanvas.getContext("2d");
       runner = new BirdRunner(
         canvas,
         ctx,
         options,
-        farCtx ? { surface: farCanvas, ctx: farCtx } : null,
       );
       runner.resize(options.width, options.height);
     }
@@ -83,22 +121,16 @@ import type { SkyPhase } from "@orakl/shared";
     const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
     const allowed = () => !document.hidden && !reducedMotion?.matches;
     const sync = () => {
-      sky.setAllowed(allowed());
-      if (allowed()) sky.resume();
-      else sky.draw();
+      awake = allowed();
     };
 
-    canvas.style.opacity = String(PHASE_CONFIG[timeOfDay].birdOpacity);
-    farCanvas.style.opacity = canvas.style.opacity;
     sync();
 
     const unsubscribePhase = subscribeSkyPhase((phase) => {
       const w = windFor(seed, phase);
       sky.setWind(w.x, w.z);
       sky.setPhase(phase);
-      const opacity = String(PHASE_CONFIG[phase].birdOpacity);
-      canvas.style.opacity = opacity;
-      farCanvas.style.opacity = opacity;
+      livePhase = phase;
     });
     const listeners = new AbortController();
     const { signal } = listeners;
@@ -109,7 +141,7 @@ import type { SkyPhase } from "@orakl/shared";
     const onResize = () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(
-        () => sky.resize(globalThis.innerWidth, globalThis.innerHeight),
+        () => sky.resize(globalThis.innerWidth, globalThis.innerHeight * cloudLab.skyShare),
         100,
       );
     };
@@ -126,14 +158,9 @@ import type { SkyPhase } from "@orakl/shared";
 </script>
 
 <canvas
-  id="birds-far"
-  bind:this={farCanvas}
-  class="rr-block absolute inset-0 z-[5] h-full w-full pointer-events-none"
-  aria-hidden="true"
-></canvas>
-<canvas
   id="birds"
   bind:this={canvas}
-  class="rr-block absolute inset-0 z-20 h-full w-full pointer-events-none"
+  class="rr-block absolute inset-x-0 top-0 z-20 w-full pointer-events-none"
+  style={`height: ${share * 100}%; opacity: ${opacity};${opacity > 0 ? "" : " visibility: hidden;"}`}
   aria-hidden="true"
 ></canvas>

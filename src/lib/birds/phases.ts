@@ -4,8 +4,10 @@ import type { Palette } from "./render";
 
 /** What a sky phase lets happen: how often, and what kinds. */
 export interface Scenario {
-  /** Seconds between one event starting and the next, [min, max]. */
-  interval: [number, number];
+  /** Flocks that start in an hour, on average; 0 for none. The gaps between them vary about the mean. */
+  perHour: number;
+  /** Share of days that have flocks at this time of day, 0 to 1; on the other days it has none. */
+  days: number;
   /** Seconds before the first event after the phase begins, [min, max]. */
   first: [number, number];
   events: EventSpec[];
@@ -93,66 +95,73 @@ const TUNE_DUSK: PhaseTune = {
  */
 export const SCENARIOS: Record<SkyPhase, Scenario> = {
   night: {
-    interval: [0, 0],
+    perHour: 0,
+    days: 1,
     first: [0, 0],
     events: [],
     tune: TUNE_DEFAULT,
   },
   dawn: {
-    interval: [25, 60],
+    perHour: 85,
+    days: 1,
     first: [3, 10],
     events: [
-      { kind: "skein", weight: 3, count: [15, 25], depth: [60, 200] },
-      { kind: "raptor", weight: 1, depth: [40, 90] },
+      { kind: "skein", weight: 3 },
+      { kind: "raptor", weight: 1 },
     ],
     tune: TUNE_DAWN,
   },
   morning: {
-    interval: [8, 20],
+    perHour: 257,
+    days: 1,
     first: [2, 6],
     events: [
-      { kind: "skein", weight: 4, count: [15, 35], depth: [18, 160] },
-      { kind: "soar", weight: 3, count: [4, 9], depth: [20, 90] },
-      { kind: "murmuration", weight: 1, count: [200, 400], depth: [45, 110] },
-      { kind: "raptor", weight: 1, depth: [30, 80] },
+      { kind: "skein", weight: 4 },
+      { kind: "soar", weight: 3 },
+      { kind: "murmuration", weight: 1 },
+      { kind: "raptor", weight: 1 },
     ],
     tune: TUNE_MORNING,
   },
   noon: {
-    interval: [20, 45],
+    perHour: 111,
+    days: 1,
     first: [3, 8],
     events: [
-      { kind: "raptor", weight: 3, depth: [40, 120] },
-      { kind: "soar", weight: 2, count: [3, 6], depth: [60, 160] },
-      { kind: "skein", weight: 1, count: [15, 24], depth: [120, 260] },
+      { kind: "raptor", weight: 3 },
+      { kind: "soar", weight: 2 },
+      { kind: "skein", weight: 1 },
     ],
     tune: TUNE_NOON,
   },
   evening: {
-    interval: [10, 25],
+    perHour: 206,
+    days: 1,
     first: [2, 6],
     events: [
-      { kind: "skein", weight: 4, count: [18, 45], depth: [16, 140] },
-      { kind: "murmuration", weight: 2, count: [400, 900], depth: [40, 100] },
-      { kind: "soar", weight: 1, count: [4, 8], depth: [25, 90] },
+      { kind: "skein", weight: 4 },
+      { kind: "murmuration", weight: 2 },
+      { kind: "soar", weight: 1 },
     ],
     tune: TUNE_EVENING,
   },
   sunset: {
-    interval: [15, 35],
+    perHour: 12,
+    days: 1,
     first: [3, 8],
     events: [
-      { kind: "murmuration", weight: 3, count: [600, 1400], depth: [35, 90] },
-      { kind: "skein", weight: 2, count: [15, 40], depth: [25, 160] },
+      { kind: "murmuration", weight: 3 },
+      { kind: "skein", weight: 2 },
     ],
     tune: TUNE_SUNSET,
   },
   dusk: {
-    interval: [35, 70],
+    perHour: 69,
+    days: 1,
     first: [5, 15],
     events: [
-      { kind: "skein", weight: 2, count: [15, 22], depth: [30, 120] },
-      { kind: "raptor", weight: 1, depth: [30, 70] },
+      { kind: "skein", weight: 2 },
+      { kind: "raptor", weight: 1 },
     ],
     tune: TUNE_DUSK,
   },

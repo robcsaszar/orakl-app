@@ -9,6 +9,7 @@ import {
 } from "@/lib/birds/modifiers";
 import { PALETTES, SCENARIOS } from "@/lib/birds/phases";
 import { mulberry32 } from "@/lib/birds/rng";
+import { defaultBirdSettings } from "@/lib/birds/settings";
 import { worldYAt } from "@/lib/birds/view";
 
 const STEP = 1 / 60;
@@ -548,7 +549,7 @@ describe("modifiers", () => {
   const view = { width: 1280, height: 800 };
   const kinds: Record<EventKind, ModifierId[]> = {
     skein: ["echelon", "low-pass", "landing"],
-    murmuration: ["pulse", "ribbon", "funnel", "giant", "probing"],
+    murmuration: ["pulse", "ribbon", "funnel", "giant", "probing", "wave"],
     soar: ["frenzy", "loafing", "squabble", "commute"],
     raptor: ["pair", "mobbed", "failed-stoop", "kettle", "ambush"],
   };
@@ -579,6 +580,28 @@ describe("modifiers", () => {
       });
     }
   }
+
+  it("wave: alarm starts at one bird, spreads to the birds about it, then dies away", () => {
+    const e = new BirdEngine({ ...view, phase: "night", seed: 8 });
+    const ev = e.spawn(
+      { kind: "murmuration", weight: 1, count: [400, 400], exact: true },
+      ["wave"],
+    ) as unknown as { alarm: Float32Array; waveIn: number };
+    const scared = () => ev.alarm.reduce((n, a) => n + (a > 0.3 ? 1 : 0), 0);
+    expect(scared()).toBe(0);
+
+    ev.waveIn = 0;
+    e.step(1 / 60);
+    const first = scared();
+    expect(first).toBeGreaterThan(0);
+    for (let k = 0; k < 20; k++) e.step(1 / 60);
+    expect(scared()).toBeGreaterThan(first);
+
+    // Long enough for the fright to fade, with the next wave held off.
+    ev.waveIn = Number.POSITIVE_INFINITY;
+    for (let k = 0; k < 600; k++) e.step(1 / 60);
+    expect(scared()).toBe(0);
+  });
 
   it("extra birds: giant doubles a murmuration, a kettle is five or six raptors, mobbing adds crows", () => {
     const e = new BirdEngine({ ...view, phase: "night", seed: 5 });
@@ -613,17 +636,13 @@ describe("modifiers", () => {
 
 describe("ranges", () => {
   const view = { width: 1280, height: 800 };
-  it("every phase table entry sits inside its kind's range", () => {
-    for (const sc of Object.values(SCENARIOS)) {
-      for (const spec of sc.events) {
-        const r = RANGES[spec.kind];
-        const [clo, chi] = spec.count ?? [1, 1];
-        expect(clo).toBeGreaterThanOrEqual(r.count[0]);
-        expect(chi).toBeLessThanOrEqual(r.count[1]);
-        const [dlo, dhi] = spec.depth ?? [30, 150];
-        expect(dlo).toBeGreaterThanOrEqual(r.depth[0]);
-        expect(dhi).toBeLessThanOrEqual(r.depth[1]);
-      }
+  it("each kind's own bounds sit inside the widest it may ever be", () => {
+    for (const [kind, own] of Object.entries(defaultBirdSettings().limits)) {
+      const r = RANGES[kind as EventKind];
+      expect(own.count[0]).toBeGreaterThanOrEqual(r.count[0]);
+      expect(own.count[1]).toBeLessThanOrEqual(r.count[1]);
+      expect(own.depth[0]).toBeGreaterThanOrEqual(r.depth[0]);
+      expect(own.depth[1]).toBeLessThanOrEqual(r.depth[1]);
     }
   });
 

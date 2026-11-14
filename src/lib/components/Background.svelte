@@ -1,218 +1,330 @@
 <script lang="ts">
-import { PHASE_CONFIG } from "@orakl/shared";
 import type { SkyPhase } from "@orakl/shared";
-  import { onMount } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import { cubicOut } from "svelte/easing";
   import { Tween } from "svelte/motion";
   import { PHASE_STOPS } from "@/lib/constants/phase-stops.constants";
+  import { skyLab, skyStops, skyStrength, skyTint } from "@/lib/sky-colours-lab.svelte";
 
+  import { fade } from "svelte/transition";
+  import {
+    CLOUD_LIVE,
+    CLOUD_SETTINGS,
+    CloudPainter,
+    type CloudMotion,
+    type SkyCloud,
+    carryProgress,
+    cloudMotion,
+    cloudsInSky,
+    drawCloud,
+    CLOUD_TOP_SHIFT,
+    skyClouds,
+  } from "@/lib/sky-clouds";
+  import { mulberry32 } from "@/lib/birds/rng";
+  import { mix } from "@/lib/birds/seed";
+  import { cloudLab, cloudStage, setCloudProgress } from "@/lib/sky-clouds-lab.svelte";
   import { subscribeSkyPhase } from "@/lib/sky-phase";
-  import cloudsImgUrl from "@/assets/clouds.png";
+  import { StarField, type StarSettings } from "@/lib/sky-stars";
+  import { starLab, starSettings, starStage } from "@/lib/sky-stars-lab.svelte";
+  import type { SkyWind } from "@/lib/sky-wind";
 
   type TimeOfDay = SkyPhase;
 
   interface Props {
     timeOfDay?: TimeOfDay;
-    /** The sky's wind along x, metres per second; sets cloud direction and pace. */
-    wind?: number;
-    cloudOpacity?: number;
-    driftX?: number;
-    driftY?: number;
-    rotationSpeed?: number;
+    /** The sky's wind; sets cloud direction, pace, stretch and lift. */
+    wind?: SkyWind;
+    /** The day's seed; lays the clouds out the same for everyone on the day. */
+    seed?: number;
   }
 
   let {
     timeOfDay = "noon",
-    wind = 1,
-    cloudOpacity = 0.55,
-    driftX = -0.04,
-    driftY = 0.02,
-    rotationSpeed = 0.00004,
+    wind = { x: 1, z: 0 },
+    seed = 0,
   }: Props = $props();
 
-  const initialStops = $derived(PHASE_STOPS[timeOfDay] ?? PHASE_STOPS.noon);
+  const initialStops = $derived(skyStops(timeOfDay in PHASE_STOPS ? timeOfDay : "noon"));
   // `offset` is an SVG attribute CSS cannot transition, so it tweens over the
   // same 2 s as the stop colours. Empty until mount; the template falls back.
   const offsets = new Tween<number[]>([], { duration: 2000, easing: cubicOut });
 
-  // Clouds cross on the wind: the faster it blows the shorter the crossing,
-  // and they go the way it goes.
-  const cloudPace = $derived(0.35 + Math.abs(wind) * 0.4);
-  const cloudDir = $derived(wind < 0 ? -1 : 1);
-  const durations = $derived([90, 120, 105, 140].map((d) => d / cloudPace));
-  const clouds = $derived([
-    { top: "6.8%", rot: 1.3, width: "52%", opacity: cloudOpacity * 1.1, flip: 1, dur: durations[0], delay: -28.0 },
-    { top: "20.1%", rot: -2.3, width: "38%", opacity: cloudOpacity * 0.8, flip: -1, dur: durations[1], delay: -71.5 },
-    { top: "32.4%", rot: 3.1, width: "62%", opacity: cloudOpacity * 0.65, flip: 1, dur: durations[2], delay: -44.0 },
-    { top: "11.5%", rot: -1.7, width: "44%", opacity: cloudOpacity * 0.9, flip: -1, dur: durations[3], delay: -88.0 },
-  ]);
+  // The day's clouds, or the cloud controls' while that panel is open. Laid out
+  // once for the day: a phase change retunes the wind and the tint, moves nothing.
+  const settings = $derived(cloudLab.active ? cloudLab.settings : CLOUD_SETTINGS);
+  const daySeed = $derived(cloudLab.active && cloudLab.daySeed !== null ? cloudLab.daySeed : seed);
+  // Every design of the pool on a path of its own, and second showings where the sky needs more clouds than there are designs.
+  const clouds = $derived(skyClouds(daySeed, settings, true));
+  const motion = $derived.by(() => {
+    const m = cloudMotion(cloudLab.active && cloudLab.wind !== null ? { x: cloudLab.wind, z: wind.z } : wind);
+    // Watched sped up from the controls, the drift runs that much faster too.
+    return { ...m, pace: m.pace * settings.speed * (cloudLab.active ? cloudLab.rate : 1) };
+  });
+  /** How many clouds the sky holds now. */
+  const wanted = $derived(cloudsInSky(timeOfDay, daySeed, settings));
+  /** The clouds in the sky now, by id: the rest of the pool waits out of sight. */
+  let inSky = $state<number[]>([]);
+  /** How far each cloud in the sky sits from its own height, percent of the sky. */
+  let shift = $state<Record<number, number>>({});
+  let draws = 0;
+  /** When each cloud was last put in its place, ms. */
+  const placed = new Map<number, number>();
+  const PLACING_MS = 1000;
+  /** A random number for the next draw, from the day's seed, so the order of clouds is the day's. */
+  const roll = () => mulberry32(mix(daySeed, 0xad17, draws++)).next();
+  /** Brings one more cloud into the sky, drawn by rarity, and puts it `at` a share of its crossing: 0 is the edge it comes in at. */
+  function admit(at = 0) {
+    const here = clouds.filter((c) => inSky.includes(c.id));
+    const next = drawCloud(
+      clouds.filter((c) => !inSky.includes(c.id)),
+      timeOfDay,
+      here,
+      roll(),
+    );
+    if (!next) return false;
+    inSky = [...inSky, next.id];
+    shift = { ...shift, [next.id]: (roll() * 2 - 1) * CLOUD_TOP_SHIFT };
+    placed.set(next.id, performance.now());
+    tick().then(() => setCloudProgress(next.id, at));
+    return true;
+  }
+  // Keeps the sky at the number wanted: a cloud that is no more goes, missing ones are drawn, extra ones leave.
+  $effect(() => {
+    const ids = new Set(clouds.map((c) => c.id));
+    const want = wanted;
+    void timeOfDay;
+    untrack(() => {
+      inSky = inSky.filter((id) => ids.has(id)).slice(0, want);
+      // A sky that needs more clouds at once, on a first visit or at a new time of day, finds them spread across it; they do not all come in at one edge.
+      while (inSky.length < want && admit(0.08 + roll() * 0.84)) {}
+    });
+  });
+  /** A cloud has crossed the sky: the next one is drawn, which may be the same again. */
+  function crossed(id: number) {
+    // Putting a cloud in its place can itself end a crossing on the clock: that is no crossing of the sky.
+    if (!inSky.includes(id) || performance.now() - (placed.get(id) ?? -PLACING_MS) < PLACING_MS) return;
+    inSky = inSky.filter((x) => x !== id);
+    if (inSky.length < wanted) admit();
+  }
+  /** A cloud shows while it is in the sky; while one is being changed, only that one shows. */
+  const visible = (c: SkyCloud) =>
+    cloudLab.active && cloudLab.editing >= 0 ? c.id === cloudLab.editing : inSky.includes(c.id);
+  /** The smallest strength a cloud is still drawn at. */
+  const FAINTEST = 0.004;
+  /** How far apart a phone's cloud repaints are, at the least, ms: each one is a long task there. */
+  const SMALL_INTERVAL = 1200;
+  /** A cloud's canvas width on a small screen, where it shows at a fraction of the full size. */
+  const SMALL_WIDTH = 512;
+  let tint = untrack(() => skyTint(timeOfDay));
+  /** The phase in the sky now; the sky colour controls' edits to it show at once. */
+  let livePhase = $state(untrack(() => timeOfDay));
+  const paused = $derived(cloudLab.active && cloudLab.paused);
+  const strength = $derived(skyStrength(livePhase));
+  /** How strongly a cloud is drawn; 0 when it cannot be seen. Night shows no clouds. */
+  const drawn = (c: SkyCloud) =>
+    visible(c) && livePhase !== "night" ? settings.opacity * strength.clouds * c.opacity * motion.thin : 0;
+  /** The clouds that can be seen: only these repaint, drift and breathe. */
+  const liveIds = $derived(new Set(clouds.filter((c) => drawn(c) >= FAINTEST).map((c) => c.id)));
+
+  $effect.pre(() => {
+    cloudStage.clouds = clouds;
+    cloudStage.live = liveIds;
+    cloudStage.motion = motion;
+  });
+
+  /** Registers a cloud's drifting element for the paint loop and the controls. */
+  function drifting(el: HTMLElement, id: number) {
+    cloudStage.els.set(id, el);
+    return { destroy: () => void cloudStage.els.delete(id) };
+  }
+
+  /** One painter per canvas; a new silhouette seed is a new canvas. */
+  function painted(el: HTMLCanvasElement, c: SkyCloud) {
+    const painter = new CloudPainter(el, c.seed, globalThis.innerWidth < 640 ? SMALL_WIDTH : undefined);
+    cloudStage.painters.set(c.id, painter);
+    cloudStage.repaint(c.id);
+    return {
+      destroy: () => {
+        if (cloudStage.painters.get(c.id) === painter) cloudStage.painters.delete(c.id);
+      },
+    };
+  }
+
+  // A new pace or direction would retime the running crossings; carry each
+  // cloud's progress over so it keeps its place and only its speed changes.
+  let lastMotion: CloudMotion | undefined;
+  $effect.pre(() => {
+    const next = motion;
+    const prev = lastMotion;
+    lastMotion = next;
+    if (!prev || (prev.pace === next.pace && prev.dir === next.dir)) return;
+    const at = new Map([...cloudStage.els].map(([id, el]) => [id, el.getAnimations()[0]?.currentTime]));
+    tick().then(() => {
+      for (const cloud of cloudStage.clouds) {
+        const t = at.get(cloud.id);
+        const anim = cloudStage.els.get(cloud.id)?.getAnimations()[0];
+        if (typeof t !== "number" || !anim) continue;
+        anim.currentTime = carryProgress(cloud, t / 1000, prev, next) * 1000;
+      }
+    });
+  });
 
   let canvas: HTMLCanvasElement;
-  let fireflyCanvas: HTMLCanvasElement;
 
   function isSkyPhaseKey(value: string): value is keyof typeof PHASE_STOPS {
     return value in PHASE_STOPS;
   }
 
   function updateGradient(phase: keyof typeof PHASE_STOPS) {
-    const { offsets: phaseOffsets, colors } = PHASE_STOPS[phase];
+    const { offsets: phaseOffsets, colors } = skyStops(phase);
     document.querySelectorAll("#grad-sky stop").forEach((el, i) => {
       (el as SVGStopElement).style.stopColor = colors[i] ?? "";
     });
     offsets.target = [...phaseOffsets];
   }
 
+  // A colour changed in the sky colour controls shows without the phase fade.
+  $effect(() => {
+    const stops = skyStops(livePhase);
+    const next = skyTint(livePhase);
+    const live = skyLab.active;
+    void JSON.stringify([stops, next]);
+    untrack(() => {
+      document.querySelectorAll<SVGStopElement>("#grad-sky stop").forEach((el, i) => {
+        el.style.transition = live ? "none" : "";
+        el.style.stopColor = stops.colors[i] ?? "";
+      });
+      offsets.set([...stops.offsets], live ? { duration: 0 } : undefined);
+      tint = next;
+      cloudStage.repaint();
+    });
+  });
+
+  /** Set on mount: tells the star loop whether the stars can be seen. */
+  let showStars: (on: boolean) => void = () => {};
+  $effect(() => {
+    if (!canvas) return;
+    canvas.style.opacity = String(strength.stars);
+    showStars(strength.stars > 0);
+  });
+
+  /** Set on mount: hands the star field new settings, and starts or holds it. */
+  let applyStars: (next: StarSettings) => void = () => {};
+  let holdStars: () => void = () => {};
+  $effect(() => {
+    const next = $state.snapshot(starSettings());
+    untrack(() => applyStars(next));
+  });
+  $effect(() => {
+    void (starLab.active && starLab.paused);
+    untrack(() => holdStars());
+  });
+
+  /** Set on mount: wakes the cloud paint loop. */
+  let wakeClouds: () => void = () => {};
+  // A cloud that comes back into view is repainted at once, then keeps its turn.
+  let wasLive = new Set<number>();
+  $effect(() => {
+    const now = liveIds;
+    untrack(() => {
+      for (const id of now) if (!wasLive.has(id)) cloudStage.repaint(id);
+      wasLive = now;
+      wakeClouds();
+    });
+  });
+
   onMount(() => {
-    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
-    const ffctx = fireflyCanvas.getContext("2d") as CanvasRenderingContext2D;
-
-    const NUM_STARS = 200;
-    const DRIFT_X = driftX;
-    const DRIFT_Y = driftY;
-    const ROTATION_SPEED = rotationSpeed;
-
-    let currentPhase: SkyPhase = timeOfDay;
-    const maxFireflyCount = Math.max(...Object.values(PHASE_CONFIG).map((c) => c.fireflyCount));
-    const NUM_FIREFLIES = Math.round((globalThis.innerWidth < 640 ? 0.5 : 1) * maxFireflyCount);
-    let firefliesAlpha = PHASE_CONFIG[timeOfDay].fireflyCount > 0 ? 1 : 0;
-    let ffWasActive = false;
-
-    let rotationCenterX = canvas.width / 2;
-    let rotationCenterY = -canvas.height * 0.3;
-
-    interface Star {
-      radius: number;
-      x: number;
-      y: number;
-      color: string;
-    }
-
-    function rand(min: number, max: number) {
-      return Math.random() * (max - min) + min;
-    }
+    // Clouds paint in turn: at most one per frame, each when its interval is
+    // up, its puffs a little further along the variation; still air under reduced motion.
+    const stillAir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // The variation clock runs only while unpaused, so a pause holds every shape.
+    // It lives on the stage so the cloud controls can read it and scrub it.
+    let lastTick = performance.now();
+    /** When each cloud was last painted, for its own tint easing. */
+    const paintedAt = new Map<number, number>();
+    const small = globalThis.innerWidth < 640;
+    const rate = () => (cloudLab.active ? cloudLab.rate : 1);
+    const paintCloud = (id: number, now = performance.now()) => {
+      const painter = cloudStage.painters.get(id);
+      const cloud = cloudStage.clouds.find((c) => c.id === id);
+      if (!painter || !cloud) return;
+      const s = cloudLab.active ? cloudLab.settings : CLOUD_SETTINGS;
+      const live = {
+        ...CLOUD_LIVE,
+        variation: stillAir ? 0 : s.variation,
+        variationPeriod: s.variationPeriod,
+        interval: s.interval,
+      };
+      const t = stillAir ? 0 : (cloudStage.clock / 1000) * ((2 * Math.PI) / live.variationPeriod);
+      const cells = cloudLab.active && cloudLab.bare && id === cloudLab.editing ? undefined : cloud.paint;
+      painter.paint(t, tint, (now - (paintedAt.get(id) ?? 0)) / 1000, cloud.model, live, cells, cloud.hardness);
+      // A fast-forwarded preview needs frames close together to read as motion.
+      const interval =
+        rate() > 1 ? Math.min(live.interval, 60) : small && !cloudLab.active ? Math.max(live.interval, SMALL_INTERVAL) : live.interval;
+      painter.nextAt = now + interval * (0.9 + 0.2 * Math.random());
+      paintedAt.set(id, now);
+      for (const listener of cloudStage.painted) listener(id);
+    };
+    cloudStage.repaint = (id) => {
+      if (id === undefined) for (const key of cloudStage.painters.keys()) paintCloud(key);
+      else paintCloud(id);
+    };
+    cloudStage.repaint();
+    // The loop runs only while a cloud that can be seen has shapes to move:
+    // not in a hidden tab, not at night, not in still air outside the controls.
+    let paintFrame = 0;
+    let painting = false;
+    const shouldPaint = () => !document.hidden && liveIds.size > 0 && (!stillAir || cloudLab.active);
+    const paintLoop = () => {
+      if (!shouldPaint()) {
+        painting = false;
+        return;
+      }
+      paintFrame = requestAnimationFrame(paintLoop);
+      const now = performance.now();
+      const dt = now - lastTick;
+      lastTick = now;
+      // A pause holds the clouds' shapes as well as their drift; a preview of the
+      // reshaping runs the shapes on while the drift stays held.
+      if (cloudLab.active && cloudLab.paused && cloudLab.rate <= 1) return;
+      cloudStage.clock += Math.min(dt, 100) * rate();
+      for (const [id, painter] of cloudStage.painters) {
+        if (now < painter.nextAt || !liveIds.has(id)) continue;
+        paintCloud(id, now);
+        break;
+      }
+    };
+    wakeClouds = () => {
+      if (painting || !shouldPaint()) return;
+      painting = true;
+      lastTick = performance.now();
+      paintFrame = requestAnimationFrame(paintLoop);
+    };
+    wakeClouds();
+    const field = new StarField(canvas.getContext("2d") as CanvasRenderingContext2D, seed);
+    field.setSettings($state.snapshot(starSettings()));
+    starStage.send = (kind) => {
+      field.send(kind);
+      syncStars();
+    };
+    starStage.clear = () => {
+      field.clear();
+      field.draw();
+    };
+    applyStars = (next) => {
+      field.setSettings(next);
+      if (!running) field.draw();
+    };
 
     function resize() {
+      // A phone's address bar fires resize as it slides; the same size is no work.
+      if (canvas.width === globalThis.innerWidth && canvas.height === globalThis.innerHeight) return;
       canvas.width = globalThis.innerWidth;
       canvas.height = globalThis.innerHeight;
-      fireflyCanvas.width = canvas.width;
-      fireflyCanvas.height = canvas.height;
-      rotationCenterX = canvas.width / 2;
-      rotationCenterY = -canvas.height * 0.3;
-      fireflies = createFireflies();
+      field.resize(canvas.width, canvas.height);
+      field.draw();
     }
-
-    function createStars(): Star[] {
-      const stars: Star[] = [];
-      for (let i = 0; i < NUM_STARS; i++) {
-        stars.push({
-          radius: rand(0.2, 1.5),
-          x: rand(0, canvas.width),
-          y: rand(0, canvas.height),
-          color: `rgba(255,255,255,${rand(0.1, 1)})`,
-        });
-      }
-      return stars;
-    }
-
-    function wrapStar(s: Star) {
-      if (s.x > canvas.width + s.radius) s.x = -s.radius;
-      else if (s.x < -s.radius) s.x = canvas.width + s.radius;
-      if (s.y > canvas.height + s.radius) s.y = -s.radius;
-      else if (s.y < -s.radius) s.y = canvas.height + s.radius;
-    }
-
-    // ── Fireflies (sunset only) ───────────────────────────────────────────
-    interface Firefly {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      blinkPhase: number;
-      blinkSpeed: number;
-      baseBright: number;
-    }
-
-    let fireflies: Firefly[] = [];
-
-    function createFireflies(): Firefly[] {
-      const arr: Firefly[] = [];
-      for (let i = 0; i < NUM_FIREFLIES; i++) {
-        arr.push({
-          x: rand(0, canvas.width),
-          // Drift in the lower band — fireflies haunt the ground at dusk.
-          y: rand(canvas.height * 0.45, canvas.height * 0.95),
-          vx: rand(-0.15, 0.15),
-          vy: rand(-0.1, 0.1),
-          size: rand(0.6, 1.5),
-          blinkPhase: rand(0, Math.PI * 2),
-          blinkSpeed: rand(0.02, 0.05),
-          baseBright: rand(0.55, 1),
-        });
-      }
-      return arr;
-    }
-
-    // Pre-rendered warm glow sprite — drawn per firefly with globalAlpha, so no
-    // per-frame radial gradient allocation.
-    function makeGlowSprite(): HTMLCanvasElement {
-      const s = 32;
-      const c = document.createElement("canvas");
-      c.width = s;
-      c.height = s;
-      const g = c.getContext("2d") as CanvasRenderingContext2D;
-      const grad = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-      grad.addColorStop(0, "rgba(225,255,150,1)");
-      grad.addColorStop(0.35, "rgba(190,240,110,0.55)");
-      grad.addColorStop(1, "rgba(160,220,90,0)");
-      g.fillStyle = grad;
-      g.fillRect(0, 0, s, s);
-      return c;
-    }
-    const glowSprite = makeGlowSprite();
-
-    interface ShootingStar {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      life: number;
-      maxLife: number;
-      length: number;
-      brightness: number;
-    }
-
-    let shootingStars: ShootingStar[] = [];
-
-    function spawnShootingStar() {
-      const baseAngle = Math.atan2(DRIFT_Y, DRIFT_X);
-      const angle = baseAngle + rand(-0.4, 0.4);
-      const speed = rand(6, 12) / Math.cos(angle - baseAngle);
-      shootingStars.push({
-        x: rand(0, canvas.width * 0.7),
-        y: rand(0, canvas.height * 0.4),
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 0,
-        maxLife: rand(40, 70),
-        length: rand(80, 160),
-        brightness: rand(0.6, 1.0),
-      });
-    }
-
-    let shootingStarTimer: ReturnType<typeof setTimeout>;
-
-    function scheduleShootingStar() {
-      shootingStarTimer = setTimeout(() => {
-        spawnShootingStar();
-        scheduleShootingStar();
-      }, rand(2000, 10000));
-    }
-
-    scheduleShootingStar();
-
     resize();
-    const stars = createStars();
 
     let _bgResizeTimer: ReturnType<typeof setTimeout> | undefined;
     const onResize = () => {
@@ -228,122 +340,24 @@ import type { SkyPhase } from "@orakl/shared";
     let animFrameId: number;
     let running = false;
     let lastTs = 0;
+    /** The slow turn alone needs half the frames; an event or a flicker takes every one. */
+    const CALM_FRAME_MS = 32;
 
     function animate(ts: number) {
       // running is authoritative: bail if stopped so a stale frame can't
       // resurrect the loop after stopAnim().
       if (!running) return;
+      animFrameId = requestAnimationFrame(animate);
+      if (!field.busy && lastTs && ts - lastTs < CALM_FRAME_MS) return;
 
       // Frame-rate independent: scale motion to a 60fps step, clamped so a
       // hitch or background tab can't fling the stars across the sky.
-      const dt = lastTs ? Math.min(2, Math.max(0, (ts - lastTs) / 16.667)) : 1;
+      const dt = lastTs ? Math.min(4, Math.max(0, (ts - lastTs) / 16.667)) : 1;
       lastTs = ts;
-
-      if (getComputedStyle(canvas).display === "none") {
-        if (running) animFrameId = requestAnimationFrame(animate);
-        return;
-      }
-
-      const rotCos = Math.cos(ROTATION_SPEED * dt);
-      const rotSin = Math.sin(ROTATION_SPEED * dt);
-      const driftX = DRIFT_X * dt;
-      const driftY = DRIFT_Y * dt;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const s of stars) {
-        const dx = s.x - rotationCenterX;
-        const dy = s.y - rotationCenterY;
-        s.x = rotationCenterX + dx * rotCos - dy * rotSin + driftX;
-        s.y = rotationCenterY + dx * rotSin + dy * rotCos + driftY;
-        wrapStar(s);
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      for (let i = shootingStars.length - 1; i >= 0; i--) {
-        const ss = shootingStars[i];
-        ss.x += ss.vx * dt;
-        ss.y += ss.vy * dt;
-        ss.life += dt;
-
-        const opacity = (1 - ss.life / ss.maxLife) * ss.brightness;
-        const tailX = ss.x - (ss.vx / Math.hypot(ss.vx, ss.vy)) * ss.length;
-        const tailY = ss.y - (ss.vy / Math.hypot(ss.vx, ss.vy)) * ss.length;
-
-        ctx.fillStyle = `rgba(255,255,255,${opacity})`;
-        ctx.beginPath();
-        ctx.arc(ss.x, ss.y, 1 + ss.brightness * 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        const segments = 5;
-        for (let j = 0; j < segments; j++) {
-          const t1 = j / segments;
-          const t2 = (j + 1) / segments;
-          const x1 = tailX + (ss.x - tailX) * t1;
-          const y1 = tailY + (ss.y - tailY) * t1;
-          const x2 = tailX + (ss.x - tailX) * t2;
-          const y2 = tailY + (ss.y - tailY) * t2;
-
-          const segmentOpacity = opacity * (0.2 + t2 * 0.8);
-          const lineWidth = (0.3 + t2 * 0.9) * ss.brightness;
-
-          ctx.strokeStyle = `rgba(255,255,255,${segmentOpacity})`;
-          ctx.lineWidth = lineWidth;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
-        }
-
-        if (ss.life >= ss.maxLife) {
-          shootingStars.splice(i, 1);
-        }
-      }
-
-      // Fireflies — ease in/out per PHASE_CONFIG.fireflyCount.
-      const ffTarget = PHASE_CONFIG[currentPhase].fireflyCount > 0 ? 1 : 0;
-      firefliesAlpha += (ffTarget - firefliesAlpha) * Math.min(1, 0.015 * dt);
-      if (firefliesAlpha > 0.01) {
-        const vh = fireflyCanvas.height;
-        ffctx.clearRect(0, 0, fireflyCanvas.width, vh);
-        ffctx.globalCompositeOperation = "lighter";
-        for (const f of fireflies) {
-          f.vx += (Math.random() - 0.5) * 0.02 * dt;
-          f.vy += (Math.random() - 0.5) * 0.015 * dt;
-          f.vx = Math.max(-0.35, Math.min(0.35, f.vx));
-          f.vy = Math.max(-0.25, Math.min(0.25, f.vy));
-          f.x += f.vx * dt;
-          f.y += f.vy * dt;
-          f.blinkPhase += f.blinkSpeed * dt;
-          if (f.x < -20) f.x = fireflyCanvas.width + 20;
-          else if (f.x > fireflyCanvas.width + 20) f.x = -20;
-          if (f.y < vh * 0.35) {
-            f.y = vh * 0.35;
-            f.vy = Math.abs(f.vy);
-          } else if (f.y > vh) {
-            f.y = vh;
-            f.vy = -Math.abs(f.vy);
-          }
-          // Sharp pulse (mostly dim, brief glow) + fade higher up.
-          const t = Math.sin(f.blinkPhase) * 0.5 + 0.5;
-          const vFade = 0.3 + 0.7 * Math.min(1, (f.y / vh - 0.35) / 0.65);
-          const bright = f.baseBright * t * t * vFade * firefliesAlpha;
-          if (bright <= 0.01) continue;
-          ffctx.globalAlpha = bright;
-          const sz = 16 * f.size;
-          ffctx.drawImage(glowSprite, f.x - sz / 2, f.y - sz / 2, sz, sz);
-        }
-        ffctx.globalAlpha = 1;
-        ffctx.globalCompositeOperation = "source-over";
-        ffWasActive = true;
-      } else if (ffWasActive) {
-        ffctx.clearRect(0, 0, fireflyCanvas.width, fireflyCanvas.height);
-        ffWasActive = false;
-      }
-
-      if (running) animFrameId = requestAnimationFrame(animate);
+      const now = Date.now();
+      field.rate = starSettings().eventRates?.[livePhase] ?? 1;
+      field.step(dt, now);
+      field.draw(now);
     }
 
     // Guarded start — never stack concurrent rAF loops (the prior visibility
@@ -359,38 +373,55 @@ import type { SkyPhase } from "@orakl/shared";
       cancelAnimationFrame(animFrameId);
     }
 
-    startAnim();
+    // The stars move only while they can be seen: not at a strength of
+    // nothing, not in a hidden tab, not while the controls hold them. Under
+    // reduced motion they stand still.
+    let starsShown = false;
+    const syncStars = () => {
+      if (starsShown && !document.hidden && !stillAir && !(starLab.active && starLab.paused)) startAnim();
+      else {
+        stopAnim();
+        if (!starsShown || document.hidden) field.clear();
+        if (starsShown) field.draw();
+        else canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+    holdStars = syncStars;
+    showStars = (on) => {
+      if (on === starsShown) return;
+      starsShown = on;
+      syncStars();
+    };
+    showStars(strength.stars > 0);
 
     offsets.set([...initialStops.offsets], { duration: 0 });
 
-    // Set initial star opacity from config.
-    canvas.style.opacity = String(PHASE_CONFIG[timeOfDay].starOpacity);
-
     const unsubscribePhase = subscribeSkyPhase((phase) => {
-      currentPhase = phase;
+      livePhase = phase;
+      tint = skyTint(phase);
       if (isSkyPhaseKey(phase)) updateGradient(phase);
-      canvas.style.opacity = String(PHASE_CONFIG[phase].starOpacity);
     });
 
     const onVisibilityChange = () => {
-      const playState = document.hidden ? "paused" : "running";
-      for (const el of document.querySelectorAll<HTMLElement>(".sky-cloud")) {
+      const playState = document.hidden || (cloudLab.active && cloudLab.paused) ? "paused" : "running";
+      for (const el of document.querySelectorAll<HTMLElement>(".sky-cloud, .sky-cloud-body")) {
         el.style.animationPlayState = playState;
       }
-      if (document.hidden) {
-        stopAnim();
-        clearTimeout(shootingStarTimer);
-      } else {
-        shootingStars = [];
-        scheduleShootingStar();
-        startAnim();
-      }
+      syncStars();
+      wakeClouds();
     };
     document.addEventListener("visibilitychange", onVisibilityChange, { signal });
 
     return () => {
+      cancelAnimationFrame(paintFrame);
+      wakeClouds = () => {};
+      showStars = () => {};
+      applyStars = () => {};
+      holdStars = () => {};
+      starStage.send = () => {};
+      starStage.clear = () => {};
+      cloudStage.repaint = () => {};
       cancelAnimationFrame(animFrameId);
-      clearTimeout(shootingStarTimer);
       clearTimeout(_bgResizeTimer);
       listeners.abort();
       unsubscribePhase();
@@ -418,22 +449,35 @@ import type { SkyPhase } from "@orakl/shared";
   </svg>
 </div>
 
-<!-- Clouds sit above the far birds and below the near ones. -->
+<!-- Clouds sit below the birds: every bird flies in front of them. -->
 <div
-  class="absolute inset-0 z-[15] h-full w-full overflow-hidden pointer-events-none"
+  class="absolute inset-x-0 top-0 z-[15] w-full overflow-hidden pointer-events-none"
+  style={`height: ${(cloudLab.active ? cloudLab.skyShare : 1) * 100}%;`}
   aria-hidden="true"
 >
-  {#each clouds as c}
-    <img
-      src={cloudsImgUrl}
-      width={400}
-      height={300}
-      class="sky-cloud absolute select-none pointer-events-none"
-      style={`top: ${c.top}; width: ${c.width}; opacity: ${c.opacity.toFixed(3)}; rotate: ${c.rot.toFixed(2)}deg; --flip: ${c.flip}; --dur: ${c.dur?.toFixed(1)}s; --delay: ${c.delay.toFixed(1)}s; --from: ${cloudDir > 0 ? "-110%" : "110vw"}; --to: ${cloudDir > 0 ? "110vw" : "-110%"};`}
-      alt=""
-      draggable="false"
-      loading="eager"
-    />
+  {#each clouds as c (c.id)}
+    <div
+      use:drifting={c.id}
+      class="sky-cloud absolute left-0 select-none"
+      class:sky-cloud-off={!liveIds.has(c.id)}
+      onanimationiteration={(e) => e.target === e.currentTarget && crossed(c.id)}
+      style={`top: ${(c.top + (shift[c.id] ?? 0)).toFixed(1)}%; width: ${c.width.toFixed(1)}%; aspect-ratio: ${c.model.aspect}; --dur: ${(c.dur / motion.pace).toFixed(1)}s; --delay: ${c.delay.toFixed(1)}s; --from: ${motion.dir > 0 ? "-110%" : "110vw"}; --to: ${motion.dir > 0 ? "110vw" : "-110%"}; --lift: ${c.lift.toFixed(1)}%;${paused ? " animation-play-state: paused;" : ""}`}
+    >
+      <div
+        class="sky-cloud-body"
+        transition:fade={{ duration: 1200 }}
+        style={`opacity: ${drawn(c).toFixed(3)}; rotate: ${c.rot.toFixed(2)}deg; scale: ${(c.flip * motion.stretch).toFixed(3)} ${c.height.toFixed(2)}; --blur: ${c.blur > 0.3 ? `blur(${c.blur.toFixed(2)}px)` : "none"}; --delay: ${c.delay.toFixed(1)}s;${paused ? " animation-play-state: paused;" : ""}`}
+      >
+        {#key c.seed}
+          <canvas use:painted={c} class="h-full w-full"></canvas>
+        {/key}
+      </div>
+      {#if cloudLab.active && cloudLab.tags && drawn(c) >= FAINTEST}
+        <span class="absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-xs leading-none text-foreground">
+          {c.name || `Cloud ${c.design + 1}`}
+        </span>
+      {/if}
+    </div>
   {/each}
 </div>
 
@@ -444,13 +488,6 @@ import type { SkyPhase } from "@orakl/shared";
   aria-hidden="true"
 ></canvas>
 
-<canvas
-  id="fireflies"
-  bind:this={fireflyCanvas}
-  class="rr-block absolute inset-0 z-10 h-full w-full pointer-events-none"
-  aria-hidden="true"
-></canvas>
-
 <style>
   #grad-sky stop {
     transition: stop-color 2s ease;
@@ -458,10 +495,20 @@ import type { SkyPhase } from "@orakl/shared";
 
   @keyframes sky-drift {
     from {
-      transform: translateX(var(--from, 110vw)) scaleX(var(--flip, 1));
+      transform: translate(var(--from, 110vw), 0);
     }
     to {
-      transform: translateX(var(--to, -110%)) scaleX(var(--flip, 1));
+      transform: translate(var(--to, -110%), var(--lift, 0%));
+    }
+  }
+
+  /* Clouds form and thin: a few percent of scale over minutes. */
+  @keyframes sky-breathe {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.035);
     }
   }
 
@@ -470,10 +517,34 @@ import type { SkyPhase } from "@orakl/shared";
     animation-duration: var(--dur, 100s);
     animation-delay: var(--delay, 0s);
     will-change: transform;
-    transition: opacity 2s ease;
   }
 
-  :global(html[data-sky-phase="night"]) .sky-cloud {
+  .sky-cloud-body {
+    position: absolute;
+    inset: 0;
+    filter: var(--blur, none);
+    animation: sky-breathe 110s ease-in-out infinite alternate;
+    animation-delay: var(--delay, 0s);
+    transition:
+      opacity 2s ease,
+      scale 2s ease;
+  }
+
+  :global(html[data-sky-phase="night"]) .sky-cloud-body {
     opacity: 0 !important;
+  }
+
+  /* A cloud that cannot be seen: faded out, then out of the compositor, its drift and breathing held. */
+  .sky-cloud-off {
+    animation-play-state: paused;
+    will-change: auto;
+  }
+  .sky-cloud-off .sky-cloud-body {
+    visibility: hidden;
+    animation-play-state: paused;
+    transition:
+      opacity 2s ease,
+      scale 2s ease,
+      visibility 0s linear 2s;
   }
 </style>

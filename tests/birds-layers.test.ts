@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BirdEngine } from "@/lib/birds/engine";
 import { SkyLoop } from "@/lib/birds/loop";
-import { BirdRenderer, LAYER_DEPTH } from "@/lib/birds/render";
+import { BirdRenderer } from "@/lib/birds/render";
 
 /** A 2D context that counts fills and strokes and accepts everything else. */
 function counting() {
@@ -18,8 +18,8 @@ function counting() {
   return { ctx, n };
 }
 
-describe("two-canvas layering", () => {
-  it("far birds draw on the far context, near birds on the near one", () => {
+describe("the bird canvas", () => {
+  it("far birds and near birds draw on the one context, in front of the clouds", () => {
     const e = new BirdEngine({
       width: 1280,
       height: 800,
@@ -38,41 +38,25 @@ describe("two-canvas layering", () => {
         [],
       );
       for (let i = 0; i < 600; i++) e.step(1 / 60);
-      const near = counting();
-      const far = counting();
-      new BirdRenderer().draw(
-        near.ctx,
-        e.view,
-        1,
-        e.events,
-        e.palette,
-        far.ctx,
-      );
-      return { near, far };
+      const one = counting();
+      new BirdRenderer().draw(one.ctx, e.view, 1, e.events, e.palette);
+      return one.n.image + one.n.stroke + one.n.fill;
     };
-    const a = drawAt(140);
-    expect(a.far.n.image + a.far.n.stroke + a.far.n.fill).toBeGreaterThan(0);
-    expect(a.near.n.image + a.near.n.fill).toBe(0);
-    const b = drawAt(30);
-    expect(b.near.n.image + b.near.n.fill).toBeGreaterThan(0);
-    expect(LAYER_DEPTH).toBeGreaterThan(30);
-    expect(LAYER_DEPTH).toBeLessThan(140);
+    expect(drawAt(140)).toBeGreaterThan(0);
+    expect(drawAt(30)).toBeGreaterThan(0);
   });
 
-  it("the loop sizes both surfaces and the governor lowers the budget on slow frames", () => {
+  it("the loop sizes its surface and the governor lowers the budget on slow frames", () => {
     const near = counting();
-    const far = counting();
     const surface = { width: 0, height: 0 };
-    const farSurface = { width: 0, height: 0 };
-    const loop = new SkyLoop(
-      surface,
-      near.ctx,
-      { width: 1000, height: 500, phase: "night", seed: 1 },
-      { surface: farSurface, ctx: far.ctx },
-    );
+    const loop = new SkyLoop(surface, near.ctx, {
+      width: 1000,
+      height: 500,
+      phase: "night",
+      seed: 1,
+    });
     loop.resize(1000, 500, 2);
     expect(surface.width).toBe(2000);
-    expect(farSurface.width).toBe(2000);
     // Pretend frames are slow, then run the governor's two-second window.
     loop.frameMs = 20;
     const inner = loop as unknown as { frames: number; govern(): void };

@@ -9,6 +9,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
   import { page } from "$app/state";
   import StickyHeader from "./StickyHeader.svelte";
   import Link from "$lib/components/ui/Link.svelte";
+  import { skyLab } from "$lib/sky-colours-lab.svelte.js";
   import Logo from "$lib/components/ui/Logo.svelte";
   import Icon from "$lib/components/ui/Icon.svelte";
   import BackButton from "$lib/components/ui/BackButton.svelte";
@@ -69,7 +70,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
 {#if !config.hidden}
   {#if config.showWordmark}
     <header id="page-header" class="relative flex w-full flex-col items-center gap-4 py-4 z-30">
-      <Logo id="header-logotype" class="z-30" variant="wordmark" />
+      <Logo id="header-logotype" class="z-30" variant={skyLab.logoShape ?? "wordmark"} size={skyLab.logoShape === "mark" ? "lg" : "md"} />
     </header>
   {/if}
   {#snippet markLogo()}

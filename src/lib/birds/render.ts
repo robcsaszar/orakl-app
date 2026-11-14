@@ -27,8 +27,6 @@ export const LOD_DOT = 1.2;
 export const LOD_LINE = 2.5;
 /** Frames with more birds than this keep every species a sprite a bit longer. */
 const CROWD = 600;
-/** Depth of the cloud layer: birds beyond it draw on the far canvas, behind the clouds. */
-export const LAYER_DEPTH = 70;
 /** Projected wingspan from which the body is a lofted mesh, not two cards. */
 export const LOD_MESH = 36;
 /** Depth where atmospheric fade begins and the span over which it saturates. */
@@ -61,6 +59,8 @@ export function spanPx(view: View, species: Species, z: number): number {
  * allocated per frame once the buffers have grown.
  */
 export class BirdRenderer {
+  /** Multiplier on every bird's drawn size. */
+  scale = 1;
   private readonly local = new Float32Array(MAX_VERTS * 3);
   private readonly world = new Float32Array(MAX_VERTS * 3);
   private readonly screen = new Float32Array(MAX_VERTS * 2);
@@ -106,24 +106,16 @@ export class BirdRenderer {
     }
   }
 
-  /**
-   * Draws every bird: those beyond `LAYER_DEPTH` on `far` (behind the
-   * clouds) when a far context is given, the rest on `near`.
-   */
+  /** Draws every bird, the farthest first. Every bird flies in front of the clouds. */
   draw(
-    near: Ctx2D,
+    ctx: Ctx2D,
     view: View,
     dpr: number,
     events: readonly SkyEvent[],
     palette: Palette,
-    far: Ctx2D | null = null,
   ): void {
-    near.setTransform(dpr, 0, 0, dpr, 0, 0);
-    near.clearRect(0, 0, view.w, view.h);
-    if (far) {
-      far.setTransform(dpr, 0, 0, dpr, 0, 0);
-      far.clearRect(0, 0, view.w, view.h);
-    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, view.w, view.h);
     this.lastStyle = "";
     if (events.length === 0) return;
 
@@ -168,7 +160,7 @@ export class BirdRenderer {
     // a murmuration of thousands becomes a handful of stroke calls.
     let batchKey = -1;
     let batchWidth = 0;
-    let batchCtx: Ctx2D = far ?? near;
+    let batchCtx: Ctx2D = ctx;
     const flush = () => {
       if (batchKey < 0) return;
       batchCtx.lineWidth = batchWidth;
@@ -180,21 +172,13 @@ export class BirdRenderer {
     // 2000 posed models would be 8000 polygon fills.
     const crowd = n > CROWD ? 1.6 : 1;
 
-    near.lineCap = "round";
-    if (far) far.lineCap = "round";
-    // Far to near: the far canvas fills first, then one switch to the near.
-    let ctx: Ctx2D = far ?? near;
+    ctx.lineCap = "round";
     for (let k = 0; k < n; k++) {
       const id = ids[order[k]];
       const f = events[id >>> 20].flocks[(id >>> 16) & 0xf];
       const i = id & 0xffff;
       const z = f.pz[i];
-      if (far && ctx === far && z <= LAYER_DEPTH) {
-        flush();
-        this.lastStyle = "";
-        ctx = near;
-      }
-      const span = spanPx(view, f.species, z) * f.size[i];
+      const span = spanPx(view, f.species, z) * f.size[i] * this.scale;
       const modelFrom = f.species.modelFrom * crowd;
       // Small birds quantise the fade so neighbours share a batch or a strip.
       const fog = span < modelFrom ? Math.round(fogAt(z) * 6) / 6 : fogAt(z);
@@ -232,6 +216,7 @@ export class BirdRenderer {
         const half =
           (f.species.span / 2) *
           f.size[i] *
+          this.scale *
           Math.cos(a) *
           (1 - 0.55 * f.tuck[i]);
         project(
@@ -328,7 +313,7 @@ export class BirdRenderer {
     const rl = Math.sqrt(rx * rx + ry * ry);
     const across =
       Math.max(0.15, rl / atlas.rightScale) * (1 - 0.55 * f.tuck[i]);
-    const m = (sp.span / FRAME_SPAN) * s * dpr * f.size[i];
+    const m = (sp.span / FRAME_SPAN) * s * dpr * f.size[i] * this.scale;
     project(view, f.px[i], f.py[i], z, this.pt);
     const frame =
       f.flap[i] < 0.5
@@ -392,7 +377,7 @@ export class BirdRenderer {
     const px = f.px[i];
     const py = f.py[i];
     const pz = f.pz[i];
-    const size = f.size[i];
+    const size = f.size[i] * this.scale;
     for (let v = 0; v < nv; v++) {
       const x = local[v * 3] * size;
       const y = local[v * 3 + 1] * size;
