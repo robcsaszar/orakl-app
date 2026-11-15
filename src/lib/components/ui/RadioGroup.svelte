@@ -77,7 +77,7 @@
         {@render optionLabel(option)}
         {#if locked}
           <span class="absolute right-1.5 top-1.5" aria-hidden="true">
-            <Icon name="locked" size="xs" />
+            <Icon name="locked" size="xs" usage="ui.radio-locked" />
           </span>
           <span class="sr-only">(locked — sign in to unlock)</span>
         {/if}

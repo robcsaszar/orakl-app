@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import Button from "./Button.svelte";
+  import type { IconUsage } from "$lib/icon-usages";
   import type { RoleName } from "$lib/icons";
   import Icon from "./Icon.svelte";
   import Popover from "./Popover.svelte";
@@ -14,6 +15,7 @@
   let {
     id,
     icon,
+    usage,
     ariaLabel,
     title,
     buttonClass = "",
@@ -24,6 +26,8 @@
   }: {
     id: string;
     icon: RoleName;
+    /** Where the trigger icon renders. */
+    usage: IconUsage;
     ariaLabel: string;
     title?: string;
     buttonClass?: string;
@@ -82,7 +86,7 @@
     onclick={() => (open = !open)}
     class={buttonClass}
   >
-    <Icon name={icon} size="sm" />
+    <Icon name={icon} {usage} size="sm" />
   </Button>
 </span>
 <Popover

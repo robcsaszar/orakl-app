@@ -157,7 +157,7 @@ import { percent } from "@orakl/shared";
             <span
               class="inline-flex items-center justify-center {locked ? 'opacity-70' : 'opacity-10 group-hover:opacity-30 group-has-checked:opacity-100'}"
             >
-              <Icon name={locked ? "locked" : "scroll"} size="md" />
+              <Icon usage="game.category-season-mark" name={locked ? "locked" : "scroll"} size="md" />
             </span>
           </span>
         </CheckboxOption>
@@ -174,7 +174,7 @@ import { percent } from "@orakl/shared";
       onclick={() => (expanded = !expanded)}
       aria-expanded={expanded}
       aria-label={expanded ? "Show less categories" : "Show more categories"}
-      iconBefore={expanded ? "collapse" : "expand"}
+      iconBefore={expanded ? "collapse" : "expand"} iconUsage="game.category-show-more"
     >
       {expanded ? "Show less" : "Show more"}
     </Button>

@@ -35,12 +35,12 @@
 >
   {#snippet optionLabel(d)}
     {#if d === "all"}
-      <span aria-hidden="true"><Icon name="shuffle" size="md" /></span>
+      <span aria-hidden="true"><Icon usage="game.difficulty-any" name="shuffle" size="md" /></span>
     {:else}
     <!-- Show a star per difficulty level -->
       <span aria-hidden="true" class="flex gap-0.5">
         {#each Array(flameCount[d]) as _}
-          <Icon name="difficulty" size="md" />
+          <Icon usage="game.difficulty-level" name="difficulty" size="md" />
         {/each}
       </span>
 

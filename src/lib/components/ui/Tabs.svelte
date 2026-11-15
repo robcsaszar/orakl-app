@@ -176,7 +176,7 @@
         class="absolute inset-y-0 -left-1 flex w-8 cursor-pointer items-center justify-start text-foreground-darker hover:text-foreground before:absolute before:-inset-y-2 before:inset-x-0"
         onclick={() => scrollRow(-1)}
       >
-        <Icon name="prev" size="sm" />
+        <Icon name="prev" size="sm" usage="ui.tabs-scroll-prev" />
       </button>
     {/if}
     {#if canScrollRight}
@@ -187,7 +187,7 @@
         class="absolute inset-y-0 -right-1 flex w-8 cursor-pointer items-center justify-end text-foreground-darker hover:text-foreground before:absolute before:-inset-y-2 before:inset-x-0"
         onclick={() => scrollRow(1)}
       >
-        <Icon name="next" size="sm" />
+        <Icon name="next" size="sm" usage="ui.tabs-scroll-next" />
       </button>
     {/if}
   </div>

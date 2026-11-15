@@ -202,7 +202,7 @@
       onclick={() => (folded[title] = !folded[title])}
     >
       {title}
-      <Icon name={folded[title] ? "expand" : "collapse"} class="text-foreground-darker" size="sm" />
+      <Icon name={folded[title] ? "expand" : "collapse"} usage="sky.star-fold" class="text-foreground-darker" size="sm" />
     </Button>
   </h3>
 {/snippet}
@@ -274,10 +274,10 @@
 {#if shown}
   <SkyPanel mode={{ key: "stars", label: "Stars" }} {modes} {onmode} bind:open {savedNote}>
     {#snippet tools()}
-      <SkyBarTool name="undo" label="Undo (Ctrl+Z)" onclick={() => step(-1)} disabled={history.at < 0} />
-      <SkyBarTool name="redo" label="Redo (Shift+Ctrl+Z)" onclick={() => step(1)} disabled={history.at >= history.changes.length - 1} />
+      <SkyBarTool name="undo" usage="sky.star-bar" label="Undo (Ctrl+Z)" onclick={() => step(-1)} disabled={history.at < 0} />
+      <SkyBarTool name="redo" usage="sky.star-bar" label="Redo (Shift+Ctrl+Z)" onclick={() => step(1)} disabled={history.at >= history.changes.length - 1} />
       <span class="mx-1 h-5 w-px bg-secondary/20 max-sm:hidden" aria-hidden="true"></span>
-      <SkyBarTool name="locked" label={starLab.paused ? "The stars are held still. Click to let them turn." : "Hold the stars still"} onclick={() => (starLab.paused = !starLab.paused)} pressed={starLab.paused} />
+      <SkyBarTool name="locked" usage="sky.star-bar" label={starLab.paused ? "The stars are held still. Click to let them turn." : "Hold the stars still"} onclick={() => (starLab.paused = !starLab.paused)} pressed={starLab.paused} />
     {/snippet}
 
       {#if !dark}

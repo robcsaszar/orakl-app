@@ -373,7 +373,7 @@
             aria-label="Select parent element"
             class={styles.iconButton()}
           >
-            <Icon name="collapse" size="xs" />
+            <Icon name="collapse" size="xs" usage="layout.feedback-select-parent" />
           </Button>
           <Button
             unstyled
@@ -381,7 +381,7 @@
             aria-label="Pick a different element"
             class={styles.iconButton()}
           >
-            <Icon name="shuffle" size="xs" />
+            <Icon name="shuffle" size="xs" usage="layout.feedback-repick" />
           </Button>
         </div>
       </div>
@@ -389,7 +389,7 @@
       <div class={styles.emptyCard()}>
         <p class="text-xs text-foreground-darker">No element selected yet</p>
         <Button unstyled onclick={beginPicking} class={styles.pickButton()}>
-          <Icon name="shuffle" size="xs" />
+          <Icon name="shuffle" size="xs" usage="layout.feedback-pick" />
           Pick element
         </Button>
       </div>
@@ -436,8 +436,8 @@
       class={fabClass}
       style={fabStyle}
     >
-      <Icon name="pencil" size="sm" />
-      <Icon name="drag" class="opacity-50" size="xs" />
+      <Icon name="pencil" size="sm" usage="layout.feedback-fab" />
+      <Icon name="drag" class="opacity-50" size="xs" usage="layout.feedback-fab-drag" />
     </Button>
   {/if}
 </div>

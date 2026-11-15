@@ -126,7 +126,7 @@
   <p class="text-sm text-foreground-darker">Question removed.</p>
 {:else if flagged}
   <p class="flex items-center gap-2 text-sm text-foreground-darker">
-    <Icon name="report" size="sm" class="shrink-0" />
+    <Icon usage="game.flag-follow-up-flagged" name="report" size="sm" class="shrink-0" />
     Flagged.
   </p>
 {:else if !expanded}
@@ -136,18 +136,18 @@
     class="min-h-11 self-start"
     onclick={() => (expanded = true)}
   >
-    <Icon name="report" size="sm" />
+    <Icon usage="game.flag-follow-up-open" name="report" size="sm" />
     Flag this question
   </Button>
 {:else}
   <div in:scale={{ start: 0.95, duration: 150 }}>
     <Card variant="default" padding="sm" class="flex flex-col gap-3">
       <p class="flex items-start gap-2 text-sm text-foreground">
-        <Icon name="report" size="sm" class="mt-0.5 shrink-0" />
+        <Icon usage="game.flag-follow-up-heading" name="report" size="sm" class="mt-0.5 shrink-0" />
         <span>
           Report a problem with this question.
           <span class="text-foreground-darker"
-            ><Icon name="info" size="xs" class="inline" /> A human will review your report.</span
+            ><Icon usage="game.flag-follow-up-note" name="info" size="xs" class="inline" /> A human will review your report.</span
           >
         </span>
       </p>

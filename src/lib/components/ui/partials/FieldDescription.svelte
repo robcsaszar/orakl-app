@@ -77,12 +77,12 @@
       {#if icon === "bulbs"}
         {#if open}
           <span class="sr-only">Hide description</span>
-          <Icon name="hint-on" size="md" class="animate-pop" />
+          <Icon name="hint-on" size="md" usage="ui.field-hint-toggle" class="animate-pop" />
         {:else}
-          <Icon name="hint" size="md" />
+          <Icon name="hint" size="md" usage="ui.field-hint-toggle" />
         {/if}
       {:else}
-        <Icon name={icon === "question" ? "help" : icon} size="md" />
+        <Icon name={icon === "question" ? "help" : icon} size="md" usage="ui.field-description-icon" />
       {/if}
     </button>
     <p

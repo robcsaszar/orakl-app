@@ -167,7 +167,7 @@
             in:fly={{ y: 8, duration: 180, easing: cubicOut }}
             out:fade={{ duration: 100 }}
           >
-            <Icon name="time" size="md" />
+            <Icon name="time" usage="app.solo-play-faster-than" size="md" />
             Faster than {s.fasterThanPercent}% of players on this question.
           </p>
         </div>
@@ -183,7 +183,7 @@
           type="button"
           variant="secondary"
           intent="icon"
-          iconBefore="next"
+          iconBefore="next" iconUsage="app.solo-play-continue"
           aria-label={isLastQuestion ? "See results" : "Continue"}
           onclick={() => s.advance()}
         ></Button>

@@ -63,7 +63,7 @@
             <Button
               variant="ghost"
               intent="icon"
-              iconBefore={toolboxRail.collapsed ? "prev" : "next"}
+              iconBefore={toolboxRail.collapsed ? "prev" : "next"} iconUsage="game.toolbox-rail-toggle"
               aria-label={toolboxRail.collapsed && pendingCount(toolboxRail.session) > 0
                 ? `Expand toolbox, ${pendingCount(toolboxRail.session)} pending`
                 : toolboxRail.collapsed

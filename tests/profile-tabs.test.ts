@@ -27,6 +27,18 @@ describe("showsToolsTab", () => {
   });
 });
 
+describe("showsToolsTab for admin-only powers", () => {
+  // These powers gate pages that also need the admin role, so on their own
+  // they would open a Tools tab with nothing a member can use.
+  it.each(["can-manage-icons", "can-manage-features"] as const)(
+    "stays hidden for a member holding only %s",
+    (power) => {
+      process.env.NODE_ENV = "production";
+      expect(showsToolsTab({ role: "member", powers: [power] })).toBe(false);
+    },
+  );
+});
+
 describe("showsToolsTab outside production", () => {
   it("bare member sees Tools", () => {
     process.env.NODE_ENV = "development";

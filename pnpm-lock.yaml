@@ -33,8 +33,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(effect@3.22.1)
       '@orakl/shared':
-        specifier: ^0.8.0
-        version: 0.8.0(effect@3.22.1)
+        specifier: ^0.8.1
+        version: 0.8.1(effect@3.22.1)
       '@sentry/sveltekit':
         specifier: ^10.73.0
         version: 10.73.0(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))(@sveltejs/kit@2.70.3(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.0(svelte@5.57.0)(vite@8.3.5(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.8.3)))(svelte@5.57.0)(typescript@6.0.3)(vite@8.3.5(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.8.3)))(rollup@4.63.1)(supports-color@10.2.2)(svelte@5.57.0)(vite@8.3.5(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.8.3))
@@ -990,8 +990,8 @@ packages:
     peerDependencies:
       effect: ^3.22.1
 
-  '@orakl/shared@0.8.0':
-    resolution: {integrity: sha512-m/VWHv8cJE6FYMBx+BW7Nk64xzkoPWzpJoiAQsleW/F+XCDbFIgfF3JaNEFx7v3snDt53L7KtlhDDg5S9DnluA==}
+  '@orakl/shared@0.8.1':
+    resolution: {integrity: sha512-/ohJuhNUy/gU++rr+NxD5tcgzxYZzPD9PUKm1lrk21ChlCEA6ff7bOOKrrge/jGZ2q37Yzl4psmBe4ZA/pgVew==}
     peerDependencies:
       effect: ^3.22.1
 
@@ -4468,7 +4468,7 @@ snapshots:
     dependencies:
       effect: 3.22.1
 
-  '@orakl/shared@0.8.0(effect@3.22.1)':
+  '@orakl/shared@0.8.1(effect@3.22.1)':
     dependencies:
       '@orakl/protocol': 0.18.0(effect@3.22.1)
       date-fns: 4.4.0

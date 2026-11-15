@@ -145,7 +145,7 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
             intent="icon"
             onclick={() => (session.nickname = randomNickname(NICKNAMES, session.nickname))}
             aria-label="Random nickname"
-            iconBefore="dice"
+            iconBefore="dice" iconUsage="game.setup-nickname-random"
           ></Button>
         {/snippet}
       </Input>
@@ -166,7 +166,7 @@ import { avatarPool, avatars as staticAvatars, rallyCandidates, randomAvatar, sh
             onclick={rallyAvatar}
             aria-label="Rally an avatar"
             data-tooltip="Rally an avatar"
-            iconBefore="dice"
+            iconBefore="dice" iconUsage="game.setup-avatar-random"
           ></Button>
           <Button
             type="button"

@@ -480,7 +480,7 @@
               intent="icon"
               onclick={generateQuizName}
               aria-label="Generate random quiz name"
-              iconBefore="dice"
+              iconBefore="dice" iconUsage="game.create-quiz-name-random"
             ></Button>
           {/snippet}
         </Input>
@@ -727,7 +727,7 @@
                   onConfirm={() => deletePreset(preset.id)}
                 >
                   {#snippet icon()}
-                    <Icon name="delete" size="sm" />
+                    <Icon usage="game.create-preset-delete" name="delete" size="sm" />
                   {/snippet}
                 </ConfirmButton>
                 <Button

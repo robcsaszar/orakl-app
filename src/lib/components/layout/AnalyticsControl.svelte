@@ -47,6 +47,7 @@ import type { AnalyticsState } from "@orakl/shared";
 {#if variant === "inline"}
   <IconPopover
     id="analytics-notice"
+    usage="layout.analytics-control"
     icon={tracked ? "analytics-on" : "analytics-off"}
     ariaLabel={tracked ? "Analytics on" : "Analytics off"}
     title="Analytics"

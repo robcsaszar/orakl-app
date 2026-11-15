@@ -31,7 +31,7 @@
       ? `Curator toolbox, ${pendingCount} pending`
       : "Curator toolbox"}
   >
-    <Icon name="scroll" size="lg" />
+    <Icon usage="game.toolbox-fab" name="scroll" size="lg" />
     {#if pendingCount > 0}
       <Badge variant="count-active" class="absolute -top-1 -right-1">
         {pendingCount}

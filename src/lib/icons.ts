@@ -274,3 +274,20 @@ export function withSaved<T extends Record<string, { svg: string }>>(
 
 /** Every icon by role: a meaning, its tier, and for an emblem the `art` role of its `-detail` pair. */
 export const ROLES = withSaved(DEFAULT_ROLES, SAVED);
+
+const SAVED_USAGES = import.meta.glob<string>("@/assets/icons/usages/*.svg", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
+
+/**
+ * Drawings one usage has of its own, by `role@usage` key — Save all writes
+ * them to `src/assets/icons/usages/<role>@<usage>.svg`. They win over the role's drawing there.
+ */
+export const USAGE_SVGS: Record<string, string> = Object.fromEntries(
+  Object.entries(SAVED_USAGES).map(([path, svg]) => [
+    path.slice(path.lastIndexOf("/") + 1, -".svg".length),
+    svg,
+  ]),
+);

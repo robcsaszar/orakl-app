@@ -94,8 +94,8 @@
       <div class="flex items-center gap-1">
         {#if entries.length}
           <ConfirmButton label="Forget" confirmLabel="Forget this history?" confirmVariant="neutral" variant="outline" revealDelay={0} duration={4000} onConfirm={() => linesOf(tab).forEach((t) => { t.forget(); })} class={ui.confirm}>
-            {#snippet icon()}<Icon name="delete" size="xs" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
+            {#snippet icon()}<Icon name="delete" usage="sky.history-forget" size="xs" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" usage="sky.history-forget-confirm" size="xs" />{/snippet}
           </ConfirmButton>
         {/if}
         <Button variant="outline" intent="compact" radius="rounded" class={ui.compact} onclick={() => (skyView.view = "settings")}>Back to settings</Button>

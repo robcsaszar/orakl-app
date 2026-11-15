@@ -27,7 +27,7 @@
   use:hinted={what ? `Resets every setting on this tab: ${what}. The other tabs stay as they are.` : "This tab has no settings to reset."}
 >
   <ConfirmButton label="Reset all" confirmLabel="Reset this tab?" confirmVariant="danger" iconPosition="left" revealDelay={0} duration={4000} onConfirm={onReset} class="gap-1.5 rounded-lg px-2 py-2 font-mono text-xs font-normal">
-    {#snippet icon()}<Icon name="reset" size="xs" />{/snippet}
-    {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
+    {#snippet icon()}<Icon name="reset" usage="sky.reset-all" size="xs" />{/snippet}
+    {#snippet confirmIcon()}<Icon name="confirm" usage="sky.reset-all-confirm" size="xs" />{/snippet}
   </ConfirmButton>
 </span>

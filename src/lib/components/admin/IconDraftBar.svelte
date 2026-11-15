@@ -67,7 +67,7 @@
           variant="secondary"
           onConfirm={save}
         >
-          {#snippet icon()}<Icon name="upload" size="sm" />{/snippet}
+          {#snippet icon()}<Icon name="upload" size="sm" usage="ui.icon-draft-save" />{/snippet}
           {#snippet confirmIcon()}{/snippet}
         </ConfirmButton>
       </span>
@@ -80,7 +80,7 @@
           confirmVariant="danger"
           onConfirm={discard}
         >
-          {#snippet icon()}<Icon name="delete" size="sm" />{/snippet}
+          {#snippet icon()}<Icon name="delete" size="sm" usage="ui.icon-draft-discard" />{/snippet}
           {#snippet confirmIcon()}{/snippet}
         </ConfirmButton>
       </span>
@@ -88,7 +88,7 @@
     {#if page.url.pathname !== "/admin/icons"}
       <span data-tooltip="Open admin" class="inline-flex">
         <Link href="/admin/icons" intent="link" content="icon" aria-label="Open admin">
-          <Icon name="settings" size="sm" />
+          <Icon name="settings" size="sm" usage="ui.icon-draft-open-admin" />
         </Link>
       </span>
     {/if}

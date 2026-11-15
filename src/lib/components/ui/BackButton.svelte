@@ -28,7 +28,7 @@
 </script>
 
 <Link {href} {onclick} class={cn("group gap-2", className)} data-back-button>
-  <Icon name="back" size="md" class="translate-x-0.5 group-hover:-translate-x-0.5 transition-transform duration-200" />
+  <Icon name="back" size="md" usage="ui.back-button" class="translate-x-0.5 group-hover:-translate-x-0.5 transition-transform duration-200" />
   {#if children}
     {@render children()}
   {:else}

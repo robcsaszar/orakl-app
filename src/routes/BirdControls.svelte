@@ -382,7 +382,7 @@
       onclick={() => (folded[title] = !folded[title])}
     >
       <span>{title}{#if sub}<span class="ml-1.5 font-mono text-xs text-foreground-darker">{sub}</span>{/if}</span>
-      <Icon name={folded[title] ? "expand" : "collapse"} class="text-foreground-darker" size="sm" />
+      <Icon name={folded[title] ? "expand" : "collapse"} usage="sky.bird-fold" class="text-foreground-darker" size="sm" />
     </Button>
   </h3>
 {/snippet}
@@ -464,11 +464,11 @@
 {#if shown}
   <SkyPanel mode={{ key: "birds", label: "Birds" }} {modes} {onmode} bind:open {savedNote}>
     {#snippet tools()}
-      <SkyBarTool name="undo" label="Undo (Ctrl+Z)" onclick={() => step(-1)} disabled={history.at < 0} />
-      <SkyBarTool name="redo" label="Redo (Shift+Ctrl+Z)" onclick={() => step(1)} disabled={history.at >= history.changes.length - 1} />
+      <SkyBarTool name="undo" usage="sky.bird-bar" label="Undo (Ctrl+Z)" onclick={() => step(-1)} disabled={history.at < 0} />
+      <SkyBarTool name="redo" usage="sky.bird-bar" label="Redo (Shift+Ctrl+Z)" onclick={() => step(1)} disabled={history.at >= history.changes.length - 1} />
       <span class="mx-1 h-5 w-px bg-secondary/20 max-sm:hidden" aria-hidden="true"></span>
-      <SkyBarTool name="tag" label={stage.tags ? "Name tags are on. Click to hide them." : "Show a name tag under each flock"} onclick={() => (stage.tags = !stage.tags)} pressed={stage.tags} />
-      <SkyBarTool name="locked" label={paused ? "Birds are held still. Click to let them fly." : "Hold birds still"} onclick={() => (paused = !paused)} pressed={paused} />
+      <SkyBarTool name="tag" usage="sky.bird-bar" label={stage.tags ? "Name tags are on. Click to hide them." : "Show a name tag under each flock"} onclick={() => (stage.tags = !stage.tags)} pressed={stage.tags} />
+      <SkyBarTool name="locked" usage="sky.bird-bar" label={paused ? "Birds are held still. Click to let them fly." : "Hold birds still"} onclick={() => (paused = !paused)} pressed={paused} />
     {/snippet}
 
     {#if !current.runner}
@@ -644,14 +644,14 @@
                         note: `${THEME_LABELS[phase]}, ${KIND[e.kind].toLowerCase()}: `,
                       })}
                     </div>
-                    <SkyBarTool name="delete" label="Take {KIND[e.kind].toLowerCase()} out of {when}" onclick={() => removeKind(i)} />
+                    <SkyBarTool name="delete" usage="sky.bird-kind-remove" label="Take {KIND[e.kind].toLowerCase()} out of {when}" onclick={() => removeKind(i)} />
                   </div>
                 {/each}
                 <div class="flex flex-wrap gap-1" use:hinted={"Adds a kind of flock to the ones that come at this time of day. A kind that is there already cannot be added again."}>
                   {#each KINDS as k (k.key)}
                     {@const there = scenario.events.some((e) => e.kind === k.key)}
                     <Button variant={there ? "disabled" : "outline"} intent="compact" radius="rounded" class="{compact} gap-1" disabled={there} onclick={() => addKind(k.key)}>
-                      <Icon name="add" size="xs" />{@render kindPill(k)}
+                      <Icon name="add" usage="sky.bird-add-kind" size="xs" />{@render kindPill(k)}
                     </Button>
                   {/each}
                 </div>

@@ -65,7 +65,7 @@
             aria-label={`Remove ${player.nickname}`}
             data-tooltip={`Remove ${player.nickname}`}
           >
-            <Icon name="delete" size="sm" />
+            <Icon usage="game.ceremony-remove-player" name="delete" size="sm" />
           </Button>
         {/if}
         {#if onRemoveAndBlock}
@@ -78,7 +78,7 @@
             aria-label={`Remove and block ${player.nickname}`}
             data-tooltip={`Remove and block ${player.nickname}`}
           >
-            <Icon name="block" size="sm" />
+            <Icon usage="game.ceremony-block-player" name="block" size="sm" />
           </Button>
         {/if}
       {/snippet}

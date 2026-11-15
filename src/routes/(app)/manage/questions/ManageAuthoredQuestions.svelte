@@ -473,7 +473,7 @@ import { toIsoTimestamp } from "@orakl/shared";
 {/snippet}
 
 {#snippet promoteIcon()}
-  <Icon name="confirm" size="sm" />
+  <Icon name="confirm" usage="app.authored-promote" size="sm" />
 {/snippet}
 
 {#snippet ActionCell(p: { row: AuthoredQuestionRow })}
@@ -512,7 +512,7 @@ import { toIsoTimestamp } from "@orakl/shared";
       aria-label={"View details for question " + p.row.id.slice(0, 8)}
       data-tooltip="Details"
       onclick={() => { selectedQuestionId = p.row.id; }}
-    ><Icon name="reveal" size="sm" /></Button>
+    ><Icon name="reveal" usage="app.authored-details" size="sm" /></Button>
   </div>
 {/snippet}
 

@@ -481,7 +481,7 @@ import type { UserPower, UserRole } from "@orakl/shared";
             onclick={() => (powersOpen = !powersOpen)}
             aria-expanded={powersOpen}
             aria-controls="powers-panel"
-            iconAfter={powersOpen ? "collapse" : "expand"}
+            iconAfter={powersOpen ? "collapse" : "expand"} iconUsage="app.users-powers-toggle"
           >
             {powersOpen ? "Hide" : "Show"}
           </Button>

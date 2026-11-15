@@ -78,11 +78,11 @@
             )}
             style="--i: {i}"
           >
-            <Icon name={met[i] ? "met" : "failed"} size="sm" class="shrink-0" />
+            <Icon name={met[i] ? "met" : "failed"} size="sm" usage="ui.password-rule-status" class="shrink-0" />
             {rule.label}
             {#if rule.required}
               <span class="text-danger">
-                <Icon name="required" size="xs" />
+                <Icon name="required" size="xs" usage="ui.field-required" />
               </span>
             {/if}
           </li>

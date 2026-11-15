@@ -41,7 +41,7 @@
       class="-ml-1 flex w-full cursor-pointer items-center gap-1 rounded px-1 text-left hover:bg-secondary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-secondary"
       onclick={() => (open = !open)}
     >
-      <Icon name={open ? "expand" : "next"} class="shrink-0 text-foreground-darker" size="xs" />
+      <Icon name={open ? "expand" : "next"} usage="sky.json-fold" class="shrink-0 text-foreground-darker" size="xs" />
       <span class="min-w-0 truncate">{@render key()}<span class="text-foreground-darker">{open ? (list ? "[" : "{") : list ? `[ ${count} ]` : `{ ${count} }`}</span></span>
     </Button>
     {#if open}

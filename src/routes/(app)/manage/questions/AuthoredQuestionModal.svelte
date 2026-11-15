@@ -126,7 +126,7 @@ import { toIsoTimestamp } from "@orakl/shared";
 </script>
 
 {#snippet promoteIcon()}
-  <Icon name="confirm" size="sm" />
+  <Icon name="confirm" usage="app.authored-modal-promote" size="sm" />
 {/snippet}
 
 <ResponsiveOverlay

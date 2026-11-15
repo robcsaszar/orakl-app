@@ -114,7 +114,7 @@
         >
           <polyline points="1,4.5 3.5,7 9,1" />
         </svg> -->
-        <Icon name="confirm" size="sm" class="text-background" />
+        <Icon name="confirm" size="sm" usage="ui.checkbox-check" class="text-background" />
       {/if}
     </span>
 

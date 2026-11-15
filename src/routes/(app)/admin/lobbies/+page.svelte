@@ -396,7 +396,7 @@
                                 aria-label={`Save nickname for ${member.nickname}`}
                                 class="hover:text-success-light hover:bg-success"
                               >
-                                <Icon name="confirm" size="md" />
+                                <Icon name="confirm" usage="app.lobbies-rename-save" size="md" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -405,7 +405,7 @@
                                 aria-label={`Cancel rename for ${member.nickname}`}
                                 class="hover:text-danger-light hover:bg-danger"
                               >
-                                <Icon name="dismiss" size="md" />
+                                <Icon name="dismiss" usage="app.lobbies-rename-cancel" size="md" />
                               </Button>
                             {:else}
                               {#if !member.curator}
@@ -417,7 +417,7 @@
                                   aria-label={`Remove ${member.nickname}`}
                                   class="hover:text-danger-light hover:bg-danger"
                                 >
-                                  <Icon name="delete" size="md" />
+                                  <Icon name="delete" usage="app.lobbies-remove-player" size="md" />
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -427,7 +427,7 @@
                                   aria-label={`Remove and block ${member.nickname}`}
                                   class="hover:text-danger-light hover:bg-danger"
                                 >
-                                  <Icon name="block" size="md" />
+                                  <Icon name="block" usage="app.lobbies-block-player" size="md" />
                                 </Button>
                               {/if}
                               <Button
@@ -437,7 +437,7 @@
                                 aria-label={`Rename ${member.nickname}`}
                                 data-rename-player={member.playerId}
                               >
-                                <Icon name="edit" size="md" />
+                                <Icon name="edit" usage="app.lobbies-rename-player" size="md" />
                               </Button>
                             {/if}
                           </span>

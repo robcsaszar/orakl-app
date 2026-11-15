@@ -122,7 +122,7 @@
           onclick={onClose}
           class="-mr-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-foreground-darker transition-colors hover:text-foreground focus-visible:text-foreground"
         >
-          <Icon name="dismiss" size="sm" />
+          <Icon name="dismiss" size="sm" usage="ui.popover-close" />
         </Button>
       {/if}
     </div>

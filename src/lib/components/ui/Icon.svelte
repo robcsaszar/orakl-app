@@ -9,17 +9,26 @@
     type IconStep,
     ROLES,
     type RoleName,
+    USAGE_SVGS,
   } from "$lib/icons";
+  import { type IconUsage, usageKey } from "$lib/icon-usages";
 
   let {
     name,
+    usage,
     size = "md",
     class: className = "",
-  }: { name: RoleName; size?: IconStep | "fill"; class?: string } = $props();
+  }: {
+    name: RoleName;
+    /** Where this icon renders; a usage can carry its own drawing of the role. */
+    usage: IconUsage;
+    size?: IconStep | "fill";
+    class?: string;
+  } = $props();
 
   // The owner's drafts ride in layout data; outside a SvelteKit page (tests,
   // isolated renders) there is no page state to read.
-  function draftFor(n: RoleName): string | undefined {
+  function draftFor(n: string): string | undefined {
     try {
       return page.data?.iconDrafts?.[n];
     } catch {
@@ -43,7 +52,8 @@
 
   function getSvg(n: RoleName, step: IconStep | "fill"): string {
     const role = ROLES[n];
-    const raw = draftFor(n) || role.svg;
+    const key = usageKey(n, usage);
+    const raw = draftFor(key) || USAGE_SVGS[key] || draftFor(n) || role.svg;
     const entry = step === "fill" ? undefined : scaleNow()[role.tier][step];
     const stroke = entry && "stroke" in entry ? entry.stroke : undefined;
     const cls = cn([

@@ -50,7 +50,7 @@
           intent="icon-inline"
           onclick={() => session.openAvatarSelector()}
           aria-label="Edit avatar"
-          iconBefore="edit"
+          iconBefore="edit" iconUsage="game.identity-card-avatar-edit"
         ></Button>
     </div>
     <div class="flex gap-2 items-end">
@@ -88,7 +88,7 @@
           behavior="toggle"
           onclick={startEdit}
           aria-label="Edit nickname"
-          iconBefore="edit"
+          iconBefore="edit" iconUsage="game.identity-card-nickname-edit"
           data-state={isEditingNickname ? "on" : "off"}
         ></Button>
       {/snippet}
@@ -98,14 +98,14 @@
             class="flex items-center gap-2 justify-center"
             in:slide={{ duration: 150, axis: "x", easing: elasticIn }}
           >
-            <Button type="button" variant="success" intent="icon" iconBefore="confirm" onclick={saveNickname} aria-label="Save"
+            <Button type="button" variant="success" intent="icon" iconBefore="confirm" iconUsage="game.identity-card-nickname-save" onclick={saveNickname} aria-label="Save"
             ></Button>
-            <Button type="button" variant="danger" intent="icon" iconBefore="dismiss" onclick={() => (isEditingNickname = false)} aria-label="Cancel"
+            <Button type="button" variant="danger" intent="icon" iconBefore="dismiss" iconUsage="game.identity-card-nickname-cancel" onclick={() => (isEditingNickname = false)} aria-label="Cancel"
             ></Button>
           </div>
         {/if}
       {/snippet}
     </Input>
   </div>
-  <Icon name="bonfire" size="xl" class="text-secondary-600/20 absolute bottom-0 -right-30 rotate-12 -z-10" />
+  <Icon usage="game.identity-card-backdrop" name="bonfire" size="xl" class="text-secondary-600/20 absolute bottom-0 -right-30 rotate-12 -z-10" />
 </Card>

@@ -105,7 +105,7 @@
 </script>
 
 {#snippet actionIcon()}
-  <Icon name="confirm" size="sm" />
+  <Icon name="confirm" usage="app.notices-action" size="sm" />
 {/snippet}
 
 <div class="flex flex-col gap-4">
