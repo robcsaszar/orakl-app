@@ -45,7 +45,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
   data-tooltip={form === "compact" ? tip : undefined}
 >
   <span class="emblem" aria-hidden="true">
-    <span class="glyph"><Icon name={meta.icon as RoleName} size="fill" /></span>
+    <span class="glyph"><Icon usage="game.earned-badge" name={meta.icon as RoleName} size="fill" /></span>
     {#if rarity === "exotic"}<span class="sheen"></span>{/if}
   </span>
   {#if form === "extended" && count !== undefined && count > 1}

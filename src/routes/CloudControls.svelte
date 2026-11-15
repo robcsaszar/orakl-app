@@ -55,6 +55,7 @@
   import Card from "@/lib/components/ui/Card.svelte";
   import ConfirmButton from "@/lib/components/ui/ConfirmButton.svelte";
   import Icon from "@/lib/components/ui/Icon.svelte";
+  import type { IconUsage } from "$lib/icon-usages";
   import type { RoleName } from "$lib/icons";
   import Input from "@/lib/components/ui/Input.svelte";
   import Progress from "@/lib/components/ui/Progress.svelte";
@@ -879,21 +880,21 @@
   <Button variant={disabled ? "disabled" : "outline"} intent="compact" radius="rounded" class={compact} {disabled} {onclick}>{label}</Button>
 {/snippet}
 <!-- A button that asks first; it holds its place, dim and still, while it has nothing to do. -->
-{#snippet ask(label: string, question: string, onConfirm: () => void, live: boolean, hint: string, mark: RoleName = "confirm")}
+{#snippet ask(label: string, question: string, onConfirm: () => void, live: boolean, hint: string, usage: IconUsage, confirmUsage: IconUsage, mark: RoleName = "confirm")}
   <span class="flex transition-opacity duration-150 motion-reduce:transition-none {live ? '' : 'pointer-events-none opacity-40'}" inert={!live} use:hinted={hint}>
     <ConfirmButton {label} confirmLabel={question} confirmVariant="danger" variant="outline" revealDelay={0} duration={4000} {onConfirm} class={confirmCls}>
-      {#snippet icon()}<Icon name={mark} size="xs" />{/snippet}
-      {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
+      {#snippet icon()}<Icon name={mark} usage={usage} size="xs" />{/snippet}
+      {#snippet confirmIcon()}<Icon name="confirm" usage={confirmUsage} size="xs" />{/snippet}
     </ConfirmButton>
   </span>
 {/snippet}
 {#snippet iconAction(name: RoleName, label: string, onclick: () => void, disabled = false)}
   <Button variant={disabled ? "disabled" : "outline"} intent="compact" radius="rounded" class="p-2" aria-label={label} data-tooltip={label} {disabled} {onclick}>
-    <Icon {name} size="sm" />
+    <Icon {name} usage="sky.cloud-name-roll" size="sm" />
   </Button>
 {/snippet}
 {#snippet barTool(name: RoleName, label: string, onclick: () => void, o: { pressed?: boolean; disabled?: boolean } = {})}
-  <SkyBarTool {name} {label} {onclick} {...o} />
+  <SkyBarTool {name} usage="sky.cloud-bar" {label} {onclick} {...o} />
 {/snippet}
 {#snippet fold(title: string)}
   <h3 class={heading}>
@@ -904,7 +905,7 @@
       onclick={() => (folded[title] = !folded[title])}
     >
       {title}
-      <Icon name={folded[title] ? "expand" : "collapse"} class="text-foreground-darker" size="sm" />
+      <Icon name={folded[title] ? "expand" : "collapse"} usage="sky.cloud-fold" class="text-foreground-darker" size="sm" />
     </Button>
   </h3>
 {/snippet}
@@ -1016,8 +1017,8 @@
             onConfirm={undoAll}
             class={confirmCls}
           >
-            {#snippet icon()}<Icon name="undo" size="xs" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
+            {#snippet icon()}<Icon name="undo" usage="sky.cloud-undo-all" size="xs" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" usage="sky.cloud-undo-all-confirm" size="xs" />{/snippet}
           </ConfirmButton>
         {/if}
         {#if picked && clouds.length > 1}
@@ -1031,8 +1032,8 @@
             onConfirm={remove}
             class="{confirmCls} ml-auto"
           >
-            {#snippet icon()}<Icon name="delete" size="xs" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
+            {#snippet icon()}<Icon name="delete" usage="sky.cloud-remove" size="xs" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" usage="sky.cloud-remove-confirm" size="xs" />{/snippet}
           </ConfirmButton>
         {/if}
       </div>
@@ -1289,7 +1290,7 @@
                 <div class="flex flex-wrap items-center gap-1">
                   <span use:hinted={"Swaps this cloud for a fresh one made with the same settings. Use it when the settings are right and the cloud is not."}>
                     <Button variant="outline" intent="compact" radius="rounded" class="{compact} gap-1.5" onclick={newCloud}>
-                      <Icon name="roll" size="xs" /> Roll again
+                      <Icon name="roll" usage="sky.cloud-roll-again" size="xs" /> Roll again
                     </Button>
                   </span>
                   <span use:hinted={"Adds a second cloud to the sky that starts out just like this one."}>
@@ -1329,13 +1330,15 @@
                   {@render action("Save as new", () => saveTemplate(newName), !newName || !!presets[newName])}
                 </div>
                 <div class="flex flex-wrap items-center gap-1">
-                  {@render ask(`Save over ${template.name}`, `Save over ${template.name}?`, () => saveTemplate(template.name), !sameAs(template.name), `Puts the shape in hand in place of the ${template.name} template, for every cloud that takes it from now on.`)}
+                  {@render ask(`Save over ${template.name}`, `Save over ${template.name}?`, () => saveTemplate(template.name), !sameAs(template.name), `Puts the shape in hand in place of the ${template.name} template, for every cloud that takes it from now on.`, "sky.cloud-template-save-over", "sky.cloud-template-save-over-confirm")}
                   {@render ask(
                     CLOUD_PRESETS[template.name] ? `Reset ${template.name}` : `Remove ${template.name}`,
                     CLOUD_PRESETS[template.name] ? `Reset ${template.name}?` : `Remove ${template.name}?`,
                     () => dropTemplate(template.name),
                     !!S.templates[template.name],
                     CLOUD_PRESETS[template.name] ? `Makes the ${template.name} template as the code has it again.` : `Takes your ${template.name} template away. Clouds made from it stay as they are.`,
+                    "sky.cloud-template-drop",
+                    "sky.cloud-template-drop-confirm",
                     CLOUD_PRESETS[template.name] ? "reset" : "delete",
                   )}
                 </div>

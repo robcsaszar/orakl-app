@@ -235,6 +235,7 @@
               <summary class="flex list-none cursor-pointer items-center gap-1 py-2 text-xs text-foreground-darker [&::-webkit-details-marker]:hidden">
                 <Icon
                   name="expand"
+                  usage="ui.data-grid-card-expand"
                   size="xs"
                   class="transition-transform duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] group-open:rotate-180 motion-reduce:transition-none"
                 />

@@ -76,8 +76,8 @@
       <div class="flex flex-col gap-2">
         <div class="flex">
           <ConfirmButton label={part.resetLabel} confirmLabel="{part.resetLabel}?" confirmVariant="danger" variant="outline" revealDelay={0} duration={4000} onConfirm={part.reset} class={ui.confirm}>
-            {#snippet icon()}<Icon name="delete" size="xs" />{/snippet}
-            {#snippet confirmIcon()}<Icon name="confirm" size="xs" />{/snippet}
+            {#snippet icon()}<Icon name="delete" usage="sky.save-reset" size="xs" />{/snippet}
+            {#snippet confirmIcon()}<Icon name="confirm" usage="sky.save-reset-confirm" size="xs" />{/snippet}
           </ConfirmButton>
         </div>
         <p class={ui.hint}>{part.resetNote}</p>

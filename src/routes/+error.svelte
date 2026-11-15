@@ -93,10 +93,10 @@
       </p>
     </div>
     <div class="flex gap-3">
-      <Button variant="secondary" iconBefore="back" onclick={() => history.back()}>
+      <Button variant="secondary" iconBefore="back" iconUsage="layout.error-back" onclick={() => history.back()}>
         Go back
       </Button>
-      <Button href="/" iconBefore="orakl">Go home</Button>
+      <Button href="/" iconBefore="orakl" iconUsage="layout.error-home">Go home</Button>
     </div>
   </div>
 {:else if is403}
@@ -109,11 +109,11 @@
     </div>
     <div class="flex gap-3">
       {#if routeHistory.paths.length > 1}
-        <Button variant="secondary" iconBefore="back" onclick={() => history.back()}>
+        <Button variant="secondary" iconBefore="back" iconUsage="layout.error-back" onclick={() => history.back()}>
           Go back
         </Button>
       {/if}
-      <Button href="/" iconBefore="orakl">Go home</Button>
+      <Button href="/" iconBefore="orakl" iconUsage="layout.error-home">Go home</Button>
     </div>
   </div>
 {:else}
@@ -132,14 +132,14 @@
     </div>
     <div class="flex flex-wrap justify-center gap-3">
       {#if !is503}
-        <Button variant="secondary" iconBefore="scroll" onclick={reportError}>
+        <Button variant="secondary" iconBefore="scroll" iconUsage="layout.error-report" onclick={reportError}>
           Report error
         </Button>
       {/if}
-      <Button variant="secondary" iconBefore="shuffle" loading={retrying} onclick={tryAgain}>
+      <Button variant="secondary" iconBefore="shuffle" iconUsage="layout.error-retry" loading={retrying} onclick={tryAgain}>
         Try again
       </Button>
-      <Button href="/" iconBefore="orakl">Go home</Button>
+      <Button href="/" iconBefore="orakl" iconUsage="layout.error-home">Go home</Button>
     </div>
     <details class="border-secondary/10 bg-secondary/5 mt-4 w-full max-w-md rounded-2xl border-2 p-4 text-left text-sm">
       <summary class="cursor-pointer font-medium">Error details</summary>

@@ -4,10 +4,17 @@
   import type { VariantProps } from "tailwind-variants";
   import { cn } from "tailwind-variants";
   import { buttonVariants } from "@/lib/button-variants";
+  import type { IconUsage } from "$lib/icon-usages";
   import type { RoleName } from "$lib/icons";
   import Icon from "./Icon.svelte";
 
   type ButtonVariants = VariantProps<typeof buttonVariants>;
+
+  /** A button with an icon names where that icon renders (`iconUsage`). */
+  type IconProps =
+    | { iconBefore?: undefined; iconAfter?: undefined; iconUsage?: undefined }
+    | { iconBefore: RoleName; iconAfter?: RoleName; iconUsage: IconUsage }
+    | { iconBefore?: RoleName; iconAfter: RoleName; iconUsage: IconUsage };
 
   let {
     variant = "primary",
@@ -16,6 +23,7 @@
     behavior,
     iconBefore,
     iconAfter,
+    iconUsage,
     loading = false,
     unstyled = false,
     class: className = "",
@@ -28,8 +36,6 @@
     intent?: ButtonVariants["intent"];
     radius?: ButtonVariants["radius"];
     behavior?: ButtonVariants["behavior"];
-    iconBefore?: RoleName;
-    iconAfter?: RoleName;
     loading?: boolean;
     /** Render with only `class` — no buttonVariants base/variant styling. */
     unstyled?: boolean;
@@ -38,7 +44,7 @@
     children?: Snippet;
     /** The rendered element (bind:this passthrough) */
     ref?: HTMLButtonElement | HTMLAnchorElement | null;
-  } & (HTMLButtonAttributes | HTMLAnchorAttributes) = $props();
+  } & IconProps & (HTMLButtonAttributes | HTMLAnchorAttributes) = $props();
 
   const cls = $derived(
     unstyled
@@ -53,10 +59,10 @@
   {#if loading}
     <span class="is-loading flex">Loading<span>.</span><span>.</span><span>.</span></span>
   {:else}
-    {#if iconBefore}<Icon name={iconBefore} size={iconStep} />{/if}
+    {#if iconBefore}<Icon name={iconBefore} usage={iconUsage as IconUsage} size={iconStep} />{/if}
     {@render children?.()}
     {#if iconAfter}
-      <Icon name={iconAfter} size={iconStep} class="transition-transform duration-300 group-hover:translate-x-1 group-focus:translate-x-1 group-active:translate-x-1" />
+      <Icon name={iconAfter} usage={iconUsage as IconUsage} size={iconStep} class="transition-transform duration-300 group-hover:translate-x-1 group-focus:translate-x-1 group-active:translate-x-1" />
     {/if}
   {/if}
 {/snippet}

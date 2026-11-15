@@ -36,13 +36,13 @@
   transition:fly={{ duration: 500, easing: cubicOut, y: -10 }}
 >
   {#if status === "correct"}
-    <Icon name="correct" />
-    Correct!
+    <Icon usage="game.answer-status" name="correct" />
+    Correct
   {:else if status === "incorrect"}
-    <Icon name="incorrect" />
+    <Icon usage="game.answer-status" name="incorrect" />
     Incorrect
   {:else if status === "timeout"}
-    <Icon name="timeout" />
+    <Icon usage="game.answer-status" name="timeout" />
     Time's up
   {:else if status === "pending"}
     {@const remaining = Math.max(0, (totalToAnswer ?? 0) - (answeredCount ?? 0))}

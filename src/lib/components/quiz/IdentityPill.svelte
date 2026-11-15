@@ -105,9 +105,10 @@
     <div class="flex shrink-0 items-center gap-1">
       {#each Array(GAME.endless.lives) as _, i}
         <Icon
+          usage="game.identity-pill-strikes"
           name="heart"
           size="sm"
-          class={cn([i < (strikes ?? 0) ? "text-gray-500" : "text-danger"])}
+          class={cn([i < (strikes ?? 0) ? "text-foreground-darker" : "text-danger"])}
         />
       {/each}
     </div>
@@ -128,10 +129,10 @@
       >
         {#if activeDelta !== null}
           <span class="text-sm text-foreground-darker/50">{fmt(prevScore)}</span>
-          <Icon name="leads-to" size="xs" class="text-foreground-darker/40" />
+          <Icon usage="game.identity-pill-score-delta-arrow" name="leads-to" size="xs" class="text-foreground-darker/40" />
         {/if}
         <span class="flex items-center gap-1 text-primary">
-          <Icon name="rhombus" size="xs" />
+          <Icon usage="game.identity-pill-score" name="rhombus" size="xs" />
           <span class="text-lg font-bold">{fmt(displayScore)}</span>
         </span>
         {#if activeDelta !== null}
@@ -163,7 +164,7 @@
           <span class="text-sm font-bold text-success-light">+{fmt(activeDelta)}</span>
         {/if}
         <span class="flex items-center gap-1 text-primary">
-          <Icon name="rhombus" size="xs" />
+          <Icon usage="game.identity-pill-score" name="rhombus" size="xs" />
           <span class="text-lg font-bold">{fmt(displayScore)}</span>
         </span>
       </div>

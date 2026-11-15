@@ -124,9 +124,9 @@
     {@render children?.()}
     {#if intent === "inline"}
       {#if isExternal}
-        <Icon name="external" size="sm" class="ml-0.5 inline align-baseline" />
+        <Icon name="external" size="sm" usage="ui.link-external" class="ml-0.5 inline align-baseline" />
       {:else}
-        <Icon name="next" size="sm" class="ease-ease-in-out-quart inline -translate-x-1 justify-baseline duration-200 group-hover:translate-x-0 group-focus-visible:translate-x-0" />
+        <Icon name="next" size="sm" usage="ui.link-inline-arrow" class="ease-ease-in-out-quart inline -translate-x-1 justify-baseline duration-200 group-hover:translate-x-0 group-focus-visible:translate-x-0" />
       {/if}
     {/if}
   {/if}

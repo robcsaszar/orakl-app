@@ -38,5 +38,5 @@
     onclick();
   }}
 >
-  <Icon name="reset" size="xs" />
+  <Icon name="reset" usage="sky.setting-reset" size="xs" />
 </Button>

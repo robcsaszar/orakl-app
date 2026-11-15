@@ -5,16 +5,19 @@
 <script lang="ts">
   import Button from "@/lib/components/ui/Button.svelte";
   import Icon from "@/lib/components/ui/Icon.svelte";
+  import type { IconUsage } from "$lib/icon-usages";
   import type { RoleName } from "$lib/icons";
 
   let {
     name,
+    usage,
     label,
     onclick,
     pressed,
     disabled = false,
   }: {
     name: RoleName;
+    usage: IconUsage;
     label: string;
     onclick: () => void;
     pressed?: boolean;
@@ -35,5 +38,5 @@
       : 'cursor-pointer text-foreground hover:bg-secondary/15'}"
   {onclick}
 >
-  <Icon {name} size="md" />
+  <Icon {name} {usage} size="md" />
 </Button>

@@ -57,10 +57,10 @@
         class={buttonVariants({ variant: "danger", intent: "icon" })}
       >
         {#snippet icon()}
-          <Icon name="dismiss" class="shrink-0" size="xl" />
+          <Icon name="dismiss" usage="app.home-dismiss-quiz" class="shrink-0" size="xl" />
         {/snippet}
         {#snippet confirmIcon()}
-          <Icon name="confirm" class="shrink-0" size="xl" />
+          <Icon name="confirm" usage="app.home-dismiss-quiz-confirm" class="shrink-0" size="xl" />
         {/snippet}
       </ConfirmButton>
     {/if}

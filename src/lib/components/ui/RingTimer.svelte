@@ -131,13 +131,13 @@
         {timeRemaining}
       </span>
     {:else if timerState === "correct"}
-      <Icon name="correct" size="xl" />
+      <Icon name="correct" size="xl" usage="ui.ring-timer-outcome" />
     {:else if timerState === "incorrect"}
-      <Icon name="incorrect" size="xl" />
+      <Icon name="incorrect" size="xl" usage="ui.ring-timer-outcome" />
     {:else if timerState === "final"}
-      <Icon name="wreath" size="xl" />
+      <Icon name="wreath" size="xl" usage="ui.ring-timer-outcome" />
     {:else if timerState === "timeout"}
-      <Icon name="timeout" size="xl" />
+      <Icon name="timeout" size="xl" usage="ui.ring-timer-outcome" />
     {/if}
   </span>
 </div>

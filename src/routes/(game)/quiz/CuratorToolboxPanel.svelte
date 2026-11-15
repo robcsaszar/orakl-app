@@ -62,7 +62,7 @@
       aria-label={nextButtonText}
       title={nextButtonText}
     >
-      <Icon name={isLastQuestion ? "wreath" : "next"} size="md" />
+      <Icon usage="game.toolbox-next" name={isLastQuestion ? "wreath" : "next"} size="md" />
     </Button>
   {/if}
 {:else}
@@ -194,8 +194,8 @@
         variant="outline"
         class="w-full"
       >
-        {#snippet icon()}<Icon name="stop" size="md" />{/snippet}
-        {#snippet confirmIcon()}<Icon name="confirm" size="md" />{/snippet}
+        {#snippet icon()}<Icon usage="game.toolbox-stop" name="stop" size="md" />{/snippet}
+        {#snippet confirmIcon()}<Icon usage="game.toolbox-stop-confirm" name="confirm" size="md" />{/snippet}
       </ConfirmButton>
     {/if}
     {#if !isFinal}
@@ -209,8 +209,8 @@
         variant="outline"
         class="w-full"
       >
-        {#snippet icon()}<Icon name="back" size="md" />{/snippet}
-        {#snippet confirmIcon()}<Icon name="confirm" size="md" />{/snippet}
+        {#snippet icon()}<Icon usage="game.toolbox-reset" name="back" size="md" />{/snippet}
+        {#snippet confirmIcon()}<Icon usage="game.toolbox-reset-confirm" name="confirm" size="md" />{/snippet}
       </ConfirmButton>
     {/if}
     <ConfirmButton
@@ -223,8 +223,8 @@
       variant="danger"
       class="w-full"
     >
-      {#snippet icon()}<Icon name="door" size="md" />{/snippet}
-      {#snippet confirmIcon()}<Icon name="confirm" size="md" />{/snippet}
+      {#snippet icon()}<Icon usage="game.toolbox-close-lobby" name="door" size="md" />{/snippet}
+      {#snippet confirmIcon()}<Icon usage="game.toolbox-close-lobby-confirm" name="confirm" size="md" />{/snippet}
     </ConfirmButton>
   </div>
 </div>

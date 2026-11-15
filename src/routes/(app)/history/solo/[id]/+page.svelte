@@ -74,7 +74,7 @@ import { percent } from "@orakl/shared";
 
     {#if data.run.mode === "endless"}
       <Badge variant="status" tone="warning" class="inline-flex items-center gap-1 self-start">
-        <Icon name="endless" size="xs" /> Endless
+        <Icon name="endless" usage="app.history-solo-endless-badge" size="xs" /> Endless
       </Badge>
     {/if}
 

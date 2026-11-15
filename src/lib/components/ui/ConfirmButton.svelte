@@ -283,7 +283,7 @@ import { percent } from "@orakl/shared";
         {#if infinite}
           <!-- Hourglass overlay -->
           <div class="absolute left-1/2 -translate-x-1/2 -top-3.5 pointer-events-none">
-            <Icon name="hourglass" size="xs" class="drop-shadow-[0_0_3px_currentColor]" />
+            <Icon name="hourglass" size="xs" usage="ui.confirm-progress" class="drop-shadow-[0_0_3px_currentColor]" />
           </div>
         {/if}
       </div>
@@ -314,5 +314,5 @@ import { percent } from "@orakl/shared";
 {/snippet}
 
 {#snippet defaultConfirmIcon()}
-  <Icon name="hourglass" size="md" />
+  <Icon name="hourglass" size="md" usage="ui.confirm-default" />
 {/snippet}

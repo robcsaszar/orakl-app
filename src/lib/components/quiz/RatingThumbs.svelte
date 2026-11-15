@@ -52,7 +52,7 @@
         type="button"
         variant="outline"
         intent="icon"
-        iconBefore={state === "ok" ? "confirm" : state === "error" ? "failed" : thumb.icon}
+        iconBefore={state === "ok" ? "confirm" : state === "error" ? "failed" : thumb.icon} iconUsage="game.rating-thumb"
         class={cn(
           rating.pending === thumb.value && "opacity-50",
           state === "ok" && "border-success text-success",

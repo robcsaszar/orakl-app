@@ -198,7 +198,7 @@
           aria-label="Password strength"
           aria-haspopup="dialog"
         >
-          <Icon name="secure" size="md" />
+          <Icon name="secure" usage="ui.password-strength-open" size="md" />
         </button>
       {/if}
       {#if showStrength && showStrengthPopover}
@@ -210,7 +210,7 @@
           aria-label="Password strength"
           aria-haspopup="dialog"
         >
-          <Icon name="dismiss" size="md" />
+          <Icon name="dismiss" usage="ui.password-strength-close" size="md" />
         </button>
       {/if}
       <button
@@ -221,7 +221,7 @@
         aria-pressed={showPassword}
         onclick={toggleReveal}
       >
-        <Icon name={showPassword ? "password-hide" : "password-show"} size="md" />
+        <Icon name={showPassword ? "password-hide" : "password-show"} usage="ui.password-toggle" size="md" />
       </button>
     {/if}
   </div>
@@ -238,7 +238,7 @@
     <span class="order-1 flex {size === 'sm' ? 'min-h-0' : 'min-h-8'} flex-nowrap items-baseline justify-{labelEndJustify} gap-2">
       <span class={cn("flex items-center gap-1", size === "sm" ? "font-mono text-xs" : "text-lg")}>
         {label}
-        {#if required}<Icon name="required" size="sm" class="text-danger self-start" />{/if}
+        {#if required}<Icon name="required" usage="ui.field-required" size="sm" class="text-danger self-start" />{/if}
       </span>
       {@render labelEnd?.()}
     </span>

@@ -232,7 +232,7 @@ import type { UserRole } from "@orakl/shared";
                 <Button
                   variant="ghost"
                   intent="compact"
-                  iconAfter="expand"
+                  iconAfter="expand" iconUsage="app.flag-roles-toggle"
                   aria-expanded={editing === flag.name}
                   aria-controls="{flag.name}-roles"
                   onclick={() =>

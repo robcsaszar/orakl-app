@@ -37,7 +37,7 @@ import type { MediaCredit, QuestionSource } from "@orakl/shared";
   });
 
   const ICON: Record<string, RoleName> = { correct: "correct", incorrect: "incorrect", timeout: "timeout" };
-  const LABEL: Record<string, string> = { correct: "Correct", incorrect: "Missed", timeout: "Timed out" };
+  const LABEL: Record<string, string> = { correct: "Correct", incorrect: "Incorrect", timeout: "Time's up" };
 
   let {
     index,
@@ -72,7 +72,7 @@ import type { MediaCredit, QuestionSource } from "@orakl/shared";
 <Card>
   <div class="flex items-start gap-3">
     <div class={indicator()}>
-      <Icon name={ICON[outcome]} size="sm" />
+      <Icon usage="game.result-card-outcome" name={ICON[outcome]} size="sm" />
     </div>
 
     <div class="min-w-0 flex-1 flex flex-col gap-2">

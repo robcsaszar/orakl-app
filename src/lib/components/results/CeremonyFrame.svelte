@@ -60,7 +60,7 @@
             `inline-flex items-center gap-2 text-gold-lightest ${centered ? "self-center" : ""}`,
           ])}
         >
-          <Icon name="wreath" size="md" />
+          <Icon usage="game.ceremony-kicker" name="wreath" size="md" />
           <span>{kicker}</span>
         </div>
         <div class="space-y-2">

@@ -283,9 +283,9 @@ import type { BadgeId, Rarity } from "@orakl/shared";
     </SoloGuestCta>
     {:else if fd?.isLeaderboardEligible && data.uiFlags.SOLO_LEADERBOARDS}
       <Card variant="success" padding="md" class="flex self-center flex-col gap-4 items-start relative isolate flex-1 overflow-hidden">
-        <Icon name="horn-detail" class="text-success/25 absolute right-2 bottom-0 z-0" size="xl" />
+        <Icon name="horn-detail" usage="app.solo-results-horn-detail" class="text-success/25 absolute right-2 bottom-0 z-0" size="xl" />
         <span class="flex items-start gap-2 text-xl text-success-light">
-          <Icon name="horn" class="shrink-0" size="xl" />
+          <Icon name="horn" usage="app.solo-results-horn" class="shrink-0" size="xl" />
           Recorded on the leaderboard.
         </span>
         <div class="flex flex-col gap-2 items-start text-success-lighter">
@@ -301,10 +301,10 @@ import type { BadgeId, Rarity } from "@orakl/shared";
       </Card>
     {:else if fd?.isStreakEligible && fd.maxStreak > 0 && data.uiFlags.SOLO_LEADERBOARDS}
       <Card variant="flame" padding="md" class="flex flex-col gap-4 items-start relative isolate flex-1 overflow-hidden">
-        <Icon name="flame-detail" class="text-flame/25 absolute right-2 -bottom-1 z-0" size="xl" />
+        <Icon name="flame-detail" usage="app.solo-results-flame-detail" class="text-flame/25 absolute right-2 -bottom-1 z-0" size="xl" />
         <span class="flex items-start gap-2 text-xl text-flame-light">
-          <Icon name="flame" class="shrink-0" size="xl" />
-          Your streak was added to the leaderboard!
+          <Icon name="flame" usage="app.solo-results-flame" class="shrink-0" size="xl" />
+          Your streak was added to the leaderboard.
         </span>
         <div class="flex flex-col gap-2 items-start text-flame-lighter">
           <p>

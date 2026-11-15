@@ -40,7 +40,7 @@
     class="font-mono text-2xl font-bold tabular-nums md:text-3xl flex gap-2 items-center"
   >
     {#if tone === "flame"}
-      <Icon name="flame" size="md" class="shrink-0 text-flame-light" />
+      <Icon name="flame" size="md" usage="ui.stat-tile-flame" class="shrink-0 text-flame-light" />
     {/if}{value}
   </p>
 </div>
