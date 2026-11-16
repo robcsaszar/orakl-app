@@ -237,6 +237,7 @@
       "Don't use the featured (violet) colour for functional actions.",
       "Don't hardcode phase-specific values directly in component styles.",
       "Don't animate layout properties for micro-interactions — use transform and opacity.",
+      "Don't fall back on stock editorial styling: a cream or off-white page background outside the colour tokens, an italic accent word inside a heading, numbered 01 / 02 / 03 section labels, or Geist Mono on eyebrows, captions, and tags.",
       "Don't use sharp (rounded-none) on player-facing or game-play buttons.",
       "Don't omit role, aria-label, or onkeydown on custom interactive elements."
     ]

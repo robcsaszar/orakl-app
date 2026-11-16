@@ -55,9 +55,9 @@ describe("AnswerStatus", () => {
     expect(screen.getByRole("alert")).toHaveAttribute("aria-live", "assertive");
   });
 
-  it("correct → shows 'Correct!'", () => {
+  it("correct → shows 'Correct'", () => {
     render(AnswerStatus, { props: { status: "correct" } });
-    expect(screen.getByText("Correct!")).toBeInTheDocument();
+    expect(screen.getByText("Correct")).toBeInTheDocument();
   });
 
   it("incorrect → role=alert", () => {

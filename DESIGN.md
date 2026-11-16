@@ -604,6 +604,8 @@ The sticky header height is 160px. It carries the Orakl logo, navigation links, 
 
 **Don't** animate layout properties (`width`, `height`, `top`, `left`) for micro-interactions. Use `transform` (scale, translate) and `opacity`. All in-app micro-animations use cubic-bezier easing — never `ease` or `linear` except for intentional mechanical effects.
 
+**Don't** fall back on stock editorial styling: a cream or off-white page background outside the colour tokens, an italic accent word inside a heading, numbered `01 / 02 / 03` section labels, or Geist Mono on eyebrows, captions, and tags. Mono is for join codes, IDs, and scores only.
+
 **Don't** use sharp (`rounded-none`) on player-facing or game-play buttons. Sharp edges are an administrative/destructive signal. In quiz screens, everything interactive should feel approachable — squircle or pill only.
 
 **Don't** omit `role`, `aria-label`, or `onkeydown` on custom interactive elements. SVG buttons, status containers, and non-semantic clickable elements must be fully accessible. The Palette agent audits for these; new components should arrive compliant.

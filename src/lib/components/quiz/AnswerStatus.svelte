@@ -37,7 +37,7 @@
 >
   {#if status === "correct"}
     <Icon name="correct" />
-    Correct!
+    Correct
   {:else if status === "incorrect"}
     <Icon name="incorrect" />
     Incorrect

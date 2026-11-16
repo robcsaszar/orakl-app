@@ -304,7 +304,7 @@ import type { BadgeId, Rarity } from "@orakl/shared";
         <Icon name="flame-detail" class="text-flame/25 absolute right-2 -bottom-1 z-0" size="xl" />
         <span class="flex items-start gap-2 text-xl text-flame-light">
           <Icon name="flame" class="shrink-0" size="xl" />
-          Your streak was added to the leaderboard!
+          Your streak was added to the leaderboard.
         </span>
         <div class="flex flex-col gap-2 items-start text-flame-lighter">
           <p>

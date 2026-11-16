@@ -72,10 +72,11 @@ import { formatEur, hasPower, hasRole } from "@orakl/shared";
   const themePicker = __FEATURE_SKY__ ? import("./ThemePicker.svelte") : null;
 
   const isAdmin = $derived(hasRole(data.user.role, "admin"));
-  // Gated on the power, not the role: the page itself requires
-  // `can-manage-features`, so a link shown on the role alone would send an
-  // admin without it to a 403 (#860).
-  const canManageFlags = $derived(hasPower(data.user, "can-manage-features"));
+  // Gated on the role and the power: the page requires both, so a link shown
+  // on either alone would end in a 403 (#860).
+  const canManageFlags = $derived(
+    isAdmin && hasPower(data.user, "can-manage-features"),
+  );
   // Both Mimic entry points below ask exactly what `/mimic/+layout.server.ts`
   // asks, so neither renders a link that 404s.
   const canAccessMimic = $derived(hasPower(data.user, "can-access-mimic"));
