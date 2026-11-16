@@ -9,7 +9,7 @@ This repository is published from the private Orakl repository by `pnpm sync:cli
 
 ## Working Style
 
-- **Communication:** Use ASD-STE 1000 simplified technical English (short, direct, ~1000-word approved vocabulary) + Barbara Minto Pyramid Principle (answer first, then support, then details). Start with conclusion/main point before evidence.
+- **Communication:** Use ASD-STE100 Simplified Technical English (short, direct, ~1000-word approved vocabulary) + Barbara Minto Pyramid Principle (answer first, then support, then details). Start with conclusion/main point before evidence.
 - State assumptions up front. Multiple valid interpretations → present them, don't pick silently.
 - Simpler approach exists → say so, push back.
 - Multi-step task → state plan w/ verify step per line: `1. [step] → verify: [check]`.

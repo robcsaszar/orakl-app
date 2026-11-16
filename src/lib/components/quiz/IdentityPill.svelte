@@ -107,7 +107,7 @@
         <Icon
           name="heart"
           size="sm"
-          class={cn([i < (strikes ?? 0) ? "text-gray-500" : "text-danger"])}
+          class={cn([i < (strikes ?? 0) ? "text-foreground-darker" : "text-danger"])}
         />
       {/each}
     </div>
